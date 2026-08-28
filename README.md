@@ -1,8 +1,8 @@
 # Ariba Shield WAF
 
 Centralized, Linux-hosted, web-managed enterprise Web Application Firewall.
-See the [master plan](enterprise_waf_development_master_plan.md) for scope, the
-[Phase 0 SRS](phase0_srs.md) as the day-to-day development contract, and
+See the [master plan](docs/enterprise_waf_development_master_plan.md) for scope, the
+[Phase 0 SRS](docs/phase0_srs.md) as the day-to-day development contract, and
 [ADR-001](docs/architecture/adr-001-initial-architecture.md) for the architecture.
 
 **Status:** Phase 0 documentation complete; Sprint 1 (repo + CI) in progress. This is a monorepo.

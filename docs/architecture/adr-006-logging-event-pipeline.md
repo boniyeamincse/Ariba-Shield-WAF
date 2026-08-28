@@ -3,7 +3,7 @@
 - **Status:** Proposed (for review)
 - **Date:** 2026-08-28
 - **Owner:** Platform Architect
-- **References:** `enterprise_waf_development_master_plan.md` (§22 rules 2 & 5, §6.8, §12.3), `phase0_srs.md` (FR-0.1-030..034, NFR-0.1-005, NFR-0.1-013), `docs/architecture/adr-002-policy-event-schema-v0.md`
+- **References:** `../enterprise_waf_development_master_plan.md` (§22 rules 2 & 5, §6.8, §12.3), `../phase0_srs.md` (FR-0.1-030..034, NFR-0.1-005, NFR-0.1-013), `adr-002-policy-event-schema-v0.md`
 
 ---
 

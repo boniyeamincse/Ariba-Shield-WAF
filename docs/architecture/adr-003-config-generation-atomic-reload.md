@@ -3,7 +3,7 @@
 - **Status:** Proposed (for review)
 - **Date:** 2026-08-28
 - **Owner:** Platform Architect
-- **References:** `enterprise_waf_development_master_plan.md` (§11, §22 rules 3 & 9, §15 Phase 1 exit criteria), `phase0_srs.md` (FR-0.1-051..056, UC-3, UC-4), `docs/architecture/adr-002-policy-event-schema-v0.md`
+- **References:** `../enterprise_waf_development_master_plan.md` (§11, §22 rules 3 & 9, §15 Phase 1 exit criteria), `../phase0_srs.md` (FR-0.1-051..056, UC-3, UC-4), `adr-002-policy-event-schema-v0.md`
 
 ---
 

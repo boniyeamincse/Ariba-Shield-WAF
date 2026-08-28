@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Guidance for AI agents and humans working in this repository. Read the
-[master plan](enterprise_waf_development_master_plan.md) and
-[Phase 0 SRS](phase0_srs.md) before changing architecture or contracts.
+[master plan](docs/enterprise_waf_development_master_plan.md) and
+[Phase 0 SRS](docs/phase0_srs.md) before changing architecture or contracts.
 
 ## Ground rules
 
@@ -27,5 +27,6 @@ Guidance for AI agents and humans working in this repository. Read the
 
 ## Docs to keep updated
 
-- `phase0_srs.md` — the day-to-day contract (FR/NFR IDs, use cases).
+- `docs/phase0_srs.md` — the day-to-day contract (FR/NFR IDs, use cases).
 - `docs/architecture/` — ADRs + diagrams (update diagrams with any boundary/data-flow change).
+- `docs/AI_SKILL.md` — AI-oriented project summary; keep in sync with the source docs (it must not override them).

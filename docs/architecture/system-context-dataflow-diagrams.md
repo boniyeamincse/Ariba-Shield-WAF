@@ -3,7 +3,7 @@
 - **Status:** Draft v0.1
 - **Date:** 2026-08-28
 - **Owner:** Platform Architect
-- **References:** `enterprise_waf_development_master_plan.md` (§3, §5, §7), `phase0_srs.md` (§8 Deployment topology, §9 Threat model), `docs/architecture/adr-001-initial-architecture.md`, `adr-002-policy-event-schema-v0.md`, `adr-003-config-generation-atomic-reload.md`, `adr-006-logging-event-pipeline.md`
+- **References:** `../enterprise_waf_development_master_plan.md` (§3, §5, §7), `../phase0_srs.md` (§8 Deployment topology, §9 Threat model), `adr-001-initial-architecture.md`, `adr-002-policy-event-schema-v0.md`, `adr-003-config-generation-atomic-reload.md`, `adr-006-logging-event-pipeline.md`
 
 ---
 
@@ -167,7 +167,7 @@ flowchart LR
 | TB5 | Control Plane ↔ PostgreSQL/Redis | Trusted internal | DB creds via secrets; envelope encryption at rest |
 | TB6 | Gateway ↔ Collector/OTel | Trusted sidecar on same node | Non-blocking stdout transport |
 
-Full STRIDE threat list and mitigations: `phase0_srs.md` §9.
+Full STRIDE threat list and mitigations: `../phase0_srs.md` §9.
 
 ---
 

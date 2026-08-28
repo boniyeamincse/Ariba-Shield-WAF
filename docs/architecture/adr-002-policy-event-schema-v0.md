@@ -3,7 +3,7 @@
 - **Status:** Proposed (for review)
 - **Date:** 2026-08-28
 - **Owner:** Platform Architect
-- **References:** `enterprise_waf_development_master_plan.md` (§8, §11), `phase0_srs.md` (Data model v0, API v0), `docs/architecture/adr-001-initial-architecture.md`
+- **References:** `../enterprise_waf_development_master_plan.md` (§8, §11), `../phase0_srs.md` (Data model v0, API v0), `adr-001-initial-architecture.md`
 
 ---
 

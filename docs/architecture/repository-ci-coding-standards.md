@@ -3,7 +3,7 @@
 - **Status:** Draft v0.1
 - **Date:** 2026-08-28
 - **Owner:** Platform Architect / SRE
-- **References:** `enterprise_waf_development_master_plan.md` (§10, §14.3, §7.3, §19), `phase0_srs.md` (NFR-0.1-030..034)
+- **References:** `../enterprise_waf_development_master_plan.md` (§10, §14.3, §7.3, §19), `../phase0_srs.md` (NFR-0.1-030..034)
 
 ---
 

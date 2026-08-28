@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-28
 - **Owner:** Platform Architect
-- **References:** `enterprise_waf_development_master_plan.md` (§4, §10, §23, §24), `phase0_srs.md` (Data model v0, Deployment topology)
+- **References:** `../enterprise_waf_development_master_plan.md` (§4, §10, §23, §24), `../phase0_srs.md` (Data model v0, Deployment topology)
 
 ---
 
