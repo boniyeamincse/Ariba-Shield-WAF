@@ -1,0 +1,34 @@
+# Dependencies / build output
+node_modules/
+dist/
+build/
+target/
+*.log
+
+# Go
+bin/
+*.test
+coverage.out
+
+# Rust
+/target/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local data
+data/
+*.sqlite
+*.db
