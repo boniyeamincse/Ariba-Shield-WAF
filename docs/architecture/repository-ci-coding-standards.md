@@ -161,6 +161,7 @@ Every architecture decision uses this template. Filename: `adr-NNN-short-title.m
   - [ ] Upgrade/rollback considered
   - [ ] Diagrams updated if a boundary/data-flow changed
 - No direct pushes to `main`; branch protection + required reviews; signed commits per organization policy (§7.3).
+- **Commit tasks:** Every finished task must be committed to git with a clear, descriptive commit message relating to the task. This ensures any AI or human can understand the repository history and context.
 
 ---
 
