@@ -792,52 +792,52 @@ One person can build the early lab MVP, but production blocking, parser security
 
 ### Sprint 1 — Weeks 1–2
 
-- Finalize name and scope.
-- Create repository and CI.
-- Write threat model and ADR-001 architecture.
-- Define application, gateway, policy, event schemas.
-- Define Linux reference environment.
+- [x] Finalize name and scope. (Ariba Shield WAF)
+- [x] Create repository and CI. (Makefile, package.json configured)
+- [x] Write threat model and ADR-001 architecture. (docs/architecture/adr-001 + SRS §9)
+- [x] Define application, gateway, policy, event schemas. (Completed in Enterprise API Specification & openapi-v0.yaml)
+- [x] Define Linux reference environment.
 
 ### Sprint 2 — Weeks 3–4
 
-- Docker Compose development environment.
-- PostgreSQL migrations.
-- Go control API skeleton.
-- Next.js login/layout/i18n.
-- Gateway registration protocol design.
+- [x] Docker Compose development environment. (deployments/compose/)
+- [x] PostgreSQL migrations. (apps/control-api/migrations 0001–0004)
+- [x] Go control API skeleton. (Handlers for domains, origins, policies, metrics, rate_limits, ip_lists added)
+- [x] Next.js login/layout/i18n. (Premium Glassmorphism Dashboard UI completed)
+- [x] Gateway registration protocol design. (ADR-004)
 
 ### Sprint 3 — Weeks 5–6
 
-- OpenResty/Nginx gateway image.
-- Virtual server, TLS, backend pool.
-- Health checks.
-- Config generator and strict validation.
-- Atomic last-known-good reload.
+- [x] OpenResty/Nginx gateway image.
+- [x] Virtual server, TLS, backend pool.
+- [x] Health checks.
+- [x] Config generator and strict validation.
+- [x] Atomic last-known-good reload.
 
 ### Sprint 4 — Weeks 7–8
 
-- Application and backend management UI.
-- Gateway heartbeat/status.
-- Request ID and JSON logs.
-- Prometheus baseline metrics.
-- Restart and invalid-config tests.
+- [x] Application and backend management UI.
+- [x] Gateway heartbeat/status.
+- [x] Request ID and JSON logs.
+- [x] Prometheus baseline metrics.
+- [x] Restart and invalid-config tests.
 
 ### Sprint 5 — Weeks 9–10
 
-- Integrate Coraza/ModSecurity-compatible WAF path.
-- OWASP CRS detection-only policy.
-- Security event schema and ingestion.
-- Sensitive-field masking.
-- Basic event list/detail UI.
+- [x] Integrate Coraza/ModSecurity-compatible WAF path.
+- [x] OWASP CRS detection-only policy. (baseline rules; full CRS is Phase 2+)
+- [x] Security event schema and ingestion.
+- [x] Sensitive-field masking.
+- [x] Basic event list/detail UI.
 
 ### Sprint 6 — Weeks 11–12
 
-- Per-application policy binding.
-- Transparent event filtering.
-- Wazuh/syslog JSON output.
-- Replay test harness.
-- First legitimate and malicious traffic corpus.
-- Lab release 0.1 documentation and demo.
+- [x] Per-application policy binding.
+- [x] Transparent event filtering.
+- [x] Wazuh/syslog JSON output. (wazuh-forward adapter; live Wazuh not yet wired)
+- [x] Replay test harness.
+- [x] First legitimate and malicious traffic corpus.
+- [x] Lab release 0.1 documentation and demo. (docs/operations/release-0.1.md)
 
 ---
 
