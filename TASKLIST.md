@@ -66,14 +66,14 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 ^- [x] **P2.25** `security_events.go` hardcodes `LIMIT 50` with no pagination (`limit`/`offset`/cursor). Add pagination.
 - [ ] **P2.26** `metrics.go` declares `shield_control_request_duration_ms` histogram but never records observations. Process start time reports request start time, not process start.
 ^- [x] **P2.27** `mask.go` has no test file. Add `mask_test.go`.
-- [ ] **P2.28** `iplist/`, `ratelimit/`, `blockpage/` have no direct unit tests. Add tests.
+^- [x] **P2.28** `iplist/`, `ratelimit/`, `blockpage/` have no direct unit tests. Add tests.
 - [ ] **P2.29** `cmd/wazuh-forward/main.go` "syslog" mode writes formatted lines to `stdout` — no TCP/UDP/TLS socket, no Wazuh agent API. Implement actual syslog transport.
 - [ ] **P2.30** `wazuh-forward` forwards the entire `raw` event to Wazuh `data` without redaction. Add masking at this hop.
 ^- [x] **P2.31** `policy-v0.json` uses `additionalProperties: false` at the top level, contradicting ADR-002 D1 (forward-compat: unknown fields must be preserved). Fix to `true`.
 - [ ] **P2.32** `event-v0.json` uses nested objects; Go `SecurityEvent` uses flat fields. Reconcile the schema with the code.
 - [ ] **P2.33** `tools/schema-gen` only generates `$defs` — no root document types (`Policy`, `Event`). Inline nested objects are mangled to `string`. Required/const/pattern/format are all dropped. Expand coverage.
-- [ ] **P2.34** Missing ADR-005: document the Coraza v3 integration decision (architecture, transaction lifecycle, fail-open semantics, rule loading).
-- [ ] **P2.35** Missing ADR-007: document the high-volume event transport decision (NATS/Kafka vs Redis Streams, ClickHouse migration).
+^- [x] **P2.34** Missing ADR-005: document the Coraza v3 integration decision (architecture, transaction lifecycle, fail-open semantics, rule loading).
+^- [x] **P2.35** Missing ADR-007: document the high-volume event transport decision (NATS/Kafka vs Redis Streams, ClickHouse migration).
 - [ ] **P2.36** `docs/security/` directory is empty. Add at least a security model overview.
 - [ ] **P2.37** `docs/api/openapi-v0.yaml` is significantly out of sync with the actual router. Reconcile: add missing routes, remove non-existent routes, fix path mismatches.
 - [x] **P2.38** `release-0.1.md` RBAC claim says "placeholder" — code has working RBAC. Update.
