@@ -66,3 +66,11 @@ This document outlines the full 37-module REST API structure required to elevate
     - GET /{id} — Retrieve a single suggestion.
     - POST /{id}/accept — Accept a suggestion (gates policy update via approval workflow; exit criteria: learning cannot directly weaken policy without configured approval).
     - POST /{id}/reject — Reject a suggestion.
+
+
+41. **Roles** (`/api/v1/roles`)
+    - GET — List all roles with their permission sets.
+    - GET /{id} — Retrieve a single role by ID.
+
+42. **Permissions** (`/api/v1/permissions`)
+    - GET — Derive permissions from the role system. Each role carries a permissions[] array; this endpoint lists all roles and their associated permissions.
