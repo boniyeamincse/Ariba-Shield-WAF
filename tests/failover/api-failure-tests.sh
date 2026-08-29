@@ -101,6 +101,56 @@ else
   bad "invalid mode accepted ($CODE)"
 fi
 
+note "Test 10: create IP list (blocked)"
+LIST_ID=$(curl -sf -X POST "$BASE/api/v1/ip-lists" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"bad-actors","list_type":"blocked","entries":["203.0.113.0/24"]}' | sed -E 's/.*"id":"([^"]+)".*/\1/')
+if [ -n "$LIST_ID" ] && curl -sf "$BASE/api/v1/ip-lists" | grep -q "bad-actors"; then
+  ok "ip list created + listed"
+else
+  bad "ip list CRUD failed"
+fi
+
+note "Test 11: invalid IP list_type rejected (400)"
+CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/v1/ip-lists" \
+  -H 'Content-Type: application/json' -d '{"name":"x","list_type":"banana"}')
+if [ "$CODE" = "400" ]; then
+  ok "invalid list_type rejected"
+else
+  bad "invalid list_type accepted ($CODE)"
+fi
+
+note "Test 12: create rate limit policy"
+if curl -sf -X POST "$BASE/api/v1/rate-limits" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"login-limit","limit_count":10,"window_seconds":60,"action":"throttle"}' >/dev/null \
+  && curl -sf "$BASE/api/v1/rate-limits" | grep -q "login-limit"; then
+  ok "rate limit created"
+else
+  bad "rate limit CRUD failed"
+fi
+
+note "Test 13: invalid rate limit rejected (400)"
+CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/v1/rate-limits" \
+  -H 'Content-Type: application/json' -d '{"name":"z","limit_count":0}')
+if [ "$CODE" = "400" ]; then
+  ok "invalid rate limit rejected"
+else
+  bad "invalid rate limit accepted ($CODE)"
+fi
+
+note "Test 14: policy version lifecycle (create -> activate)"
+POL_ID=$(curl -sf -X POST "$BASE/api/v1/security-policies" \
+  -H 'Content-Type: application/json' -d '{"name":"versioned"}' | sed -E 's/.*"id":"([^"]+)".*/\1/')
+V1=$(curl -sf -X POST "$BASE/api/v1/security-policies/$POL_ID/versions" \
+  -H 'Content-Type: application/json' \
+  -d '{"document":{"enforcement_mode":"transparent"},"bundle_hash":"hash-v1"}' | sed -E 's/.*"id":"([^"]+)".*/\1/')
+if [ -n "$V1" ] && curl -sf -X POST "$BASE/api/v1/policy-versions/$V1/activate" | grep -q '"status":"active"'; then
+  ok "policy version activated"
+else
+  bad "policy version lifecycle failed"
+fi
+
 echo
 echo "=========================================="
 echo "  api failure tests: $PASS passed, $FAIL failed"

@@ -38,10 +38,20 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Policy binding (Phase 2).
 	mux.HandleFunc("POST /api/v1/security-policies/bind", handlers.BindPolicy(st))
 
+	// Phase 3 — safe blocking: IP lists, rate limits, policy versions.
+	mux.HandleFunc("GET /api/v1/ip-lists", handlers.ListIPLists(st))
+	mux.HandleFunc("POST /api/v1/ip-lists", handlers.CreateIPList(st))
+	mux.HandleFunc("GET /api/v1/rate-limits", handlers.ListRateLimits(st))
+	mux.HandleFunc("POST /api/v1/rate-limits", handlers.CreateRateLimit(st))
+	mux.HandleFunc("POST /api/v1/security-policies/{id}/versions", handlers.CreatePolicyVersion(st))
+	mux.HandleFunc("POST /api/v1/policy-versions/{id}/activate", handlers.ActivatePolicyVersion(st))
+	mux.HandleFunc("POST /api/v1/policy-versions/{id}/rollback", handlers.RollbackPolicyVersion(st))
+
 	// Apply middleware stack (outermost first).
 	var h http.Handler = mux
 	h = middleware.Logging(h)
 	h = middleware.RequestID(h)
+	h = middleware.Audit(st.Pool, h)
 	h = middleware.Recovery(h)
 
 	return h

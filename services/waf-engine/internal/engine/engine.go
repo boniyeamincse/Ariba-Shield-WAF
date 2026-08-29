@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ariba-shield/waf-engine/internal/engine/blockpage"
+	"github.com/ariba-shield/waf-engine/internal/engine/iplist"
+	"github.com/ariba-shield/waf-engine/internal/engine/ratelimit"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -24,16 +27,32 @@ type Config struct {
 	EventSink    io.Writer
 	BlockStatus  int
 	RequestIDHdr string
+	// AnomalyThreshold: if > 0, block when the transaction anomaly score
+	// reaches this value even if no single rule interruption fired (Phase 3).
+	AnomalyThreshold int
+	// BlockTitle/BlockMessage/BlockEventID configure the custom block page.
+	BlockTitle   string
+	BlockMessage string
+	BlockEventID string
 }
 
 // Engine wraps Coraza and the reverse proxy.
 type Engine struct {
-	waf         coraza.WAF
-	backend     *url.URL
-	detectOnly  bool
-	sink        io.Writer
-	blockStatus int
-	reqIDHdr    string
+	waf            coraza.WAF
+	backend        *url.URL
+	detectOnly     bool
+	sink           io.Writer
+	blockStatus    int
+	reqIDHdr       string
+	anomalyThresh  int
+	blockTitle     string
+	blockMessage   string
+	blockEventID   string
+	ipList         *iplist.List
+	rateLimiter    *ratelimit.SlidingWindow
+	rateLimitRoute string // path prefix to rate limit, "" = all
+	rateLimitCount int
+	rateLimitWin   time.Duration
 }
 
 // New builds the engine from config.
@@ -60,13 +79,48 @@ func New(cfg Config) (*Engine, error) {
 	}
 
 	return &Engine{
-		waf:         waf,
-		backend:     backend,
-		detectOnly:  cfg.DetectOnly,
-		sink:        sink,
-		blockStatus: blockStatus,
-		reqIDHdr:    cfg.RequestIDHdr,
+		waf:            waf,
+		backend:        backend,
+		detectOnly:     cfg.DetectOnly,
+		sink:           sink,
+		blockStatus:    blockStatus,
+		reqIDHdr:       cfg.RequestIDHdr,
+		anomalyThresh:  cfg.AnomalyThreshold,
+		blockTitle:     cfg.BlockTitle,
+		blockMessage:   cfg.BlockMessage,
+		blockEventID:   cfg.BlockEventID,
+		ipList:         iplist.New(),
 	}, nil
+}
+
+// SetIPLists replaces the allow/block IP prefix sets atomically.
+func (e *Engine) SetIPLists(allowed, blocked []string) error {
+	if err := e.ipList.SetAllowed(allowed); err != nil {
+		return err
+	}
+	return e.ipList.SetBlocked(blocked)
+}
+
+// SetRateLimit configures per-IP rate limiting. limit<=0 disables.
+func (e *Engine) SetRateLimit(route string, count int, window time.Duration) {
+	if count <= 0 {
+		e.rateLimiter = nil
+		return
+	}
+	e.rateLimiter = ratelimit.New(count, window)
+	e.rateLimitRoute = route
+	e.rateLimitCount = count
+	e.rateLimitWin = window
+}
+
+// EnableRateLimit creates a limiter when none exists (for tests).
+func (e *Engine) EnableRateLimit(route string, count int, window time.Duration) {
+	if e.rateLimiter == nil {
+		e.rateLimiter = ratelimit.New(count, window)
+	}
+	e.rateLimitRoute = route
+	e.rateLimitCount = count
+	e.rateLimitWin = window
 }
 
 // Handler returns the HTTP handler that inspects and forwards.
@@ -75,10 +129,7 @@ func (e *Engine) Handler() http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
-		// Build a Coraza transaction.
-		tx := e.waf.NewTransaction()
-		defer tx.Close()
+		ip := clientIP(r.RemoteAddr)
 
 		reqID := r.Header.Get(e.reqIDHdr)
 		event := &SecurityEvent{
@@ -91,9 +142,47 @@ func (e *Engine) Handler() http.Handler {
 			Method:         r.Method,
 			Path:           r.URL.Path,
 			Host:           r.Host,
-			ClientIP:       clientIP(r.RemoteAddr),
+			ClientIP:       ip,
 			DecisionAction: "pass",
 		}
+
+		// Phase 3: IP reputation pre-check (step 7 of the pipeline).
+		if e.ipList.IsBlocked(ip) {
+			event.DecisionAction = "block"
+			event.Severity = "medium"
+			event.Reason = "ip_blocklist"
+			event.RuleIDs = []string{"ip-list"}
+			event.Status = e.blockStatus
+			e.logEvent(event)
+			e.serveBlock(w, event)
+			return
+		}
+
+		// Phase 3: rate limit (step 14 of the pipeline).
+		if e.rateLimiter != nil {
+			routeOK := e.rateLimitRoute == "" || strings.HasPrefix(r.URL.Path, e.rateLimitRoute)
+			if routeOK {
+				allowed, remaining := e.rateLimiter.Allow(ip)
+				if !allowed {
+					event.DecisionAction = "rate_limit"
+					event.Severity = "medium"
+					event.Reason = "rate_limit_exceeded"
+					event.RuleIDs = []string{"rate-limit"}
+					event.Status = 429
+					e.logEvent(event)
+					w.Header().Set("Retry-After", fmt.Sprintf("%d", int(e.rateLimitWin.Seconds())))
+					w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+					blockpage.Write(w, http.StatusTooManyRequests,
+						e.blockTitle, "Too many requests. Please try again later.", event.EventID)
+					return
+				}
+				w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+			}
+		}
+
+		// Build a Coraza transaction.
+		tx := e.waf.NewTransaction()
+		defer tx.Close()
 
 		// Seed the transaction from the request.
 		tx.ProcessConnection(event.ClientIP, 0, r.Host, 0)
@@ -176,15 +265,21 @@ func (e *Engine) handleInterruption(w http.ResponseWriter, event *SecurityEvent,
 	e.logEvent(event)
 
 	if e.detectOnly {
-		// Transparent: serve a synthesized 200 so detection never blocks.
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	status := e.blockStatus
-	if it.Status != 0 {
-		status = it.Status
+	e.serveBlock(w, event)
+}
+
+// serveBlock writes the custom block page or a plain status line.
+func (e *Engine) serveBlock(w http.ResponseWriter, event *SecurityEvent) {
+	w.Header().Set("X-Shield-Blocked", "1")
+	w.Header().Set("X-Shield-Event-ID", event.EventID)
+	if e.blockTitle != "" {
+		blockpage.Write(w, e.blockStatus, e.blockTitle, e.blockMessage, event.EventID)
+	} else {
+		w.WriteHeader(e.blockStatus)
 	}
-	w.WriteHeader(status)
 }
 
 // logEvent writes a security event as JSON-lines (non-blocking upstream).
