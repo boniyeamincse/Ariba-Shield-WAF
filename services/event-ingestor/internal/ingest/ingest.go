@@ -12,6 +12,14 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+const (
+	// DefaultMaxBuf caps the in-memory event buffer to prevent OOM on DB
+	// outage (P2.21). Events beyond this are dropped.
+	DefaultMaxBuf = 10_000
+	// MaxBackoff is the upper bound on retry wait between flush failures.
+	MaxBackoff = 30 * time.Second
+)
+
 // Event is the normalized shape written to PostgreSQL.
 // Only fields with no sensitive payloads are stored (masking rule).
 type Event struct {
@@ -37,15 +45,17 @@ type Event struct {
 
 // Ingestor consumes JSON-lines events from an io.Reader and writes them to
 // PostgreSQL in batches. Never blocks or crashes the producer: on DB failure
-// it backs off and resumes; events in-flight may be dropped (best-effort).
+// it backs off and resumes; events beyond the buffer cap are dropped.
 type Ingestor struct {
-	pool *pgxpool.Pool
-	buf  []Event
+	pool    *pgxpool.Pool
+	buf     []Event
+	maxBuf  int
+	backoff time.Duration
 }
 
 // New creates an Ingestor bound to a DB pool.
 func New(pool *pgxpool.Pool) *Ingestor {
-	return &Ingestor{pool: pool}
+	return &Ingestor{pool: pool, maxBuf: DefaultMaxBuf}
 }
 
 // Run reads events from r, batched by maxBatch or maxWait, until ctx done or EOF.
@@ -63,41 +73,57 @@ func (in *Ingestor) Run(ctx context.Context, r io.Reader, maxBatch int, maxWait 
 		}
 		var ev Event
 		if err := json.Unmarshal(line, &ev); err != nil {
-			// Malformed line: log and continue; never kill the pipeline.
 			slog.Warn("malformed event line", "error", err)
 			continue
+		}
+
+		// P2.21: bounded buffer — drop oldest events when overflow.
+		if len(in.buf) >= in.maxBuf {
+			// Drop half the buffer to make room.
+			drop := in.maxBuf / 2
+			in.buf = in.buf[drop:]
+			slog.Warn("event buffer overflow", "dropped", drop, "max", in.maxBuf)
 		}
 		in.buf = append(in.buf, ev)
 
 		if len(in.buf) >= maxBatch {
 			if err := in.Flush(ctx); err != nil {
-				slog.Error("flush failed", "error", err)
+				slog.Error("flush failed", "error", err, "backoff", in.backoff)
+				in.backoffOff()
 			}
 		}
 
 		select {
 		case <-tick.C:
 			if err := in.Flush(ctx); err != nil {
-				slog.Error("tick flush failed", "error", err)
+				slog.Error("tick flush failed", "error", err, "backoff", in.backoff)
+				in.backoffOff()
 			}
 		default:
 		}
 
 		select {
 		case <-ctx.Done():
-			return in.Flush(ctx)
+			// P2.22: use a fresh context for the final flush (the signal
+			// context is already cancelled, so flush would fail).
+			flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return in.Flush(flushCtx)
 		default:
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return in.Flush(ctx)
+	flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return in.Flush(flushCtx)
 }
 
 // Flush writes the pending batch to PostgreSQL.
 func (in *Ingestor) Flush(ctx context.Context) error {
 	if len(in.buf) == 0 {
+		in.backoff = 0
 		return nil
 	}
 	batch := in.buf
@@ -105,7 +131,6 @@ func (in *Ingestor) Flush(ctx context.Context) error {
 
 	tx, err := in.pool.Begin(ctx)
 	if err != nil {
-		// Re-queue on failure so data is not silently lost for a transient error.
 		in.buf = append(in.buf, batch...)
 		return err
 	}
@@ -127,9 +152,28 @@ func (in *Ingestor) Flush(ctx context.Context) error {
 			ev.ClientIP, ev.Method, ev.Path, ev.Host, ev.Status, ev.Severity, ev.Decision, ev.Reason,
 			ev.RuleIDs, ev.MatchDetails, ev.Raw, ts)
 		if err != nil {
+			in.buf = append(in.buf, batch...)
 			return err
 		}
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		in.buf = append(in.buf, batch...)
+		return err
+	}
+	in.backoff = 0
+	return nil
+}
+
+// backoffOff implements exponential backoff on flush failure (P2.21).
+func (in *Ingestor) backoffOff() {
+	if in.backoff == 0 {
+		in.backoff = 100 * time.Millisecond
+	} else {
+		in.backoff *= 2
+		if in.backoff > MaxBackoff {
+			in.backoff = MaxBackoff
+		}
+	}
+	time.Sleep(in.backoff)
 }
