@@ -43,6 +43,73 @@ All endpoints require a valid Bearer token (JWT) or session cookie obtained via 
 
 ---
 
+### 1.2 Enable Managed Rules (OWASP CRS)
+**Endpoint:** `POST /security-policies/{policy_id}/rules/managed`
+**Description:** Enable industry-standard managed rule sets (e.g., OWASP Core Rule Set) with configurable paranoia levels.
+
+**Request Body (JSON):**
+```json
+{
+  "rule_set": "OWASP_CRS_V3",
+  "paranoia_level": 1,
+  "enforcement_mode": "DETECTION",
+  "anomaly_score_threshold": 5
+}
+```
+*Note: Best practice is to run at Paranoia Level 1 or 2 in DETECTION mode for the first 3 months to monitor false positives before switching to BLOCKING.*
+
+### 1.3 Create Exception Rule (False Positive Mitigation)
+**Endpoint:** `POST /exceptions`
+**Description:** Create highly specific exclusion rules to prevent valid traffic from being blocked by strict security rules.
+
+**Request Body (JSON):**
+```json
+{
+  "target_rule_id": "ARIBA-SQLI-001",
+  "application_id": "app_internal_hr",
+  "match_conditions": [
+    {
+      "variable": "URI_PATH",
+      "operator": "EQUALS",
+      "value": "/api/reports/query"
+    }
+  ],
+  "reason": "Internal HR reporting payload contains SQL-like syntax",
+  "expiry_days": 90
+}
+```
+
+### 1.4 Automated Policy Testing / Dry-Run Pipeline
+**Endpoint:** `POST /rule-testing/simulate`
+**Description:** Simulate a raw HTTP request against a draft policy to ensure it catches attacks without breaking legitimate traffic (Used heavily in CI/CD pipelines).
+
+**Request Body (JSON):**
+```json
+{
+  "policy_id": "policy_draft_002",
+  "request": {
+    "method": "POST",
+    "path": "/login",
+    "headers": {
+      "User-Agent": "Mozilla/5.0",
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    "body": "username=admin' OR 1=1--"
+  }
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "action": "BLOCK",
+  "matched_rules": ["SQLI-001", "OWASP-942100"],
+  "anomaly_score": 10
+}
+```
+
+---
+
 ## 2. Traffic Control & Bot Management
 
 ### 2.1 Configure Rate Limiting

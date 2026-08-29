@@ -1,0 +1,13 @@
+{
+  "name": "@ariba-shield/sdk-typescript",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/types.ts",
+  "types": "src/types.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

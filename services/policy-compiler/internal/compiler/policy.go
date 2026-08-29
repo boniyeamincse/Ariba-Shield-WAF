@@ -116,9 +116,9 @@ func (d *PolicyDocument) CanonicalJSON() ([]byte, error) {
 	return json.Marshal(d)
 }
 
-// BundleHash returns the SHA-256 of the canonical JSON, hex-encoded.
+// BundleHash returns the SHA-256 of the canonical unsigned JSON, hex-encoded.
 func (d *PolicyDocument) BundleHash() (string, error) {
-	canon, err := d.CanonicalJSON()
+	canon, err := d.canonicalUnsignedJSON()
 	if err != nil {
 		return "", err
 	}

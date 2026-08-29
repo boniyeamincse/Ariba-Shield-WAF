@@ -12,10 +12,21 @@ bootstrap: ## Install local tooling (go, node deps, pre-commit)
 gen: gen-sdk ## Regenerate SDK types from schema
 
 gen-sdk: ## Generate Go and TS SDK types from JSON Schema (source of truth: packages/*/schema)
-	@echo "TODO(Sprint 2): schema-codegen wired to packages/policy-schema + packages/event-schema"
+	go run ./tools/schema-gen
+
+gen-check: ## Verify generated SDK matches schema (golden test; fails if drift)
+	@tmp=$$(mktemp -d); \
+	go run ./tools/schema-gen -out-dir "$$tmp" > /dev/null; \
+	diff "$$tmp/sdk-go/sdk.go" packages/sdk-go/sdk.go && \
+	diff "$$tmp/sdk-typescript/src/types.ts" packages/sdk-typescript/src/types.ts && \
+	echo "gen: SDK up to date" || { echo "gen: SDK out of date — run 'make gen'"; exit 1; }
 
 schema-check: ## Validate JSON Schema files and golden tests
-	@echo "TODO(Sprint 2): schema validator"
+	python3 -m json.tool packages/policy-schema/schema/policy-v0.json > /dev/null
+	python3 -m json.tool packages/event-schema/schema/event-v0.json > /dev/null
+	@echo "schema JSON valid"
+	cd packages/sdk-typescript && npx tsc --noEmit
+	@echo "generated TS SDK typechecks"
 
 fmt: fmt-go fmt-ts ## Format all languages
 

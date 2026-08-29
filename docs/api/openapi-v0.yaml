@@ -167,6 +167,74 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/AuditEvent" }
+  /api/v1/applications/{id}/domains:
+    get:
+      tags: [applications]
+      operationId: listDomains
+      summary: List domains for an application
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: List of domains
+  /api/v1/applications/{id}/origins:
+    get:
+      tags: [applications]
+      operationId: listOrigins
+      summary: List upstream origins for an application
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: List of origins
+  /api/v1/security-policies:
+    get:
+      tags: [security-policies]
+      operationId: listSecurityPolicies
+      summary: List security policies
+      responses:
+        "200":
+          description: Security policies
+  /api/v1/gateways:
+    get:
+      tags: [gateways]
+      operationId: listGateways
+      summary: List active gateway nodes
+      responses:
+        "200":
+          description: List of gateways
+  /api/v1/metrics:
+    get:
+      tags: [health]
+      operationId: getMetrics
+      summary: Prometheus metrics endpoint
+      responses:
+        "200":
+          description: Metrics data
+  /api/v1/traffic-control/ip-lists:
+    get:
+      tags: [traffic]
+      operationId: listIpLists
+      summary: Manage IP allowlists and blocklists
+      responses:
+        "200":
+          description: IP Lists
+  /api/v1/traffic-control/rate-limits:
+    get:
+      tags: [traffic]
+      operationId: listRateLimits
+      summary: Manage API rate limits
+      responses:
+        "200":
+          description: Rate limit configurations
+  /api/v1/security-events:
+    get:
+      tags: [audit]
+      operationId: listSecurityEvents
+      summary: Query security block/alert events
+      responses:
+        "200":
+          description: Security events
 components:
   parameters:
     IdempotencyKey:

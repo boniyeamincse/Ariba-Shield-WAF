@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"flag"
 	"fmt"
 	"log"
@@ -14,6 +15,8 @@ func main() {
 	policyPath := flag.String("policy", "", "path to policy document (JSON, ADR-002 schema v0)")
 	outputPath := flag.String("output", "-", "output path for generated nginx config (default stdout)")
 	certDir := flag.String("cert-dir", "/etc/shield-waf/certs", "base directory for certificate_ref lookups (<ref>/cert.pem, <ref>/key.pem inside)")
+	signKey := flag.String("sign-key", "", "path to ed25519 private key PEM; if set, signs the bundle before rendering")
+	signKeyID := flag.String("sign-key-id", "control-plane-01", "key ID attached to the signature")
 	flag.Parse()
 
 	if *policyPath == "" {
@@ -40,6 +43,18 @@ func main() {
 	for _, vs := range doc.VirtualServers {
 		if vs.TLS.Enabled && vs.TLS.CertificateRef != "" {
 			certPaths[vs.TLS.CertificateRef] = filepath.Join(*certDir, vs.TLS.CertificateRef)
+		}
+	}
+
+	// Phase 4: sign the bundle if a signing key is provided.
+	if *signKey != "" {
+		keyBytes, err := os.ReadFile(*signKey)
+		if err != nil {
+			log.Fatalf("read signing key: %v", err)
+		}
+		priv := ed25519.PrivateKey(keyBytes)
+		if err := compiler.SignBundle(doc, priv, *signKeyID); err != nil {
+			log.Fatalf("sign bundle: %v", err)
 		}
 	}
 
