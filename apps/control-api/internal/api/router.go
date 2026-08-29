@@ -218,6 +218,15 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("PATCH /api/v1/tenants/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "tenants", JSONName: "tenant", Columns: []string{"name", "description", "contact_email", "plan", "quotas", "status"}}))
 	mux.HandleFunc("DELETE /api/v1/tenants/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "tenants", JSONName: "tenant"}))
 
+	// Listeners / Virtual Servers (aliased to virtual_servers table)
+	mux.HandleFunc("GET /api/v1/listeners", handlers.ListResource(st, handlers.CRUDConfig{Table: "virtual_servers", JSONName: "listener"}))
+	mux.HandleFunc("POST /api/v1/listeners", handlers.CreateResource(st, handlers.CRUDConfig{Table: "virtual_servers", JSONName: "listener", Required: []string{"name", "listen_port"}, Columns: []string{"name", "listen_addr", "listen_port", "tls_enabled", "certificate_ref", "default_backend_pool_id", "status"}}))
+	mux.HandleFunc("GET /api/v1/listeners/{id}", handlers.GetResource(st, handlers.CRUDConfig{Table: "virtual_servers", JSONName: "listener"}))
+	mux.HandleFunc("PATCH /api/v1/listeners/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "virtual_servers", JSONName: "listener", Columns: []string{"name", "listen_addr", "listen_port", "tls_enabled", "certificate_ref", "default_backend_pool_id", "status"}}))
+	mux.HandleFunc("DELETE /api/v1/listeners/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "virtual_servers", JSONName: "listener"}))
+	mux.HandleFunc("POST /api/v1/listeners/{id}/enable", handlers.EnableListener(st))
+	mux.HandleFunc("POST /api/v1/listeners/{id}/disable", handlers.DisableListener(st))
+
 	// Sites / data centers
 	mux.HandleFunc("GET /api/v1/sites", handlers.ListResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site"}))
 	mux.HandleFunc("POST /api/v1/sites", handlers.CreateResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site", Required: []string{"name"}, Columns: []string{"name", "description", "location", "country_code", "gateway_ids", "status"}}))
