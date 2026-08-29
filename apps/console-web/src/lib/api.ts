@@ -101,3 +101,15 @@ export function createSecurityPolicy(
     body: JSON.stringify({ name, enforcement_mode: enforcementMode, application_id: applicationId }),
   });
 }
+
+export type User = {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  created_at: string;
+};
+
+export function listUsers(): Promise<User[]> {
+  return request<{ users: User[] }>("/users").then((r) => r.users ?? []);
+}
