@@ -287,11 +287,18 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/gateway-clusters/{id}/rollback", handlers.RollbackClusterConfig(st))
 	mux.HandleFunc("GET /api/v1/gateway-clusters/{id}/health", handlers.ClusterHealth(st))
 
-	// Phase 4: incidents + automation + clusters + caching
-	mux.HandleFunc("GET /api/v1/incident-response", handlers.ListResource(st, handlers.CRUDConfig{Table: "incidents", JSONName: "incident"}))
-	mux.HandleFunc("POST /api/v1/incident-response", handlers.CreateResource(st, handlers.CRUDConfig{Table: "incidents", JSONName: "incident", Required: []string{"title"}, Columns: []string{"title", "severity", "status", "owner_user_id", "notes", "related_events"}}))
-	mux.HandleFunc("PATCH /api/v1/incident-response/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "incidents", JSONName: "incident", Columns: []string{"severity", "status", "owner_user_id", "notes"}}))
-	mux.HandleFunc("DELETE /api/v1/incident-response/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "incidents", JSONName: "incident"}))
+	// Phase 4: incidents
+	mux.HandleFunc("GET /api/v1/incidents", handlers.ListIncidents(st))
+	mux.HandleFunc("POST /api/v1/incidents", handlers.CreateIncident(st))
+	mux.HandleFunc("GET /api/v1/incidents/{id}", handlers.GetIncident(st))
+	mux.HandleFunc("PATCH /api/v1/incidents/{id}", handlers.UpdateIncident(st))
+	mux.HandleFunc("DELETE /api/v1/incidents/{id}", handlers.DeleteIncident(st))
+	mux.HandleFunc("POST /api/v1/incidents/{id}/assign", handlers.AssignIncident(st))
+	mux.HandleFunc("POST /api/v1/incidents/{id}/escalate", handlers.EscalateIncident(st))
+	mux.HandleFunc("POST /api/v1/incidents/{id}/close", handlers.CloseIncident(st))
+	mux.HandleFunc("POST /api/v1/incidents/{id}/reopen", handlers.ReopenIncident(st))
+	mux.HandleFunc("GET /api/v1/incidents/{id}/events", handlers.IncidentEvents(st))
+	mux.HandleFunc("GET /api/v1/incidents/{id}/timeline", handlers.IncidentTimeline(st))
 
 	mux.HandleFunc("GET /api/v1/automation", handlers.ListResource(st, handlers.CRUDConfig{Table: "automation_rules", JSONName: "automation rule"}))
 	mux.HandleFunc("POST /api/v1/automation", handlers.CreateResource(st, handlers.CRUDConfig{Table: "automation_rules", JSONName: "automation rule", Required: []string{"name", "trigger_event"}, Columns: []string{"name", "trigger_event", "action", "target", "enabled"}}))

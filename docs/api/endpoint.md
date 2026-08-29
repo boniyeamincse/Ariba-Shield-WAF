@@ -36,7 +36,7 @@ This document outlines the full 37-module REST API structure required to elevate
 25. **Security & Threat Analytics** (`/api/v1/analytics`)
 26. **Rule Hit Analytics** (`/api/v1/rule-analytics`)
 27. **Attack Response Automation** (`/api/v1/automation`)
-28. **Incident Response & Webhooks** (`/api/v1/incident-response`)
+28. **Incident Response & Webhooks** (`/api/v1/incidents`)
 29. **Backup & Disaster Recovery** (`/api/v1/backups`)
 30. **Multi-Tenancy** (`/api/v1/organizations`, `/api/v1/workspaces`)
 31. **HA & Cluster Management** (`/api/v1/clusters`)
