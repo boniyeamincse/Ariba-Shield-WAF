@@ -98,8 +98,12 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Phase 3 — safe blocking: IP lists, rate limits, policy versions.
 	mux.HandleFunc("GET /api/v1/ip-lists", handlers.ListIPLists(st))
 	mux.HandleFunc("POST /api/v1/ip-lists", handlers.CreateIPList(st))
+	mux.HandleFunc("GET /api/v1/ip-lists/{id}", handlers.GetIPList(st))
 	mux.HandleFunc("PATCH /api/v1/ip-lists/{id}", handlers.UpdateIPList(st))
 	mux.HandleFunc("DELETE /api/v1/ip-lists/{id}", handlers.DeleteIPList(st))
+	mux.HandleFunc("GET /api/v1/ip-lists/{id}/entries", handlers.ListIPEntries(st))
+	mux.HandleFunc("POST /api/v1/ip-lists/{id}/entries", handlers.AddIPEntry(st))
+	mux.HandleFunc("DELETE /api/v1/ip-lists/{id}/entries/{entryId}", handlers.DeleteIPEntry(st))
 	mux.HandleFunc("GET /api/v1/rate-limits", handlers.ListRateLimits(st))
 	mux.HandleFunc("POST /api/v1/rate-limits", handlers.CreateRateLimit(st))
 	mux.HandleFunc("PATCH /api/v1/rate-limits/{id}", handlers.UpdateRateLimit(st))
