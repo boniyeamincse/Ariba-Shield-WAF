@@ -40,16 +40,18 @@ type UpstreamServer struct {
 
 // Server models an nginx server block derived from a virtual server.
 type Server struct {
-	ListenAddr    string
-	ListenPort    int
-	SSL           bool
-	HTTP2         bool
-	ServerName    string
-	SSLCertPath   string
-	SSLKeyPath    string
-	MaxBodySize   string
-	MaxHeaderSize string
-	Locations     []Location
+	ListenAddr      string
+	ListenPort      int
+	SSL             bool
+	HTTP2           bool
+	ServerName      string
+	SSLCertPath     string
+	SSLKeyPath      string
+	MaxBodySize     string
+	MaxHeaderSize   string
+	VirtualServerID string
+	ApplicationID   string
+	Locations       []Location
 }
 
 type Location struct {
@@ -191,13 +193,15 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 		}
 
 		s := Server{
-			ListenAddr:    addr,
-			ListenPort:    vs.ListenPort,
-			SSL:           vs.TLS.Enabled,
-			HTTP2:         http2,
-			ServerName:    "_",
-			MaxBodySize:   "10m",
-			MaxHeaderSize: "8k",
+			ListenAddr:      addr,
+			ListenPort:      vs.ListenPort,
+			SSL:             vs.TLS.Enabled,
+			HTTP2:           http2,
+			ServerName:      "_",
+			MaxBodySize:     "10m",
+			MaxHeaderSize:   "8k",
+			VirtualServerID: vs.ID,
+			ApplicationID:   appIDForPool(doc, vs.DefaultBackendPoolID),
 		}
 
 		if vs.TLS.Enabled {
@@ -268,6 +272,17 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 		return "", fmt.Errorf("execute template: %w", err)
 	}
 	return buf.String(), nil
+}
+
+// appIDForPool returns the application_id of the first pool whose ID matches,
+// or the pool's own application_id if found. Used to stamp X-Shield-App-ID.
+func appIDForPool(doc *PolicyDocument, poolID string) string {
+	for _, p := range doc.BackendPools {
+		if p.ID == poolID {
+			return p.ApplicationID
+		}
+	}
+	return ""
 }
 
 func validate(doc *PolicyDocument) error {

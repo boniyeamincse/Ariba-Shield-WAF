@@ -17,6 +17,7 @@ import (
 	"github.com/ariba-shield/waf-engine/internal/engine/ratelimit"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/oklog/ulid/v2"
 )
 
 // Config holds runtime settings for the WAF sidecar.
@@ -179,6 +180,13 @@ func (e *Engine) Handler() http.Handler {
 			Host:           r.Host,
 			ClientIP:       ip,
 			DecisionAction: "pass",
+		}
+
+		// Populate virtual server / application identity from trusted gateway
+		// headers (set by the OpenResty template, P2.19).
+		if e.trustProxy {
+			event.VirtualServerID = r.Header.Get("X-Shield-VS-ID")
+			event.ApplicationID = r.Header.Get("X-Shield-App-ID")
 		}
 
 		// Phase 3: IP reputation pre-check (step 7 of the pipeline).
@@ -407,7 +415,7 @@ func truncate(s string, n int) string {
 	return s[:n] + "..."
 }
 
-// newID is a small ULID-like generator; in production uses the real ULID lib.
+// newID generates a real ULID public identifier (P2.18).
 func newID() string {
-	return fmt.Sprintf("%d-%x", time.Now().UnixNano(), os.Getpid())
+	return ulid.Make().String()
 }

@@ -91,6 +91,8 @@
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Request-ID $shield_request_id;
+        proxy_set_header X-Shield-VS-ID "{{.VirtualServerID}}";
+        proxy_set_header X-Shield-App-ID "{{.ApplicationID}}";
         proxy_set_header Host $host;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
