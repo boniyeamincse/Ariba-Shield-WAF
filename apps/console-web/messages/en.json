@@ -66,5 +66,17 @@
     "actions": "Actions",
     "active": "Active",
     "invited": "Invited"
+  },
+  "audit": {
+    "title": "Audit Log",
+    "description": "Immutable, append-only record of all configuration changes and security events.",
+    "immutable_note": "This log is append-only. No entries can be edited or deleted. All mutations are recorded with actor identity, timestamp, and request ID.",
+    "no_events": "No audit events yet. Configuration changes will appear here.",
+    "time": "Time",
+    "action": "Action",
+    "resource": "Resource",
+    "actor": "Actor",
+    "ip": "IP Address",
+    "request_id": "Request ID"
   }
 }

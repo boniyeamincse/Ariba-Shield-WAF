@@ -37,6 +37,9 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Security events (Phase 2).
 	mux.HandleFunc("GET /api/v1/security-events", handlers.ListSecurityEvents(st))
 
+	// Audit log (immutable).
+	mux.HandleFunc("GET /api/v1/audit-events", handlers.ListAuditEvents(st))
+
 	// Policy binding (Phase 2).
 	mux.HandleFunc("POST /api/v1/security-policies/bind", handlers.BindPolicy(st))
 

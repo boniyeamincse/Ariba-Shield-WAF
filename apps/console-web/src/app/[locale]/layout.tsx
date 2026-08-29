@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import "@/globals.css";
-import { AuthProvider } from "../../context/AuthContext";
 
 export const metadata: Metadata = {
   title: "Ariba Shield WAF",
@@ -12,7 +9,9 @@ export const metadata: Metadata = {
 
 const locales = ["en", "bn"];
 
-export default async function RootLayout({
+// Locale segment layout: validates the locale and pins it for this subtree.
+// <html>/<body> and providers live in the root layout (src/app/layout.tsx).
+export default async function LocaleLayout({
   children,
   params,
 }: {
@@ -23,17 +22,5 @@ export default async function RootLayout({
   if (!locales.includes(locale)) notFound();
 
   setRequestLocale(locale);
-  const messages = await getMessages();
-
-  return (
-    <html lang={locale}>
-      <body>
-        <NextIntlClientProvider messages={messages}>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
-  );
+  return children;
 }
