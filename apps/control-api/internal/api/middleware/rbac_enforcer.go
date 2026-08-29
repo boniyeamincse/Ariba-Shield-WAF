@@ -46,6 +46,11 @@ var DefaultRoutePermissions = []RoutePermission{
 
 	{Method: "GET", PathPrefix: "/api/v1/certificates", Permissions: []string{PermCertificateRead, PermCertificateWrite}},
 	{Method: "POST", PathPrefix: "/api/v1/certificates", Permissions: []string{PermCertificateWrite}},
+	{Method: "DELETE", PathPrefix: "/api/v1/certificates", Permissions: []string{PermCertificateWrite}},
+	{Method: "GET", PathPrefix: "/api/v1/tls-profiles", Permissions: []string{PermCertificateRead, PermCertificateWrite}},
+	{Method: "POST", PathPrefix: "/api/v1/tls-profiles", Permissions: []string{PermCertificateWrite}},
+	{Method: "PATCH", PathPrefix: "/api/v1/tls-profiles", Permissions: []string{PermCertificateWrite}},
+	{Method: "DELETE", PathPrefix: "/api/v1/tls-profiles", Permissions: []string{PermCertificateWrite}},
 
 	{Method: "GET", PathPrefix: "/api/v1/users", Permissions: []string{PermUserRead, PermUserAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/users", Permissions: []string{PermUserAdmin}},

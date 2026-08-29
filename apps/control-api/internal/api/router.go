@@ -143,6 +143,18 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/deployments", handlers.SyncDeployment(st))
 	mux.HandleFunc("GET /api/v1/certificates", handlers.ListCertificates(st))
 	mux.HandleFunc("POST /api/v1/certificates", handlers.UploadCertificate(st))
+	mux.HandleFunc("GET /api/v1/certificates/{id}", handlers.GetCertificate(st))
+	mux.HandleFunc("DELETE /api/v1/certificates/{id}", handlers.DeleteCertificate(st))
+	mux.HandleFunc("POST /api/v1/certificates/import", handlers.ImportCertificate(st))
+	mux.HandleFunc("POST /api/v1/certificates/{id}/renew", handlers.RenewCertificate(st))
+	mux.HandleFunc("GET /api/v1/certificates/{id}/expiry", handlers.CertExpiry(st))
+
+	// TLS profiles
+	mux.HandleFunc("GET /api/v1/tls-profiles", handlers.ListResource(st, handlers.CRUDConfig{Table: "tls_profiles", JSONName: "tls profile"}))
+	mux.HandleFunc("POST /api/v1/tls-profiles", handlers.CreateResource(st, handlers.CRUDConfig{Table: "tls_profiles", JSONName: "tls profile", Required: []string{"name"}, Columns: []string{"name", "min_version", "max_version", "cipher_suites", "certificate_ref", "renegotiation", "status"}}))
+	mux.HandleFunc("GET /api/v1/tls-profiles/{id}", handlers.GetResource(st, handlers.CRUDConfig{Table: "tls_profiles", JSONName: "tls profile"}))
+	mux.HandleFunc("PATCH /api/v1/tls-profiles/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "tls_profiles", JSONName: "tls profile", Columns: []string{"name", "min_version", "max_version", "cipher_suites", "certificate_ref", "renegotiation", "status"}}))
+	mux.HandleFunc("DELETE /api/v1/tls-profiles/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "tls_profiles", JSONName: "tls profile"}))
 
 	// ===== API roadmap modules (endpoint.md) =====
 
