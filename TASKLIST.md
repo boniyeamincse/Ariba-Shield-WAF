@@ -21,18 +21,18 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 
 ## P1 — High (blocking Phase 4 deliverables or major features)
 
-- [ ] **P1.1** Multi-gateway config distribution: add `GET /api/v1/gateways/{id}/config/current` that returns the signed bundle (with `304 Not Modified`). Add `applied_hash` reconciliation.
-- [ ] **P1.2** Load-balancing algorithms: implement `ip_hash` (sticky sessions by client IP) and `consistent_hash` (by URI) in the policy compiler. The `weighted` algorithm is a no-op alias for `round_robin` — fix.
-- [ ] **P1.3** TLS re-encryption to upstreams: add `protocol` (`http`/`https`) per backend node, emit `proxy_ssl_*` directives and `proxy_pass https://` when `protocol=https`.
-- [ ] **P1.4** Session persistence: add `sticky_cookie` / `sticky_route` fields to the backend pool schema and render `ip_hash` or `sticky` in the nginx config.
-- [ ] **P1.5** Connection draining: add `drain` state + `slow_start` to backend nodes. Active=false nodes should drain gracefully, not be hard-dropped from the upstream.
-- [ ] **P1.6** Active health checks: `HealthMonitor` fields (interval, thresholds, HTTP path, expected status) are declared in the schema but never rendered in the nginx config. Wire them to `health_check` directives.
-- [ ] **P1.7** Backup/restore: add `POST /api/v1/backups` (trigger encrypted DB dump) and `POST /api/v1/backups/restore`. Add `backups` table.
-- [ ] **P1.8** `make test` must include `services/waf-engine`, `services/policy-compiler`, and `services/event-ingestor`. Currently only `apps/control-api` is tested.
-- [ ] **P1.9** `make gen-check` must run in CI as part of the `schema` job to catch schema-SDK drift.
+^- [x] **P1.1** Multi-gateway config distribution: add `GET /api/v1/gateways/{id}/config/current` that returns the signed bundle (with `304 Not Modified`). Add `applied_hash` reconciliation.
+^- [x] **P1.2** Load-balancing algorithms: implement `ip_hash` (sticky sessions by client IP) and `consistent_hash` (by URI) in the policy compiler. The `weighted` algorithm is a no-op alias for `round_robin` — fix.
+^- [x] **P1.3** TLS re-encryption to upstreams: add `protocol` (`http`/`https`) per backend node, emit `proxy_ssl_*` directives and `proxy_pass https://` when `protocol=https`.
+^- [x] **P1.4** Session persistence: add `sticky_cookie` / `sticky_route` fields to the backend pool schema and render `ip_hash` or `sticky` in the nginx config.
+^- [x] **P1.5** Connection draining: add `drain` state + `slow_start` to backend nodes. Active=false nodes should drain gracefully, not be hard-dropped from the upstream.
+^- [x] **P1.6** Active health checks: `HealthMonitor` fields (interval, thresholds, HTTP path, expected status) are declared in the schema but never rendered in the nginx config. Wire them to `health_check` directives.
+^- [x] **P1.7** Backup/restore: add `POST /api/v1/backups` (trigger encrypted DB dump) and `POST /api/v1/backups/restore`. Add `backups` table.
+^- [x] **P1.8** `make test` must include `services/waf-engine`, `services/policy-compiler`, and `services/event-ingestor`. Currently only `apps/control-api` is tested.
+^- [x] **P1.9** `make gen-check` must run in CI as part of the `schema` job to catch schema-SDK drift.
 - [ ] **P1.10** Real auth: replace `X-User-Email`/`X-User-Role` dev headers with session-cookie-based auth. Add login/logout/refresh endpoints, session storage in Redis, HTTP-only/Secure/SameSite cookies, CSRF protection.
-- [ ] **P1.11** Idempotency keys: implement `Idempotency-Key` middleware + table. FR-0.1-043 (M) — documented in OpenAPI but zero code.
-- [ ] **P1.12** Optimistic concurrency: implement `If-Match`/ETag + `WHERE version =` checks on all mutation handlers. FR-0.1-044 (M) — version columns exist but no checks.
+^- [x] **P1.11** Idempotency keys: implement `Idempotency-Key` middleware + table. FR-0.1-043 (M) — documented in OpenAPI but zero code.
+^- [x] **P1.12** Optimistic concurrency: implement `If-Match`/ETag + `WHERE version =` checks on all mutation handlers. FR-0.1-044 (M) — version columns exist but no checks.
 - [x] **P1.13** `engine.go`/`iplist`: `IsAllowed` is never called in the handler. `--allowed-ips` has zero effect. Fix: check allow list before block list.
 
 ---
