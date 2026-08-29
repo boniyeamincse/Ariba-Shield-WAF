@@ -55,21 +55,21 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 - [ ] **P2.14** `replay.sh` should verify security events are emitted in detect mode (not just HTTP status codes).
 - [ ] **P2.15** `replay.sh` should support POST bodies and header injection, not just GET query strings.
 - [ ] **P2.16** `replay.sh` should verify rule IDs and match details in emitted events.
-- [ ] **P2.17** Detach the duplicated nginx template (`gateways/openresty-gateway/nginx/templates/shield.conf.tmpl` vs `services/policy-compiler/internal/compiler/templates/shield.conf.tmpl`). Use a symlink or single source of truth.
-- [ ] **P2.18** `engine.go` `newID()` is not a ULID — uses `fmt.Sprintf("%d-%x", time.Now().UnixNano(), os.Getpid())`. Replace with ULID generation.
-- [ ] **P2.19** `engine.go` `event.go` never populates `virtual_server_id`/`application_id` (only `GATEWAY_ID` env var). These are empty in all events.
-- [ ] **P2.20** `ratelimit/limit.go` buckets map is never evicted — unbounded memory growth per unique client IP. Add TTL eviction.
-- [ ] **P2.21** `event-ingestor/ingest.go` — unbounded `in.buf` growth on DB outage (OOM risk). Add a cap and backoff.
-- [ ] **P2.22** `event-ingestor/ingest.go` — final flush on shutdown uses a cancelled context, dropping the last batch.
+^- [x] **P2.17** Detach the duplicated nginx template (`gateways/openresty-gateway/nginx/templates/shield.conf.tmpl` vs `services/policy-compiler/internal/compiler/templates/shield.conf.tmpl`). Use a symlink or single source of truth.
+^- [x] **P2.18** `engine.go` `newID()` is not a ULID — uses `fmt.Sprintf("%d-%x", time.Now().UnixNano(), os.Getpid())`. Replace with ULID generation.
+^- [x] **P2.19** `engine.go` `event.go` never populates `virtual_server_id`/`application_id` (only `GATEWAY_ID` env var). These are empty in all events.
+^- [x] **P2.20** `ratelimit/limit.go` buckets map is never evicted — unbounded memory growth per unique client IP. Add TTL eviction.
+^- [x] **P2.21** `event-ingestor/ingest.go` — unbounded `in.buf` growth on DB outage (OOM risk). Add a cap and backoff.
+^- [x] **P2.22** `event-ingestor/ingest.go` — final flush on shutdown uses a cancelled context, dropping the last batch.
 - [ ] **P2.23** `handlers/auth.go` (unrouted mock) — delete or route. Contains a hardcoded password check ("admin").
 - [ ] **P2.24** `handlers/certificates.go`, `custom_rules.go`, `managed_rules.go`, `deployments.go`, `webhooks.go`, `exceptions.go` — all unrouted mock handlers. Delete or implement.
-- [ ] **P2.25** `security_events.go` hardcodes `LIMIT 50` with no pagination (`limit`/`offset`/cursor). Add pagination.
+^- [x] **P2.25** `security_events.go` hardcodes `LIMIT 50` with no pagination (`limit`/`offset`/cursor). Add pagination.
 - [ ] **P2.26** `metrics.go` declares `shield_control_request_duration_ms` histogram but never records observations. Process start time reports request start time, not process start.
-- [ ] **P2.27** `mask.go` has no test file. Add `mask_test.go`.
+^- [x] **P2.27** `mask.go` has no test file. Add `mask_test.go`.
 - [ ] **P2.28** `iplist/`, `ratelimit/`, `blockpage/` have no direct unit tests. Add tests.
 - [ ] **P2.29** `cmd/wazuh-forward/main.go` "syslog" mode writes formatted lines to `stdout` — no TCP/UDP/TLS socket, no Wazuh agent API. Implement actual syslog transport.
 - [ ] **P2.30** `wazuh-forward` forwards the entire `raw` event to Wazuh `data` without redaction. Add masking at this hop.
-- [ ] **P2.31** `policy-v0.json` uses `additionalProperties: false` at the top level, contradicting ADR-002 D1 (forward-compat: unknown fields must be preserved). Fix to `true`.
+^- [x] **P2.31** `policy-v0.json` uses `additionalProperties: false` at the top level, contradicting ADR-002 D1 (forward-compat: unknown fields must be preserved). Fix to `true`.
 - [ ] **P2.32** `event-v0.json` uses nested objects; Go `SecurityEvent` uses flat fields. Reconcile the schema with the code.
 - [ ] **P2.33** `tools/schema-gen` only generates `$defs` — no root document types (`Policy`, `Event`). Inline nested objects are mangled to `string`. Required/const/pattern/format are all dropped. Expand coverage.
 - [ ] **P2.34** Missing ADR-005: document the Coraza v3 integration decision (architecture, transaction lifecycle, fail-open semantics, rule loading).

@@ -21,7 +21,8 @@ async function fetchSecurityEvents(): Promise<SecurityEvent[]> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/security-events`, { cache: "no-store" });
     if (!res.ok) return [];
-    return res.json();
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.events ?? []);
   } catch {
     return [];
   }

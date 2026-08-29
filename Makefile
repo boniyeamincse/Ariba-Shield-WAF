@@ -24,6 +24,16 @@ gen-check: ## Verify generated SDK matches schema (golden test; fails if drift)
 	diff "$$tmp/sdk-typescript/src/types.ts" packages/sdk-typescript/src/types.ts && \
 	echo "gen: SDK up to date" || { echo "gen: SDK out of date — run 'make gen'"; exit 1; }
 
+template-check: ## Verify the nginx template copies are identical (P2.17)
+	@diff services/policy-compiler/internal/compiler/templates/shield.conf.tmpl \
+	  gateways/openresty-gateway/nginx/templates/shield.conf.tmpl \
+	  && echo "template: copies in sync" \
+	  || { echo "template: DRIFT — run 'make template-sync'"; exit 1; }
+
+template-sync: ## Sync the gateway template copy from the compiler source of truth
+	cp services/policy-compiler/internal/compiler/templates/shield.conf.tmpl \
+	  gateways/openresty-gateway/nginx/templates/shield.conf.tmpl
+
 schema-check: ## Validate JSON Schema files and golden tests
 	python3 -m json.tool packages/policy-schema/schema/policy-v0.json > /dev/null
 	python3 -m json.tool packages/event-schema/schema/event-v0.json > /dev/null
