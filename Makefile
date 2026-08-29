@@ -39,7 +39,7 @@ test-go:
 	cd apps/control-api && go test ./...
 
 test-ts:
-	npm --prefix apps/console-web run test -- --runInBand
+	npm --prefix apps/console-web run test
 
 build: build-api build-console ## Build all artifacts
 
