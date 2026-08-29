@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS rule_bundles;
+DROP TABLE IF EXISTS rule_tests;
+DROP TABLE IF EXISTS rule_tags;
+DROP TABLE IF EXISTS rule_versions;
+DROP TABLE IF EXISTS rules;

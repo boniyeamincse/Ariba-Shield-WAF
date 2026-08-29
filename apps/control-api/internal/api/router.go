@@ -53,6 +53,25 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/policy-approvals/{id}/approve", handlers.ApprovePolicyApproval(st))
 	mux.HandleFunc("POST /api/v1/policy-approvals/{id}/reject", handlers.RejectPolicyApproval(st))
 
+	// WAF Rules / Signatures (master plan §6.3)
+	mux.HandleFunc("GET /api/v1/rules", handlers.ListResource(st, handlers.CRUDConfig{Table: "rules", JSONName: "rule"}))
+	mux.HandleFunc("POST /api/v1/rules", handlers.CreateResource(st, handlers.CRUDConfig{Table: "rules", JSONName: "rule", Required: []string{"rule_id", "name"}, Columns: []string{"rule_id", "name", "description", "action", "severity", "phase", "source", "status"}}))
+	mux.HandleFunc("GET /api/v1/rules/{id}", handlers.GetRule(st))
+	mux.HandleFunc("PATCH /api/v1/rules/{id}", handlers.UpdateRule(st))
+	mux.HandleFunc("DELETE /api/v1/rules/{id}", handlers.DeleteRule(st))
+	mux.HandleFunc("GET /api/v1/rules/{id}/versions", handlers.ListRuleVersions(st))
+	mux.HandleFunc("POST /api/v1/rules/{id}/test", handlers.TestRule(st))
+	mux.HandleFunc("POST /api/v1/rules/{id}/enable", handlers.EnableRule(st))
+	mux.HandleFunc("POST /api/v1/rules/{id}/disable", handlers.DisableRule(st))
+
+	// Rule Bundles
+	mux.HandleFunc("GET /api/v1/rule-bundles", handlers.ListResource(st, handlers.CRUDConfig{Table: "rule_bundles", JSONName: "bundle"}))
+	mux.HandleFunc("POST /api/v1/rule-bundles", handlers.CreateResource(st, handlers.CRUDConfig{Table: "rule_bundles", JSONName: "bundle", Required: []string{"name"}, Columns: []string{"name", "description", "rule_ids", "status"}}))
+	mux.HandleFunc("GET /api/v1/rule-bundles/{id}", handlers.GetRuleBundle(st))
+	mux.HandleFunc("POST /api/v1/rule-bundles/{id}/sign", handlers.SignRuleBundle(st))
+	mux.HandleFunc("POST /api/v1/rule-bundles/{id}/deploy", handlers.DeployRuleBundle(st))
+	mux.HandleFunc("POST /api/v1/rule-bundles/{id}/rollback", handlers.RollbackRuleBundle(st))
+
 	// Gateway fleet (Phase 2 operations).
 	mux.HandleFunc("POST /api/v1/gateways/register", handlers.RegisterGateway(st))
 	mux.HandleFunc("POST /api/v1/gateways/{id}/heartbeat", handlers.Heartbeat(st))
