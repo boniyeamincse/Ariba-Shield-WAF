@@ -86,6 +86,13 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/health-monitors", handlers.ListHealthMonitors(st))
 	mux.HandleFunc("POST /api/v1/health-monitors", handlers.CreateHealthMonitor(st))
 	mux.HandleFunc("DELETE /api/v1/health-monitors/{id}", handlers.DeleteHealthMonitor(st))
+
+	// Routes (URL routing rules)
+	mux.HandleFunc("GET /api/v1/routes", handlers.ListResource(st, handlers.CRUDConfig{Table: "routes", JSONName: "route"}))
+	mux.HandleFunc("POST /api/v1/routes", handlers.CreateResource(st, handlers.CRUDConfig{Table: "routes", JSONName: "route", Required: []string{"virtual_server_id", "path", "backend_pool_id"}, Columns: []string{"virtual_server_id", "path", "match_type", "backend_pool_id", "priority"}}))
+	mux.HandleFunc("GET /api/v1/routes/{id}", handlers.GetResource(st, handlers.CRUDConfig{Table: "routes", JSONName: "route"}))
+	mux.HandleFunc("PATCH /api/v1/routes/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "routes", JSONName: "route", Columns: []string{"path", "match_type", "backend_pool_id", "priority"}}))
+	mux.HandleFunc("DELETE /api/v1/routes/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "routes", JSONName: "route"}))
 	mux.HandleFunc("GET /api/v1/config-versions", handlers.ListConfigVersions(st))
 	mux.HandleFunc("GET /api/v1/config-versions/{id}", handlers.GetConfigVersion(st))
 	mux.HandleFunc("GET /api/v1/traffic/requests", handlers.ListTrafficRequests(st))

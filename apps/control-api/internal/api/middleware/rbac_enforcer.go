@@ -85,6 +85,10 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "GET", PathPrefix: "/api/v1/health-monitors", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/health-monitors", Permissions: []string{PermAppWrite, PermAppAdmin}},
 	{Method: "DELETE", PathPrefix: "/api/v1/health-monitors", Permissions: []string{PermAppAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/routes", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/routes", Permissions: []string{PermAppWrite, PermAppAdmin}},
+	{Method: "PATCH", PathPrefix: "/api/v1/routes", Permissions: []string{PermAppWrite, PermAppAdmin}},
+	{Method: "DELETE", PathPrefix: "/api/v1/routes", Permissions: []string{PermAppAdmin}},
 	{Method: "GET", PathPrefix: "/api/v1/config-versions", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "GET", PathPrefix: "/api/v1/traffic", Permissions: []string{PermEventRead, PermAuditRead}},
 
