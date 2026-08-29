@@ -194,6 +194,14 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Phase 4: organizations / workspaces (multi-tenancy foundation)
 	mux.HandleFunc("GET /api/v1/organizations", handlers.ListResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization"}))
 	mux.HandleFunc("POST /api/v1/organizations", handlers.CreateResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization", Required: []string{"name"}, Columns: []string{"name"}}))
+
+	// Sites / data centers
+	mux.HandleFunc("GET /api/v1/sites", handlers.ListResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site"}))
+	mux.HandleFunc("POST /api/v1/sites", handlers.CreateResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site", Required: []string{"name"}, Columns: []string{"name", "description", "location", "country_code", "gateway_ids", "status"}}))
+	mux.HandleFunc("GET /api/v1/sites/{id}", handlers.GetSite(st))
+	mux.HandleFunc("PATCH /api/v1/sites/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site", Columns: []string{"name", "description", "location", "country_code", "gateway_ids", "status"}}))
+	mux.HandleFunc("DELETE /api/v1/sites/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site"}))
+	mux.HandleFunc("GET /api/v1/sites/{id}/health", handlers.SiteHealth(st))
 	mux.HandleFunc("GET /api/v1/workspaces", handlers.ListResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "workspace"}))
 
 	// Phase 5: graphql security, CSP, quotas, ML baselines, network protection
