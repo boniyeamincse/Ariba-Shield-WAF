@@ -44,10 +44,17 @@ export type SecurityPolicy = {
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8443";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, role?: string): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> ?? {}),
+  };
+  // Forward role for mock auth RBAC enforcement
+  if (role) headers["X-User-Role"] = role;
+
   const res = await fetch(`${API_BASE}/api/v1${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers,
     credentials: "include",
     cache: "no-store",
   });
@@ -110,6 +117,6 @@ export type User = {
   created_at: string;
 };
 
-export function listUsers(): Promise<User[]> {
-  return request<{ users: User[] }>("/users").then((r) => r.users ?? []);
+export function listUsers(role?: string): Promise<User[]> {
+  return request<{ users: User[] }>("/users", undefined, role).then((r) => r.users ?? []);
 }

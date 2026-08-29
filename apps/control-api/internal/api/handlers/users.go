@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/ariba-shield/control-api/internal/store"
 )
@@ -19,12 +20,9 @@ type userListItem struct {
 func ListUsers(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rows, err := st.Pool.Query(r.Context(), `
-			SELECT u.id, u.email, u.status, u.created_at,
-			       COALESCE(r.name, 'Read Only') AS role
-			FROM users u
-			LEFT JOIN user_roles ur ON ur.user_id = u.id
-			LEFT JOIN roles r ON r.id = ur.role_id
-			ORDER BY u.created_at ASC
+			SELECT id, email, status, created_at
+			FROM users
+			ORDER BY created_at ASC
 		`)
 		if err != nil {
 			http.Error(w, `{"error":"db query failed"}`, http.StatusInternalServerError)
@@ -34,11 +32,22 @@ func ListUsers(st *store.Store) http.HandlerFunc {
 
 		users := []userListItem{}
 		for rows.Next() {
-			var u userListItem
-			if err := rows.Scan(&u.ID, &u.Email, &u.Status, &u.CreatedAt, &u.Role); err != nil {
+			var id, email, status string
+			var createdAt time.Time
+			if err := rows.Scan(&id, &email, &status, &createdAt); err != nil {
 				continue
 			}
-			users = append(users, u)
+			role, _ := st.LookupUserRole(r.Context(), id)
+			if role == "" {
+				role = "Read Only"
+			}
+			users = append(users, userListItem{
+				ID:        id,
+				Email:     email,
+				Status:    status,
+				CreatedAt: createdAt.Format(time.RFC3339),
+				Role:      role,
+			})
 		}
 
 		w.Header().Set("Content-Type", "application/json")

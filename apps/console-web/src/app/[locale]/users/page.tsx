@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import { listUsers, User } from "@/lib/api";
@@ -7,11 +8,18 @@ export default async function UsersAccessPage({ params }: { params: Promise<{ lo
   const { locale } = await params;
   const t = await getTranslations("users");
 
+  // In mock mode, pass X-User-Role: Super Admin so RBAC allows the request
+  // In production this is handled via real session/JWT
+  const cookieStore = await cookies();
+  const session = cookieStore.get("shield_session")?.value ?? "";
+  const isMock = session === "mock_session_token";
+  const role = isMock ? "Super Admin" : undefined;
+
   let usersList: User[] = [];
   let fetchError = false;
 
   try {
-    usersList = await listUsers();
+    usersList = await listUsers(role);
   } catch {
     fetchError = true;
     // Fallback mock data so UI is never blank

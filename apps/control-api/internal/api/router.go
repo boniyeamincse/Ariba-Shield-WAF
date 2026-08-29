@@ -78,18 +78,18 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/certificates", handlers.ListCertificates(st))
 	mux.HandleFunc("POST /api/v1/certificates", handlers.UploadCertificate(st))
 
-	// Apply middleware stack. Order matters (P0.6): Auth and RequestID must set
-	// the request context BEFORE Audit reads it, otherwise the audit trail has
-	// empty actor/request_id. Execution order (outermost first):
-	//   Recovery -> RBACEnforcer -> RequestID -> Auth -> Idempotency -> Audit -> Logging -> mux
+	// Apply middleware stack. Execution order (outermost wraps last, runs first):
+	//   Recovery -> RequestID -> Auth -> RBACEnforcer -> Idempotency -> Audit -> Logging -> mux
+	// Auth MUST run before RBACEnforcer so that the RBAC context (user + permissions)
+	// is populated before the enforcer reads it.
 	var h http.Handler = mux
 	store := middleware.NewIdempotencyStore(24 * time.Hour)
 	h = middleware.Logging(h)
 	h = middleware.Audit(st.Pool, h)
 	h = middleware.Idempotency(store)(h)
+	h = middleware.RBACEnforcer(h)
 	h = middleware.Auth(st)(h)
 	h = middleware.RequestID(h)
-	h = middleware.RBACEnforcer(h)
 	h = middleware.Recovery(h)
 
 	// Global CORS Middleware
