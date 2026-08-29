@@ -20,9 +20,13 @@
     "traffic": "ট্রাফিক",
     "security_events": "নিরাপত্তা ইভেন্ট",
     "policies": "পলিসি",
-    "gateways": "গেটওয়ে",
-    "settings": "সেটিংস",
-    "audit_log": "অডিট লগ"
+    "gateways_clusters": "গেটওয়ে ও ক্লাস্টার",
+    "platform": "প্ল্যাটফর্ম",
+    "integrations": "ইন্টিগ্রেশন",
+    "reports": "রিপোর্ট",
+    "users_access": "ইউজার ও এক্সেস",
+    "audit_log": "অডিট লগ",
+    "system_settings": "সিস্টেম সেটিংস"
   },
   "applications": {
     "title": "অ্যাপ্লিকেশন",

@@ -20,9 +20,13 @@
     "traffic": "Traffic",
     "security_events": "Security Events",
     "policies": "Policies",
-    "gateways": "Gateways",
-    "settings": "Settings",
-    "audit_log": "Audit Log"
+    "gateways_clusters": "Gateways & Clusters",
+    "platform": "Platform",
+    "integrations": "Integrations",
+    "reports": "Reports",
+    "users_access": "Users & Access",
+    "audit_log": "Audit Log",
+    "system_settings": "System Settings"
   },
   "applications": {
     "title": "Applications",

@@ -1,12 +1,15 @@
 SHELL := /bin/bash
 
-.PHONY: help lint lint-go lint-ts test test-go test-ts build build-api build-console gen gen-sdk schema-check audit fmt fmt-go fmt-ts bootstrap clean
+.PHONY: help lint lint-go lint-ts test test-go test-go-all test-ts build build-api build-services build-console gen gen-sdk gen-check schema-check audit fmt fmt-go fmt-ts bootstrap clean check-i18n
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 bootstrap: ## Install local tooling (go, node deps, pre-commit)
 	go mod download -C apps/control-api
+	go mod download -C services/waf-engine
+	go mod download -C services/policy-compiler
+	go mod download -C services/event-ingestor
 	npm --prefix apps/console-web ci
 
 gen: gen-sdk ## Regenerate SDK types from schema
@@ -31,7 +34,9 @@ schema-check: ## Validate JSON Schema files and golden tests
 fmt: fmt-go fmt-ts ## Format all languages
 
 fmt-go:
-	cd apps/control-api && gofmt -l . && gofmt -w .
+	@for d in apps/control-api services/waf-engine services/policy-compiler services/event-ingestor; do \
+		(cd $$d && gofmt -l . && gofmt -w .); \
+	done
 
 fmt-ts:
 	npm --prefix apps/console-web run format -- --write
@@ -40,34 +45,58 @@ lint: lint-go lint-ts ## Lint all languages
 
 lint-go:
 	cd apps/control-api && golangci-lint run
+	cd services/waf-engine && golangci-lint run
+	cd services/policy-compiler && golangci-lint run
+	cd services/event-ingestor && golangci-lint run
 
 lint-ts:
 	npm --prefix apps/console-web run lint
 
-test: test-go test-ts ## Run all tests
+test: test-go-all test-ts ## Run all tests
+
+# P1.8: run tests for ALL Go services, not just control-api.
+test-go-all: test-go test-waf test-compiler test-ingestor
 
 test-go:
 	cd apps/control-api && go test ./...
 
+test-waf:
+	cd services/waf-engine && go test ./...
+
+test-compiler:
+	cd services/policy-compiler && go test ./...
+
+test-ingestor:
+	cd services/event-ingestor && go test ./...
+
 test-ts:
 	npm --prefix apps/console-web run test
 
-build: build-api build-console ## Build all artifacts
+build: build-api build-services build-console ## Build all artifacts
 
 build-api:
 	cd apps/control-api && go build ./...
 
+build-services: ## Build all Go services
+	cd services/waf-engine && go build ./...
+	cd services/policy-compiler && go build ./...
+	cd services/event-ingestor && go build ./...
+
 build-console:
 	npm --prefix apps/console-web run build
 
+check-i18n: ## Verify en/bn message catalogs have matching keys
+	python3 tools/check-i18n.py
+
 audit: ## Run dependency and secret scans
 	cd apps/control-api && go list -m all | govulncheck ./...
+	cd services/waf-engine && go list -m all | govulncheck ./...
 	npm --prefix apps/console-web run audit
 
 test-failover: ## Run gateway + API failure drills
 	@echo "=== Gateway failure tests ==="
 	bash tests/failover/gateway-failure-tests.sh
-	@echo "=== API failure tests (requires compose stack) ==="
+	@echo "=== API failure tests (requires compose stack up) ==="
 	@echo "Skipping: run manually with docker compose up -d first"
 	@echo "  bash tests/failover/api-failure-tests.sh"
 
