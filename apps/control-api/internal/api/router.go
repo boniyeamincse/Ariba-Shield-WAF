@@ -88,6 +88,11 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 
 	// Security events (Phase 2).
 	mux.HandleFunc("GET /api/v1/security-events", handlers.ListSecurityEvents(st))
+	mux.HandleFunc("GET /api/v1/security-events/{id}", handlers.GetSecurityEvent(st))
+	mux.HandleFunc("GET /api/v1/security-events/{id}/matches", handlers.EventMatches(st))
+	mux.HandleFunc("GET /api/v1/security-events/{id}/timeline", handlers.EventTimeline(st))
+	mux.HandleFunc("POST /api/v1/security-events/{id}/mask", handlers.MaskSecurityEvent(st))
+	mux.HandleFunc("POST /api/v1/security-events/{id}/export", handlers.ExportSecurityEvent(st))
 
 	// Audit log (immutable).
 	mux.HandleFunc("GET /api/v1/audit-events", handlers.ListAuditEvents(st))

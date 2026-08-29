@@ -54,8 +54,26 @@ func ListSecurityEvents(st *store.Store) http.HandlerFunc {
 		if v := r.URL.Query().Get("application_id"); v != "" {
 			add("application_id = $"+strconv.Itoa(len(args)+1), v)
 		}
+		if v := r.URL.Query().Get("gateway_id"); v != "" {
+			add("gateway_id = $"+strconv.Itoa(len(args)+1), v)
+		}
+		if v := r.URL.Query().Get("ip"); v != "" {
+			add("client_ip = $"+strconv.Itoa(len(args)+1), v)
+		}
+		if v := r.URL.Query().Get("attack_type"); v != "" {
+			add("reason ILIKE $"+strconv.Itoa(len(args)+1), "%"+v+"%")
+		}
 		if v := r.URL.Query().Get("severity"); v != "" {
 			add("severity = $"+strconv.Itoa(len(args)+1), v)
+		}
+		if v := r.URL.Query().Get("action"); v != "" {
+			add("decision_action = $"+strconv.Itoa(len(args)+1), v)
+		}
+		if v := r.URL.Query().Get("from"); v != "" {
+			add("created_at >= $"+strconv.Itoa(len(args)+1)+"::timestamptz", v)
+		}
+		if v := r.URL.Query().Get("to"); v != "" {
+			add("created_at <= $"+strconv.Itoa(len(args)+1)+"::timestamptz", v)
 		}
 		if v := r.URL.Query().Get("client_ip"); v != "" {
 			add("client_ip = $"+strconv.Itoa(len(args)+1), v)
