@@ -3,9 +3,12 @@
 
 export type BackendNode = {
   active?: boolean;
+  drain?: boolean;
   host?: string;
   id?: Ulid;
   port?: number;
+  protocol?: string;
+  slow_start?: number;
   weight?: number;
 };
 
@@ -16,6 +19,9 @@ export type BackendPool = {
   lb_algorithm?: string;
   name?: string;
   nodes?: BackendNode[];
+  sticky?: boolean;
+  sticky_cookie?: string;
+  sticky_type?: string;
 };
 
 export type HealthMonitor = {

@@ -141,8 +141,11 @@
         "id": { "$ref": "#/$defs/ulid" },
         "name": { "type": "string", "minLength": 1, "maxLength": 128 },
         "application_id": { "$ref": "#/$defs/ulid" },
-        "lb_algorithm": { "type": "string", "enum": ["round_robin", "weighted", "least_conn"], "default": "round_robin" },
+        "lb_algorithm": { "type": "string", "enum": ["round_robin", "weighted", "least_conn", "ip_hash", "consistent_hash"], "default": "round_robin" },
         "health_monitor": { "$ref": "#/$defs/health_monitor" },
+        "sticky": { "type": "boolean", "default": false },
+        "sticky_type": { "type": "string", "enum": ["ip_hash", "cookie"], "default": "ip_hash" },
+        "sticky_cookie": { "type": "string", "minLength": 1 },
         "nodes": {
           "type": "array",
           "items": { "$ref": "#/$defs/backend_node" },
@@ -173,7 +176,10 @@
         "host": { "type": "string", "minLength": 1 },
         "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "weight": { "type": "integer", "minimum": 1, "maximum": 100, "default": 1 },
-        "active": { "type": "boolean", "default": true }
+        "active": { "type": "boolean", "default": true },
+        "protocol": { "type": "string", "enum": ["http", "https"], "default": "http" },
+        "drain": { "type": "boolean", "default": false },
+        "slow_start": { "type": "integer", "minimum": 0, "maximum": 3600, "default": 0 }
       }
     }
   }

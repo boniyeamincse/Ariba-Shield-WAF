@@ -13,9 +13,19 @@ var templatesFS embed.FS
 
 // Upstream models an nginx upstream block derived from a backend pool.
 type Upstream struct {
-	Name       string
-	LeastConn  bool
-	Servers    []UpstreamServer
+	Name          string
+	LeastConn     bool
+	IPHash        bool
+	ConsistentHash bool
+	StickyCookie  string // non-empty => emit sticky cookie directive
+	HealthCheck   bool   // active health checks enabled
+	HealthInterval  string
+	HealthTimeout   string
+	HealthFailCount int
+	HealthPassCount int
+	HealthPath      string
+	HealthStatus    string
+	Servers       []UpstreamServer
 }
 
 type UpstreamServer struct {
@@ -24,6 +34,8 @@ type UpstreamServer struct {
 	Weight     int
 	MaxFails   int
 	FailTimeout int
+	Protocol   string // "http" or "https" (P1.3 TLS re-encryption)
+	SlowStart  string // e.g. "30s" or "" (P1.5)
 }
 
 // Server models an nginx server block derived from a virtual server.
@@ -44,6 +56,8 @@ type Location struct {
 	Path     string
 	Upstream string
 	Timeout  int
+	// Scheme is the upstream protocol (http/https) for TLS re-encryption (P1.3).
+	Scheme string
 }
 
 // RenderNginxConfig produces the nginx configuration from a validated policy
@@ -55,19 +69,90 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 
 	// Build upstreams from backend pools.
 	var upstreams []Upstream
-	poolByName := make(map[string]string) // poolID -> upstream name
+	poolByName := make(map[string]string)   // poolID -> upstream name
+	poolScheme := make(map[string]string)   // poolID -> http|https (P1.3)
 	for _, pool := range doc.BackendPools {
 		name := "pool_" + sanitize(pool.Name)
 		poolByName[pool.ID] = name
 
-		up := Upstream{Name: name, LeastConn: pool.LBAlgorithm == "least_conn"}
+		scheme := "http"
 		for _, node := range pool.Nodes {
-			if !node.Active {
+			if node.Protocol == "https" {
+				scheme = "https"
+				break
+			}
+		}
+		poolScheme[pool.ID] = scheme
+
+		up := Upstream{
+			Name:           name,
+			LeastConn:      pool.LBAlgorithm == "least_conn",
+			IPHash:         pool.LBAlgorithm == "ip_hash" || (pool.Sticky && pool.StickyType == "ip_hash"),
+			ConsistentHash: pool.LBAlgorithm == "consistent_hash",
+		}
+		if pool.Sticky && pool.StickyType == "cookie" {
+			cookie := pool.CookieName
+			if cookie == "" {
+				cookie = "shield_sticky"
+			}
+			up.StickyCookie = cookie
+		}
+
+		// Active health checks (P1.6).
+		if pool.HealthMonitor != nil && pool.HealthMonitor.Type == "http" {
+			hm := pool.HealthMonitor
+			interval := hm.IntervalMS
+			if interval <= 0 {
+				interval = 5000
+			}
+			timeout := hm.TimeoutMS
+			if timeout <= 0 {
+				timeout = 2000
+			}
+			fail := hm.FailThreshold
+			if fail <= 0 {
+				fail = 3
+			}
+			pass := hm.PassThreshold
+			if pass <= 0 {
+				pass = 2
+			}
+			path := hm.HTTPPath
+			if path == "" {
+				path = "/"
+			}
+			up.HealthCheck = true
+			up.HealthInterval = fmt.Sprintf("%dms", interval)
+			up.HealthTimeout = fmt.Sprintf("%dms", timeout)
+			up.HealthFailCount = fail
+			up.HealthPassCount = pass
+			up.HealthPath = path
+			if len(hm.HTTPExpectedStatus) > 0 {
+				statuses := make([]string, 0, len(hm.HTTPExpectedStatus))
+				for _, s := range hm.HTTPExpectedStatus {
+					statuses = append(statuses, fmt.Sprintf("%d", s))
+				}
+				up.HealthStatus = strings.Join(statuses, " ")
+			}
+		}
+
+		for _, node := range pool.Nodes {
+			// Draining nodes keep serving in-flight but stop receiving new
+			// requests: drop them from the upstream (P1.5).
+			if !node.Active || node.Drain {
 				continue
 			}
 			weight := node.Weight
 			if weight == 0 {
 				weight = 1
+			}
+			protocol := node.Protocol
+			if protocol == "" {
+				protocol = "http"
+			}
+			slowStart := ""
+			if node.SlowStart > 0 {
+				slowStart = fmt.Sprintf("%ds", node.SlowStart)
 			}
 			up.Servers = append(up.Servers, UpstreamServer{
 				Host:        node.Host,
@@ -75,6 +160,8 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 				Weight:      weight,
 				MaxFails:    3,
 				FailTimeout: 30,
+				Protocol:    protocol,
+				SlowStart:   slowStart,
 			})
 		}
 		if len(up.Servers) == 0 {
@@ -108,7 +195,7 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 			ListenPort:    vs.ListenPort,
 			SSL:           vs.TLS.Enabled,
 			HTTP2:         http2,
-			ServerName:    vs.Name + ".shield.local",
+			ServerName:    "_",
 			MaxBodySize:   "10m",
 			MaxHeaderSize: "8k",
 		}
@@ -133,7 +220,7 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 
 		// Routes default to the default pool when no path match applies.
 		if len(vs.Routes) == 0 {
-			s.Locations = append(s.Locations, Location{Path: "/", Upstream: upstream})
+			s.Locations = append(s.Locations, Location{Path: "/", Upstream: upstream, Scheme: poolScheme[vs.DefaultBackendPoolID]})
 		} else {
 			for _, r := range vs.Routes {
 				u, ok := poolByName[r.BackendPoolID]
@@ -141,10 +228,13 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 					return "", fmt.Errorf("virtual server %q: route %q references unknown pool %q", vs.Name, r.Path, r.BackendPoolID)
 				}
 				path := r.Path
-				if r.Match == "prefix" && !strings.HasSuffix(path, "/") {
+				if r.Match == "exact" {
+					// nginx `location = <path>` is the exact-match form.
+					path = "= " + r.Path
+				} else if !strings.HasSuffix(path, "/") {
 					path = path + "/"
 				}
-				s.Locations = append(s.Locations, Location{Path: path, Upstream: u})
+				s.Locations = append(s.Locations, Location{Path: path, Upstream: u, Scheme: poolScheme[r.BackendPoolID]})
 			}
 		}
 
@@ -162,7 +252,7 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 	}{
 		LogLevel:        doc.Settings.LogLevel,
 		GatewayID:       first(doc.GatewayTargets, "local"),
-		VirtualServerID: "vs",  // placeholder; one server block each
+		VirtualServerID: "vs",
 		ApplicationID:   "app",
 		Upstreams:       upstreams,
 		Servers:         servers,

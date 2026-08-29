@@ -55,6 +55,8 @@
     {{range .Upstreams}}
     upstream {{.Name}} {
         {{if .LeastConn}}least_conn;{{end}}
+        {{if .IPHash}}ip_hash;{{end}}
+        {{if .ConsistentHash}}hash $request_uri consistent;{{end}}
         {{range .Servers}}
         server {{.Host}}:{{.Port}} weight={{.Weight}} max_fails={{.MaxFails}} fail_timeout={{.FailTimeout}}s;
         {{end}}
@@ -103,7 +105,8 @@
 
         {{range .Locations}}
         location {{.Path}} {
-            proxy_pass http://{{.Upstream}};
+            proxy_pass {{if eq .Scheme "https"}}https://{{else}}http://{{end}}{{.Upstream}};
+            {{if eq .Scheme "https"}}proxy_ssl_server_name on;{{end}}
             {{if .Timeout}}proxy_read_timeout {{.Timeout}};{{end}}
         }
         {{end}}

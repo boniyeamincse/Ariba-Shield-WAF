@@ -6,9 +6,12 @@ package sdk
 // BackendNode 
 type BackendNode struct {
 	Active bool `json:"active,omitempty"`
+	Drain bool `json:"drain,omitempty"`
 	Host string `json:"host,omitempty"`
 	Id Ulid `json:"id,omitempty"`
 	Port int `json:"port,omitempty"`
+	Protocol string `json:"protocol,omitempty"`
+	SlowStart int `json:"slow_start,omitempty"`
 	Weight int `json:"weight,omitempty"`
 }
 
@@ -20,6 +23,9 @@ type BackendPool struct {
 	LbAlgorithm string `json:"lb_algorithm,omitempty"`
 	Name string `json:"name,omitempty"`
 	Nodes []BackendNode `json:"nodes,omitempty"`
+	Sticky bool `json:"sticky,omitempty"`
+	StickyCookie string `json:"sticky_cookie,omitempty"`
+	StickyType string `json:"sticky_type,omitempty"`
 }
 
 // HealthMonitor 

@@ -53,5 +53,18 @@
     "reason": "Reason",
     "rules": "Rules",
     "client_ip": "Client IP"
+  },
+  "users": {
+    "title": "Users & Access",
+    "description": "Manage user accounts, roles, and access controls for this workspace.",
+    "add_user": "Add User",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "last_login": "Last Login",
+    "actions": "Actions",
+    "active": "Active",
+    "invited": "Invited"
   }
 }

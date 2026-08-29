@@ -103,6 +103,15 @@ h1, h2, h3, h4, h5, h6 {
   height: 20px;
 }
 
+.sidebar-section-title {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin: 16px 0 4px 16px;
+}
+
 /* Main Content */
 .main-content {
   flex: 1;

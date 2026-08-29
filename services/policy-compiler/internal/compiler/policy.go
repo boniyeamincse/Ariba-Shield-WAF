@@ -69,6 +69,11 @@ type BackendPool struct {
 	LBAlgorithm   string         `json:"lb_algorithm"`
 	HealthMonitor *HealthMonitor `json:"health_monitor,omitempty"`
 	Nodes         []BackendNode  `json:"nodes"`
+	// Sticky enables session persistence (P1.4). StickyType: ip_hash | cookie.
+	Sticky     bool   `json:"sticky,omitempty"`
+	StickyType string `json:"sticky_type,omitempty"`
+	// CookieName used when StickyType == "cookie".
+	CookieName string `json:"sticky_cookie,omitempty"`
 }
 
 type HealthMonitor struct {
@@ -87,6 +92,13 @@ type BackendNode struct {
 	Port   int    `json:"port"`
 	Weight int    `json:"weight,omitempty"`
 	Active bool   `json:"active,omitempty"`
+	// Protocol for upstream connection (P1.3): "http" (default) or "https".
+	Protocol string `json:"protocol,omitempty"`
+	// Drain marks the node for graceful removal: it stops receiving new
+	// requests but keeps serving in-flight ones (P1.5).
+	Drain bool `json:"drain,omitempty"`
+	// SlowStart seconds before the node is ramped up to full weight (P1.5).
+	SlowStart int `json:"slow_start,omitempty"`
 }
 
 type HeadersConfig struct {
