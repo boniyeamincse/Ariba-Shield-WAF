@@ -82,10 +82,12 @@ services:
     build:
       context: ../../gateways/openresty-gateway
       dockerfile: Dockerfile
+    environment:
+      CONFIG_STORE: /var/lib/shield-waf/config
     ports:
       - "443:443"
     volumes:
-      - gateway-config:/etc/shield-waf/config
+      - gateway-config:/var/lib/shield-waf/config
     depends_on:
       - control-api
     healthcheck:

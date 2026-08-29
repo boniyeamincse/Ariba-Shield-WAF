@@ -7,7 +7,25 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/ulid/v2"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// cost for bcrypt hashing
+const bcryptCost = 10
+
+// HashPassword returns a bcrypt hash of the password.
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	if err != nil {
+		return "", fmt.Errorf("hash password: %w", err)
+	}
+	return string(bytes), nil
+}
+
+// CheckPassword verifies a password against a bcrypt hash.
+func CheckPassword(password, hash string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
 
 // Store wraps the PostgreSQL connection pool.
 type Store struct {
@@ -48,7 +66,6 @@ func (s *Store) Close() {
 // EnsureInitialAdmin creates the initial admin user and organization
 // if they do not exist. Called once at startup.
 func (s *Store) EnsureInitialAdmin(ctx context.Context, email, password string) error {
-	// Check if any admin user exists.
 	var count int
 	if err := s.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE status = 'active'`).Scan(&count); err != nil {
 		return fmt.Errorf("check users: %w", err)
@@ -57,14 +74,18 @@ func (s *Store) EnsureInitialAdmin(ctx context.Context, email, password string) 
 		return nil
 	}
 
-	orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV" // fixed ULID for dev; production uses generated
+	orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
 	if _, err := s.Pool.Exec(ctx, `INSERT INTO organizations (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING`, orgID, "default"); err != nil {
 		return fmt.Errorf("create org: %w", err)
 	}
 
 	userID := "01ARZ3NDEKTSV4RRFFQ69G5FAW"
+	hash, err := HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
 	if _, err := s.Pool.Exec(ctx, `INSERT INTO users (id, organization_id, email, password_hash, language) VALUES ($1, $2, $3, $4, 'en') ON CONFLICT DO NOTHING`,
-		userID, orgID, email, password); err != nil {
+		userID, orgID, email, hash); err != nil {
 		return fmt.Errorf("create initial admin: %w", err)
 	}
 	return nil

@@ -50,3 +50,19 @@ make gen       # regenerate SDK types from schema
 
 See [repository-ci-coding-standards.md](docs/architecture/repository-ci-coding-standards.md)
 for coding standards and the ADR template.
+
+## RBAC Test Users (For Local UI Testing)
+
+Use the following credentials in the local development environment (`http://localhost:3002/login`) to test the Role-Based Access Control (RBAC) UI features:
+
+| Role | Email | Password | Allowed Access |
+|---|---|---|---|
+| **Super Admin** | `superadmin@aribashield.local` | `admin` | Full access to all settings, global policies, and tenant management. |
+| **Platform Admin** | `platform@aribashield.local` | `admin` | Gateway nodes, load balancers, deployments, and cluster health. |
+| **Security Admin** | `security@aribashield.local` | `admin` | Policy creation, custom rules, WAF configurations, and exceptions. |
+| **App Owner** | `appowner@aribashield.local` | `admin` | Only their assigned Applications and related traffic logs. |
+| **SOC Analyst** | `soc@aribashield.local` | `admin` | Security Events, Incident Playbooks, Analytics, and Webhooks. |
+| **Auditor** | `auditor@aribashield.local` | `admin` | Read-only access to Audit Logs, Reports, and System Configurations. |
+| **Read Only** | `readonly@aribashield.local` | `admin` | Read-only view of the main dashboard and live traffic. |
+
+*(Note: In production, these mock passwords must be replaced, and MFA must be enabled according to Phase 3 requirements.)*

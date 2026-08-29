@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -34,6 +35,10 @@ type Config struct {
 	BlockTitle   string
 	BlockMessage string
 	BlockEventID string
+	// TrustProxyHeader, when true, trusts X-Forwarded-For / X-Real-IP set by
+	// the trusted gateway in front of the engine (ADR-004 mTLS chain). Only
+	// enable when the engine is NOT directly reachable by clients.
+	TrustProxyHeader bool
 }
 
 // Engine wraps Coraza and the reverse proxy.
@@ -53,6 +58,7 @@ type Engine struct {
 	rateLimitRoute string // path prefix to rate limit, "" = all
 	rateLimitCount int
 	rateLimitWin   time.Duration
+	trustProxy     bool
 }
 
 // New builds the engine from config.
@@ -99,7 +105,27 @@ func New(cfg Config) (*Engine, error) {
 		blockMessage:   cfg.BlockMessage,
 		blockEventID:   cfg.BlockEventID,
 		ipList:         iplist.New(),
+		trustProxy:     cfg.TrustProxyHeader,
 	}, nil
+}
+
+// clientAddress resolves the client IP for reputation/rate-limit decisions.
+// If trustProxy is enabled, it honors X-Forwarded-For (leftmost entry set by
+// the trusted gateway) or X-Real-IP. Otherwise it uses the connection peer.
+func (e *Engine) clientAddress(r *http.Request) string {
+	if e.trustProxy {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			// Leftmost is the original client (gateway prepends).
+			if i := strings.Index(xff, ","); i != -1 {
+				xff = xff[:i]
+			}
+			return clientIP(xff)
+		}
+		if xri := r.Header.Get("X-Real-IP"); xri != "" {
+			return clientIP(xri)
+		}
+	}
+	return clientIP(r.RemoteAddr)
 }
 
 // SetIPLists replaces the allow/block IP prefix sets atomically.
@@ -138,7 +164,7 @@ func (e *Engine) Handler() http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		ip := clientIP(r.RemoteAddr)
+		ip := e.clientAddress(r)
 
 		reqID := r.Header.Get(e.reqIDHdr)
 		event := &SecurityEvent{
@@ -203,19 +229,38 @@ func (e *Engine) Handler() http.Handler {
 		}
 
 		// Buffer the body so Coraza can inspect it AND the proxy can forward it.
+		// Cap the body size to SecRequestBodyLimit (13 MB in baseline.conf) to
+		// prevent unbounded memory growth (P0.7).
+		const maxBody = 13 << 20 // 13 MB
 		var bodyBytes []byte
 		if tx.IsRequestBodyAccessible() && r.Body != nil {
+			limited := io.LimitReader(r.Body, maxBody+1)
 			var err error
-			bodyBytes, err = io.ReadAll(r.Body)
+			bodyBytes, err = io.ReadAll(limited)
 			if err != nil {
-				// Engine failure: fail open in detect-only, never block traffic.
 				event.Reason = "engine_error"
 				event.DecisionAction = "pass"
 				e.logEvent(event)
 				proxy.ServeHTTP(w, r)
 				return
 			}
-			r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			if len(bodyBytes) > maxBody {
+				// Body exceeds limit — reject with 413 (fail open in detect-only).
+				event.Reason = "body_too_large"
+				event.DecisionAction = "block"
+				event.Severity = "medium"
+				event.RuleIDs = []string{"body-limit"}
+				event.Status = 413
+				e.logEvent(event)
+				if !e.detectOnly {
+					e.serveBlock(w, event)
+					return
+				}
+				// In detect-only: log and continue.
+				r.Body = io.NopCloser(bytes.NewReader(bodyBytes[:maxBody]))
+			} else {
+				r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			}
 			if len(bodyBytes) > 0 {
 				it, _, err := tx.ReadRequestBodyFrom(bytes.NewReader(bodyBytes))
 				if err != nil {
@@ -226,7 +271,9 @@ func (e *Engine) Handler() http.Handler {
 					return
 				}
 				if it != nil {
-					e.handleInterruption(w, event, tx, it)
+					if e.handleInterruption(w, event, tx, it) {
+						proxy.ServeHTTP(w, r)
+					}
 					return
 				}
 			}
@@ -234,7 +281,9 @@ func (e *Engine) Handler() http.Handler {
 
 		it := tx.ProcessRequestHeaders()
 		if it != nil {
-			e.handleInterruption(w, event, tx, it)
+			if e.handleInterruption(w, event, tx, it) {
+				proxy.ServeHTTP(w, r)
+			}
 			return
 		}
 
@@ -250,7 +299,9 @@ func (e *Engine) Handler() http.Handler {
 				return
 			}
 			if it != nil {
-				e.handleInterruption(w, event, tx, it)
+				if e.handleInterruption(w, event, tx, it) {
+					proxy.ServeHTTP(w, r)
+				}
 				return
 			}
 		}
@@ -263,7 +314,10 @@ func (e *Engine) Handler() http.Handler {
 	})
 }
 
-func (e *Engine) handleInterruption(w http.ResponseWriter, event *SecurityEvent, tx types.Transaction, it *types.Interruption) {
+// handleInterruption logs the matched rules and either forwards to the backend
+// (detect-only) or serves a block page. Returns true if the caller should
+// continue to proxy.ServeHTTP (detect-only passthrough), false if blocked.
+func (e *Engine) handleInterruption(w http.ResponseWriter, event *SecurityEvent, tx types.Transaction, it *types.Interruption) bool {
 	matched := tx.MatchedRules()
 	event.DecisionAction = "log"
 	event.Severity = "high"
@@ -274,10 +328,13 @@ func (e *Engine) handleInterruption(w http.ResponseWriter, event *SecurityEvent,
 	e.logEvent(event)
 
 	if e.detectOnly {
-		w.WriteHeader(http.StatusOK)
-		return
+		// Transparent: log the event, then forward to the backend.
+		// The caller must call proxy.ServeHTTP after this returns true.
+		return true
 	}
+	// Blocking: serve the block page.
 	e.serveBlock(w, event)
+	return false
 }
 
 // serveBlock writes the custom block page or a plain status line.
@@ -331,9 +388,13 @@ func matchedDetails(ms []types.MatchedRule) []map[string]string {
 }
 
 func clientIP(remote string) string {
-	if i := strings.LastIndex(remote, ":"); i != -1 {
-		return remote[:i]
+	// Strip port from IPv4 (1.2.3.4:5678) or IPv6 ([::1]:8080).
+	// net.SplitHostPort handles both correctly.
+	if host, _, err := net.SplitHostPort(remote); err == nil {
+		remote = host
 	}
+	// Strip brackets from IPv6 (should already be clean after SplitHostPort).
+	remote = strings.Trim(remote, "[]")
 	return remote
 }
 

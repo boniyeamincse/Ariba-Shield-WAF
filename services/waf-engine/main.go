@@ -27,6 +27,7 @@ func main() {
 	rateLimitRoute := flag.String("rate-limit-route", "", "rate limit applies to this path prefix only (empty = all)")
 	allowedIPs := flag.String("allowed-ips", "", "comma-separated list of allowed IP/CIDR")
 	blockedIPs := flag.String("blocked-ips", "", "comma-separated list of blocked IP/CIDR")
+	trustProxy := flag.Bool("trust-proxy", false, "trust X-Forwarded-For/X-Real-IP from the gateway (only when not directly reachable)")
 	flag.Parse()
 
 	if *backend == "" {
@@ -43,6 +44,7 @@ func main() {
 		AnomalyThreshold: *anomalyThreshold,
 		BlockTitle:       *blockTitle,
 		BlockMessage:     *blockMessage,
+		TrustProxyHeader: *trustProxy,
 	}
 
 	eng, err := engine.New(cfg)

@@ -272,3 +272,123 @@ All endpoints require a valid Bearer token (JWT) or session cookie obtained via 
 }
 ```
 
+---
+
+## 9. Dynamic Threat Intelligence
+### 9.1 Configure Threat Feeds
+**Endpoint:** `POST /threat-feeds`
+**Description:** Integrate real-time threat intelligence feeds to block malicious IPs, ASNs, and domains dynamically.
+
+**Request Body (JSON):**
+```json
+{
+  "feed_name": "Emerging Threats Pro",
+  "feed_type": "IP | DOMAIN | URL",
+  "update_interval": "3600s",
+  "confidence_threshold": 70,
+  "action": "BLOCK | ALERT | SCORE",
+  "source_provenance": "proofpoint.com/et"
+}
+```
+
+---
+
+## 10. Upstream mTLS & Certificate Pinning
+### 10.1 Configure Backend TLS
+**Endpoint:** `POST /applications/{id}/backend-tls`
+**Description:** Secure communication between the WAF and upstream microservices using mTLS.
+
+**Request Body (JSON):**
+```json
+{
+  "enable_mtls": true,
+  "client_certificate_id": "cert-12345",
+  "ca_bundle_id": "ca-prod-01",
+  "verify_hostname": true,
+  "ssl_ciphers": ["TLS_AES_256_GCM_SHA384"]
+}
+```
+
+---
+
+## 11. AI Learning Mode & Anomaly Baselines
+### 11.1 Configure Traffic Baselines
+**Endpoint:** `POST /learning/baseline`
+**Description:** Enable behavioral analysis to detect seasonal anomalies and non-signature-based zero-day attacks.
+
+**Request Body (JSON):**
+```json
+{
+  "application_id": "app-001",
+  "learning_window": "7d",
+  "sensitivity": "MEDIUM",
+  "metrics": ["REQUEST_RATE", "ERROR_RATE", "AVG_PAYLOAD_SIZE"],
+  "auto_mitigation": false,
+  "deviations": {
+    "threshold": 3.5,
+    "action": "INCREASE_ANOMALY_SCORE"
+  }
+}
+```
+
+---
+
+## 12. Response Modification & Data Masking
+### 12.1 Transform Upstream Responses
+**Endpoint:** `POST /policies/response-modification`
+**Description:** Modify or mask sensitive data (like PANs or stack traces) leaking from upstream servers before sending to the client.
+
+**Request Body (JSON):**
+```json
+{
+  "rule_id": "resp-001",
+  "match_pattern": "\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b",
+  "replacement": "****-****-****-****",
+  "content_types": ["application/json", "text/html"],
+  "status_code_range": [200, 299]
+}
+```
+
+---
+
+## 13. Advanced Geo-Fencing
+### 13.1 Regional Access Control
+**Endpoint:** `POST /policies/geo-access`
+**Description:** Drop traffic from unauthorized countries or ASNs at the edge.
+
+**Request Body (JSON):**
+```json
+{
+  "application_id": "banking-api",
+  "allowed_countries": ["BD", "IN"],
+  "blocked_countries": ["RU", "CN", "KP"],
+  "action": "BLOCK",
+  "custom_block_message": "Access restricted to Bangladesh and India."
+}
+```
+
+---
+
+## 14. SOAR Integration & Advanced Webhooks
+### 14.1 Configure Incident Playbook Webhooks
+**Endpoint:** `POST /integrations/webhook`
+**Description:** Trigger external SOAR playbooks (like blocking an IP automatically) when critical WAF events occur.
+
+**Request Body (JSON):**
+```json
+{
+  "name": "SOC-Playbook",
+  "trigger_events": ["SQL_INJECTION", "RCE"],
+  "severity": "HIGH",
+  "webhook_url": "https://soc.company.com/incident/create",
+  "headers": {"X-API-Key": "encrypted_value"},
+  "retry_policy": {"max_attempts": 3, "backoff": "exponential"}
+}
+```
+
+---
+
+## 15. Policy as Code (PaC) & GitOps
+### 15.1 Sync Declarative Configuration
+**Endpoint:** `POST /deployments/sync`
+**Description:** API endpoint for CI/CD tools (Terraform/Ansible) or CLI (`wafctl apply -f policy.yaml`) to push declarative configurations directly to the WAF control plane.
