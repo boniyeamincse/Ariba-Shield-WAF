@@ -21,12 +21,16 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Phase 1 API (placeholder auth; real auth + RBAC in Phase 3).
 	mux.HandleFunc("GET /api/v1/applications", handlers.ListApplications(st))
 	mux.HandleFunc("POST /api/v1/applications", handlers.CreateApplication(st))
+	mux.HandleFunc("PATCH /api/v1/applications/{id}", middleware.OptimisticConcurrency(st, "applications", "id", handlers.UpdateApplication(st)))
+	mux.HandleFunc("DELETE /api/v1/applications/{id}", handlers.DeleteApplication(st))
 	mux.HandleFunc("GET /api/v1/applications/{id}/domains", handlers.ListDomains(st))
 	mux.HandleFunc("POST /api/v1/applications/{id}/domains", handlers.CreateDomain(st))
 	mux.HandleFunc("GET /api/v1/applications/{id}/origins", handlers.ListOrigins(st))
 	mux.HandleFunc("POST /api/v1/applications/{id}/origins", handlers.CreateOrigin(st))
 	mux.HandleFunc("GET /api/v1/security-policies", handlers.ListSecurityPolicies(st))
 	mux.HandleFunc("POST /api/v1/security-policies", handlers.CreateSecurityPolicy(st))
+	mux.HandleFunc("PATCH /api/v1/security-policies/{id}", handlers.UpdateSecurityPolicy(st))
+	mux.HandleFunc("DELETE /api/v1/security-policies/{id}", handlers.DeleteSecurityPolicy(st))
 
 	// Gateway fleet (Phase 2 operations).
 	mux.HandleFunc("POST /api/v1/gateways/register", handlers.RegisterGateway(st))
@@ -46,13 +50,31 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Phase 3 — safe blocking: IP lists, rate limits, policy versions.
 	mux.HandleFunc("GET /api/v1/ip-lists", handlers.ListIPLists(st))
 	mux.HandleFunc("POST /api/v1/ip-lists", handlers.CreateIPList(st))
+	mux.HandleFunc("PATCH /api/v1/ip-lists/{id}", handlers.UpdateIPList(st))
+	mux.HandleFunc("DELETE /api/v1/ip-lists/{id}", handlers.DeleteIPList(st))
 	mux.HandleFunc("GET /api/v1/rate-limits", handlers.ListRateLimits(st))
 	mux.HandleFunc("POST /api/v1/rate-limits", handlers.CreateRateLimit(st))
+	mux.HandleFunc("PATCH /api/v1/rate-limits/{id}", handlers.UpdateRateLimit(st))
+	mux.HandleFunc("DELETE /api/v1/rate-limits/{id}", handlers.DeleteRateLimit(st))
 	mux.HandleFunc("POST /api/v1/security-policies/{id}/versions", handlers.CreatePolicyVersion(st))
 	mux.HandleFunc("POST /api/v1/policy-versions/{id}/activate", handlers.ActivatePolicyVersion(st))
 	mux.HandleFunc("POST /api/v1/policy-versions/{id}/promote", handlers.PromotePolicyVersion(st))
 	mux.HandleFunc("POST /api/v1/policy-versions/{id}/rollback", handlers.RollbackPolicyVersion(st))
 	mux.HandleFunc("GET /api/v1/policy-versions/diff", handlers.DiffPolicyVersions(st))
+
+	// SRS §7 delivery endpoints.
+	mux.HandleFunc("GET /api/v1/virtual-servers", handlers.ListVirtualServers(st))
+	mux.HandleFunc("POST /api/v1/virtual-servers", handlers.CreateVirtualServer(st))
+	mux.HandleFunc("DELETE /api/v1/virtual-servers/{id}", handlers.DeleteVirtualServer(st))
+	mux.HandleFunc("GET /api/v1/backend-pools", handlers.ListBackendPools(st))
+	mux.HandleFunc("POST /api/v1/backend-pools", handlers.CreateBackendPool(st))
+	mux.HandleFunc("DELETE /api/v1/backend-pools/{id}", handlers.DeleteBackendPool(st))
+	mux.HandleFunc("GET /api/v1/health-monitors", handlers.ListHealthMonitors(st))
+	mux.HandleFunc("POST /api/v1/health-monitors", handlers.CreateHealthMonitor(st))
+	mux.HandleFunc("DELETE /api/v1/health-monitors/{id}", handlers.DeleteHealthMonitor(st))
+	mux.HandleFunc("GET /api/v1/config-versions", handlers.ListConfigVersions(st))
+	mux.HandleFunc("GET /api/v1/config-versions/{id}", handlers.GetConfigVersion(st))
+	mux.HandleFunc("GET /api/v1/traffic/requests", handlers.ListTrafficRequests(st))
 
 	// Auth & Identity
 	mux.HandleFunc("POST /api/v1/auth/login", handlers.Login(st))
@@ -67,6 +89,8 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Users (Phase 3 — RBAC-protected, read by SUPER_ADMIN / PLATFORM_ADMIN)
 	mux.HandleFunc("GET /api/v1/users", handlers.ListUsers(st))
 	mux.HandleFunc("POST /api/v1/users", handlers.CreateUser(st))
+	mux.HandleFunc("PATCH /api/v1/users/{id}", handlers.UpdateUser(st))
+	mux.HandleFunc("DELETE /api/v1/users/{id}", handlers.DeleteUser(st))
 
 	// Phase 3 — Webhooks, Exceptions, Rules, Certificates, Deployments
 	mux.HandleFunc("GET /api/v1/webhooks", handlers.ListWebhooks(st))

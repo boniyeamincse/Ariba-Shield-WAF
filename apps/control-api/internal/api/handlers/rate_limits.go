@@ -102,3 +102,71 @@ func nullIfEmpty(s string) *string {
 	}
 	return &s
 }
+// UpdateRateLimit updates a rate limit policy (partial update).
+func UpdateRateLimit(st *store.Store) http.HandlerFunc {
+	type update struct {
+		Name          *string `json:"name"`
+		RoutePrefix   *string `json:"route_prefix"`
+		LimitCount    *int    `json:"limit_count"`
+		WindowSeconds *int    `json:"window_seconds"`
+		Action        *string `json:"action"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var body update
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+
+		ct, err := st.Pool.Exec(r.Context(),
+			`UPDATE rate_limit_policies SET
+			   name = COALESCE($1, name),
+			   route_prefix = COALESCE($2, route_prefix),
+			   limit_count = COALESCE($3, limit_count),
+			   window_seconds = COALESCE($4, window_seconds),
+			   action = COALESCE($5, action),
+			   version = version + 1, updated_at = now()
+			 WHERE id = $6`,
+			nullableString(body.Name), nullableString(body.RoutePrefix),
+			nullableInt(body.LimitCount), nullableInt(body.WindowSeconds),
+			nullableString(body.Action), id)
+		if err != nil {
+			http.Error(w, `{"error":"update failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"rate limit not found"}`, http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"id": id})
+	}
+}
+
+// DeleteRateLimit deletes a rate limit policy.
+func DeleteRateLimit(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		ct, err := st.Pool.Exec(r.Context(), `DELETE FROM rate_limit_policies WHERE id = $1`, id)
+		if err != nil {
+			http.Error(w, `{"error":"delete failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"rate limit not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	}
+}
+
+func nullableInt(i *int) any {
+	if i == nil {
+		return nil
+	}
+	return *i
+}

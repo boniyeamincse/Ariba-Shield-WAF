@@ -83,3 +83,72 @@ func CreateApplication(st *store.Store) http.HandlerFunc {
 		json.NewEncoder(w).Encode(map[string]string{"id": appID})
 	}
 }
+
+// UpdateApplication updates an application (PATCH semantics).
+func UpdateApplication(st *store.Store) http.HandlerFunc {
+	type applicationUpdate struct {
+		Name        *string `json:"name"`
+		Description *string `json:"description"`
+		Status      *string `json:"status"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		appID := r.PathValue("id")
+		var body applicationUpdate
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Verify exists + read current values for partial update.
+		var name, description, status string
+		if err := st.Pool.QueryRow(r.Context(),
+			`SELECT name, COALESCE(description,''), status FROM applications WHERE id = $1`, appID).
+			Scan(&name, &description, &status); err != nil {
+			http.Error(w, `{"error":"application not found"}`, http.StatusNotFound)
+			return
+		}
+
+		if body.Name != nil {
+			name = *body.Name
+		}
+		if body.Description != nil {
+			description = *body.Description
+		}
+		if body.Status != nil {
+			if *body.Status != "active" && *body.Status != "disabled" {
+				http.Error(w, `{"error":"status must be active or disabled"}`, http.StatusBadRequest)
+				return
+			}
+			status = *body.Status
+		}
+
+		if _, err := st.Pool.Exec(r.Context(),
+			`UPDATE applications SET name = $1, description = $2, status = $3, version = version + 1, updated_at = now() WHERE id = $4`,
+			name, description, status, appID); err != nil {
+			http.Error(w, `{"error":"update failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"id": appID, "name": name, "status": status})
+	}
+}
+
+// DeleteApplication deletes an application.
+func DeleteApplication(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		appID := r.PathValue("id")
+		ct, err := st.Pool.Exec(r.Context(), `DELETE FROM applications WHERE id = $1`, appID)
+		if err != nil {
+			http.Error(w, `{"error":"delete failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"application not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	}
+}

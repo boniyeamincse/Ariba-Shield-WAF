@@ -88,3 +88,73 @@ func CreateIPList(st *store.Store) http.HandlerFunc {
 		json.NewEncoder(w).Encode(map[string]string{"id": id})
 	}
 }
+
+// UpdateIPList updates an IP list (entries, description, list type).
+func UpdateIPList(st *store.Store) http.HandlerFunc {
+	type update struct {
+		Name        *string   `json:"name"`
+		ListType    *string   `json:"list_type"`
+		Entries     *[]string `json:"entries"`
+		Description *string   `json:"description"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var body update
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+		if body.ListType != nil && *body.ListType != "allowed" && *body.ListType != "blocked" {
+			http.Error(w, `{"error":"list_type must be allowed or blocked"}`, http.StatusBadRequest)
+			return
+		}
+
+		ct, err := st.Pool.Exec(r.Context(),
+			`UPDATE ip_lists SET
+			   name = COALESCE($1, name),
+			   list_type = COALESCE($2, list_type),
+			   entries = COALESCE($3, entries),
+			   description = COALESCE($4, description),
+			   version = version + 1, updated_at = now()
+			 WHERE id = $5`,
+			nullableString(body.Name), nullableString(body.ListType),
+			body.Entries, nullableString(body.Description), id)
+		if err != nil {
+			http.Error(w, `{"error":"update failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"ip list not found"}`, http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"id": id})
+	}
+}
+
+// DeleteIPList deletes an IP list.
+func DeleteIPList(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		ct, err := st.Pool.Exec(r.Context(), `DELETE FROM ip_lists WHERE id = $1`, id)
+		if err != nil {
+			http.Error(w, `{"error":"delete failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"ip list not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	}
+}
+
+func nullableString(s *string) any {
+	if s == nil {
+		return nil
+	}
+	return *s
+}

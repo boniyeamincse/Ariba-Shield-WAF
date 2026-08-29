@@ -117,3 +117,66 @@ func CreateUser(st *store.Store) http.HandlerFunc {
 		})
 	}
 }
+// UpdateUser updates a user's role or status.
+func UpdateUser(st *store.Store) http.HandlerFunc {
+	type update struct {
+		Role   *string `json:"role"`
+		Status *string `json:"status"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := r.PathValue("id")
+		var body update
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+
+		if body.Role != nil {
+			roleID, err := st.RoleID(r.Context(), *body.Role)
+			if err != nil {
+				http.Error(w, `{"error":"invalid role"}`, http.StatusBadRequest)
+				return
+			}
+			// Replace role mapping.
+			if _, err := st.Pool.Exec(r.Context(),
+				`DELETE FROM user_roles WHERE user_id = $1`, userID); err != nil {
+				http.Error(w, `{"error":"role update failed"}`, http.StatusInternalServerError)
+				return
+			}
+			if err := st.AssignRole(r.Context(), userID, roleID); err != nil {
+				http.Error(w, `{"error":"role update failed"}`, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if body.Status != nil {
+			if _, err := st.Pool.Exec(r.Context(),
+				`UPDATE users SET status = $1 WHERE id = $2`, *body.Status, userID); err != nil {
+				http.Error(w, `{"error":"status update failed"}`, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"id": userID})
+	}
+}
+
+// DeleteUser deletes a user.
+func DeleteUser(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := r.PathValue("id")
+		ct, err := st.Pool.Exec(r.Context(), `DELETE FROM users WHERE id = $1`, userID)
+		if err != nil {
+			http.Error(w, `{"error":"delete failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	}
+}

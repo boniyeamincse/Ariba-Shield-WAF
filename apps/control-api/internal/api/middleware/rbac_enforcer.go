@@ -18,7 +18,7 @@ type RoutePermission struct {
 var DefaultRoutePermissions = []RoutePermission{
 	{Method: "GET", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppWrite, PermAppAdmin}},
-	{Method: "PUT", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppWrite, PermAppAdmin}},
+	{Method: "PATCH", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppWrite, PermAppAdmin}},
 	{Method: "DELETE", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppAdmin}},
 
 	{Method: "GET", PathPrefix: "/api/v1/gateways", Permissions: []string{PermGatewayRead, PermGatewayWrite}},
@@ -27,22 +27,29 @@ var DefaultRoutePermissions = []RoutePermission{
 
 	{Method: "GET", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
-	{Method: "PUT", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "PATCH", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "DELETE", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyAdmin}},
 
 	{Method: "GET", PathPrefix: "/api/v1/security-events", Permissions: []string{PermEventRead, PermAuditRead}},
 	{Method: "GET", PathPrefix: "/api/v1/audit-events", Permissions: []string{PermAuditRead}},
 
 	{Method: "GET", PathPrefix: "/api/v1/ip-lists", Permissions: []string{PermIPListRead, PermIPListWrite}},
 	{Method: "POST", PathPrefix: "/api/v1/ip-lists", Permissions: []string{PermIPListWrite}},
+	{Method: "PATCH", PathPrefix: "/api/v1/ip-lists", Permissions: []string{PermIPListWrite}},
+	{Method: "DELETE", PathPrefix: "/api/v1/ip-lists", Permissions: []string{PermIPListWrite}},
 
 	{Method: "GET", PathPrefix: "/api/v1/rate-limits", Permissions: []string{PermRateLimitRead, PermRateLimitWrite}},
 	{Method: "POST", PathPrefix: "/api/v1/rate-limits", Permissions: []string{PermRateLimitWrite}},
+	{Method: "PATCH", PathPrefix: "/api/v1/rate-limits", Permissions: []string{PermRateLimitWrite}},
+	{Method: "DELETE", PathPrefix: "/api/v1/rate-limits", Permissions: []string{PermRateLimitWrite}},
 
 	{Method: "GET", PathPrefix: "/api/v1/certificates", Permissions: []string{PermCertificateRead, PermCertificateWrite}},
 	{Method: "POST", PathPrefix: "/api/v1/certificates", Permissions: []string{PermCertificateWrite}},
 
 	{Method: "GET", PathPrefix: "/api/v1/users", Permissions: []string{PermUserRead, PermUserAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/users", Permissions: []string{PermUserAdmin}},
+	{Method: "PATCH", PathPrefix: "/api/v1/users", Permissions: []string{PermUserAdmin}},
+	{Method: "DELETE", PathPrefix: "/api/v1/users", Permissions: []string{PermUserAdmin}},
 
 	// Policy version lifecycle.
 	{Method: "POST", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
@@ -62,6 +69,19 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "POST", PathPrefix: "/api/v1/webhooks", Permissions: []string{PermSystemAdmin}},
 	{Method: "GET", PathPrefix: "/api/v1/exceptions", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/exceptions", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+
+	// SRS §7 delivery endpoints.
+	{Method: "GET", PathPrefix: "/api/v1/virtual-servers", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/virtual-servers", Permissions: []string{PermAppWrite, PermAppAdmin}},
+	{Method: "DELETE", PathPrefix: "/api/v1/virtual-servers", Permissions: []string{PermAppAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/backend-pools", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/backend-pools", Permissions: []string{PermAppWrite, PermAppAdmin}},
+	{Method: "DELETE", PathPrefix: "/api/v1/backend-pools", Permissions: []string{PermAppAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/health-monitors", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/health-monitors", Permissions: []string{PermAppWrite, PermAppAdmin}},
+	{Method: "DELETE", PathPrefix: "/api/v1/health-monitors", Permissions: []string{PermAppAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/config-versions", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/traffic", Permissions: []string{PermEventRead, PermAuditRead}},
 }
 
 // CheckRoutePermission returns true if the request method+path is authorized

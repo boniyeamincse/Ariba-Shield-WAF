@@ -102,3 +102,66 @@ func CreateSecurityPolicy(st *store.Store) http.HandlerFunc {
 		json.NewEncoder(w).Encode(map[string]string{"id": policyID})
 	}
 }
+// UpdateSecurityPolicy updates a security policy (partial update).
+func UpdateSecurityPolicy(st *store.Store) http.HandlerFunc {
+	type update struct {
+		Name            *string `json:"name"`
+		Description     *string `json:"description"`
+		EnforcementMode *string `json:"enforcement_mode"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var body update
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+		if body.EnforcementMode != nil {
+			switch *body.EnforcementMode {
+			case "transparent", "alarm", "blocking":
+			default:
+				http.Error(w, `{"error":"invalid enforcement_mode"}`, http.StatusBadRequest)
+				return
+			}
+		}
+
+		ct, err := st.Pool.Exec(r.Context(),
+			`UPDATE security_policies SET
+			   name = COALESCE($1, name),
+			   description = COALESCE($2, description),
+			   enforcement_mode = COALESCE($3, enforcement_mode),
+			   version = version + 1, updated_at = now()
+			 WHERE id = $4`,
+			nullableString(body.Name), nullableString(body.Description),
+			nullableString(body.EnforcementMode), id)
+		if err != nil {
+			http.Error(w, `{"error":"update failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"policy not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"id": id})
+	}
+}
+
+// DeleteSecurityPolicy deletes a security policy.
+func DeleteSecurityPolicy(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		ct, err := st.Pool.Exec(r.Context(), `DELETE FROM security_policies WHERE id = $1`, id)
+		if err != nil {
+			http.Error(w, `{"error":"delete failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"policy not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	}
+}
