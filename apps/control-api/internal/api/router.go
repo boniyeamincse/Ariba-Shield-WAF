@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/ariba-shield/control-api/internal/api/handlers"
 	"github.com/ariba-shield/control-api/internal/api/middleware"
@@ -54,6 +55,9 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/logout", handlers.Logout(st))
 	mux.HandleFunc("GET /api/v1/auth/me", handlers.Me(st))
 
+	// Users (Phase 3 — RBAC-protected, read by SUPER_ADMIN / PLATFORM_ADMIN)
+	mux.HandleFunc("GET /api/v1/users", handlers.ListUsers(st))
+
 	// Phase 3 — Webhooks, Exceptions, Rules, Certificates, Deployments
 	mux.HandleFunc("GET /api/v1/webhooks", handlers.ListWebhooks(st))
 	mux.HandleFunc("POST /api/v1/webhooks", handlers.CreateWebhook(st))
@@ -71,10 +75,12 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Apply middleware stack. Order matters (P0.6): Auth and RequestID must set
 	// the request context BEFORE Audit reads it, otherwise the audit trail has
 	// empty actor/request_id. Execution order (outermost first):
-	//   Recovery -> RBACEnforcer -> RequestID -> Auth -> Audit -> Logging -> mux
+	//   Recovery -> RBACEnforcer -> RequestID -> Auth -> Idempotency -> Audit -> Logging -> mux
 	var h http.Handler = mux
+	store := middleware.NewIdempotencyStore(24 * time.Hour)
 	h = middleware.Logging(h)
 	h = middleware.Audit(st.Pool, h)
+	h = middleware.Idempotency(store)(h)
 	h = middleware.Auth(st)(h)
 	h = middleware.RequestID(h)
 	h = middleware.RBACEnforcer(h)
