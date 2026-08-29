@@ -208,6 +208,17 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "POST", PathPrefix: "/api/v1/network-protection", Permissions: []string{PermSystemAdmin}},
 	{Method: "PATCH", PathPrefix: "/api/v1/network-protection", Permissions: []string{PermSystemAdmin}},
 	{Method: "DELETE", PathPrefix: "/api/v1/network-protection", Permissions: []string{PermSystemAdmin}},
+	// Phase 6: learning and policy builder
+	{Method: "GET", PathPrefix: "/api/v1/learning/sessions", Permissions: []string{PermEventRead, PermSystemAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/learning/sessions", Permissions: []string{PermSystemAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/learning/sessions/{id}", Permissions: []string{PermEventRead, PermSystemAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/learning/sessions/{id}", Permissions: []string{PermSystemAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/learning/sessions/{id}/start", Permissions: []string{PermSystemAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/learning/sessions/{id}/stop", Permissions: []string{PermSystemAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/learning/suggestions", Permissions: []string{PermEventRead, PermSystemAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/learning/suggestions/{id}", Permissions: []string{PermEventRead, PermSystemAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/learning/suggestions/{id}/accept", Permissions: []string{PermSystemAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/learning/suggestions/{id}/reject", Permissions: []string{PermSystemAdmin}},
 }
 
 // CheckRoutePermission returns true if the request method+path is authorized

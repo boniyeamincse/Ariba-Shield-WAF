@@ -53,3 +53,16 @@ This document outlines the full 37-module REST API structure required to elevate
     - Train AI on normal traffic patterns to automatically detect zero-day anomalies without signatures.
 37. **L3/L4 DDoS Mitigation** (`/api/v1/network-protection`)
     - BGP route injection configs and Anycast routing status for volumetric attacks.
+
+## Phase 6 — Learning and policy builder (Months 18–22)
+
+38. **Learning sessions** (`/api/v1/learning/sessions`)
+    - POST — Create a new learning session from a trusted source.
+    - GET — List sessions with filters (source, status).
+    - GET /{id} — Retrieve a single session.
+
+39. **Learning suggestions** (`/api/v1/learning/suggestions`)
+    - GET — List suggestions filtered by status, rule_id, session_id.
+    - GET /{id} — Retrieve a single suggestion.
+    - POST /{id}/accept — Accept a suggestion (gates policy update via approval workflow; exit criteria: learning cannot directly weaken policy without configured approval).
+    - POST /{id}/reject — Reject a suggestion.
