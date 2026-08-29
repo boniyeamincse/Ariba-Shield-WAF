@@ -76,6 +76,8 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "POST", PathPrefix: "/api/v1/webhooks", Permissions: []string{PermSystemAdmin}},
 	{Method: "GET", PathPrefix: "/api/v1/exceptions", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/exceptions", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "PATCH", PathPrefix: "/api/v1/exceptions", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "DELETE", PathPrefix: "/api/v1/exceptions", Permissions: []string{PermPolicyAdmin}},
 
 	// SRS §7 delivery endpoints.
 	{Method: "GET", PathPrefix: "/api/v1/virtual-servers", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
