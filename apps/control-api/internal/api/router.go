@@ -98,7 +98,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/exceptions", handlers.ListExceptions(st))
 	mux.HandleFunc("POST /api/v1/exceptions", handlers.CreateException(st))
 	mux.HandleFunc("GET /api/v1/managed-rules", handlers.ListManagedRules(st))
-	mux.HandleFunc("POST /api/v1/managed-rules", handlers.ConfigureManagedRules(st))
+	mux.HandleFunc("POST /api/v1/managed-rules/{id}", handlers.ConfigureManagedRules(st))
 	mux.HandleFunc("GET /api/v1/custom-rules", handlers.ListCustomRules(st))
 	mux.HandleFunc("POST /api/v1/custom-rules", handlers.CreateCustomRule(st))
 	mux.HandleFunc("GET /api/v1/deployments", handlers.ListDeployments(st))

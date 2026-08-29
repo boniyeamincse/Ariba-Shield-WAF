@@ -1,74 +1,115 @@
 package handlers
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"net/http"
+	"time"
 
 	"github.com/ariba-shield/control-api/internal/store"
 )
 
-type Certificate struct {
-	ID         string `json:"id"`
-	CommonName string `json:"common_name"`
-	CertType   string `json:"cert_type"` // CLIENT_MTLS, SERVER_TLS
-	Issuer     string `json:"issuer"`
-	ValidFrom  string `json:"valid_from"`
-	ValidTo    string `json:"valid_to"`
-	Status     string `json:"status"`
+type certificate struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Domain    string  `json:"domain"`
+	Issuer    string  `json:"issuer"`
+	Serial    string  `json:"serial"`
+	NotBefore string  `json:"not_before"`
+	NotAfter  string  `json:"not_after"`
+	Status    string  `json:"status"`
 }
 
-// ListCertificates returns all TLS/mTLS certificates managed by the control plane
+// ListCertificates returns certificate metadata (never key material, §7.2).
 func ListCertificates(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		certs := []Certificate{
-			{
-				ID:         "cert_001",
-				CommonName: "upstream-service.internal",
-				CertType:   "CLIENT_MTLS",
-				Issuer:     "Ariba Shield Internal CA",
-				ValidFrom:  "2025-01-01T00:00:00Z",
-				ValidTo:    "2026-01-01T00:00:00Z",
-				Status:     "active",
-			},
+		rows, err := st.Pool.Query(r.Context(),
+			`SELECT id, name, domain, issuer, serial, not_before, not_after, status
+			 FROM certificates ORDER BY domain`)
+		if err != nil {
+			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
+			return
 		}
+		defer rows.Close()
 
+		certs := []certificate{}
+		for rows.Next() {
+			var c certificate
+			var nb, na time.Time
+			if err := rows.Scan(&c.ID, &c.Name, &c.Domain, &c.Issuer, &c.Serial, &nb, &na, &c.Status); err != nil {
+				continue
+			}
+			c.NotBefore = nb.Format(time.RFC3339)
+			c.NotAfter = na.Format(time.RFC3339)
+			certs = append(certs, c)
+		}
+		if certs == nil {
+			certs = []certificate{}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(certs)
 	}
 }
 
-// UploadCertificate securely stores a new certificate (excluding private key return)
+// UploadCertificate imports a certificate. Only the certificate chain is
+// parsed for metadata; the private key is never stored or returned (§7.2).
 func UploadCertificate(st *store.Store) http.HandlerFunc {
-	type certUpload struct {
-		CertBody   string `json:"cert_body"`
-		PrivateKey string `json:"private_key,omitempty"` // Stored securely, never returned
-		CertType   string `json:"cert_type"`
+	type upload struct {
+		Name        string `json:"name"`
+		Domain      string `json:"domain"`
+		Certificate string `json:"certificate"` // PEM
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		var body certUpload
+		var body upload
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 			return
 		}
-
-		if body.CertBody == "" || body.CertType == "" {
-			http.Error(w, `{"error":"cert_body and cert_type are required"}`, http.StatusBadRequest)
+		if body.Name == "" || body.Domain == "" || body.Certificate == "" {
+			http.Error(w, `{"error":"name, domain and certificate required"}`, http.StatusBadRequest)
 			return
 		}
 
-		// In a real application:
-		// 1. Parse x509 cert to get CN, Expiry, Issuer
-		// 2. Encrypt PrivateKey with KMS/Vault before storing
+		// Parse the first PEM block to extract metadata.
+		block, _ := pem.Decode([]byte(body.Certificate))
+		if block == nil {
+			http.Error(w, `{"error":"invalid PEM certificate"}`, http.StatusBadRequest)
+			return
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			http.Error(w, `{"error":"invalid certificate"}`, http.StatusBadRequest)
+			return
+		}
 
-		newID, err := st.NewID()
+		id, err := st.NewID()
 		if err != nil {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
+			return
+		}
+		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+
+		status := "active"
+		if time.Now().After(cert.NotAfter) {
+			status = "expired"
+		} else if time.Until(cert.NotAfter) < 30*24*time.Hour {
+			status = "expiring"
+		}
+
+		if _, err := st.Pool.Exec(r.Context(),
+			`INSERT INTO certificates
+			   (id, organization_id, name, domain, issuer, serial, not_before, not_after, status)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			id, orgID, body.Name, body.Domain, cert.Issuer.CommonName, cert.SerialNumber.String(),
+			cert.NotBefore, cert.NotAfter, status); err != nil {
+			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]string{"id": newID})
+		json.NewEncoder(w).Encode(map[string]string{"id": id, "status": status})
 	}
 }

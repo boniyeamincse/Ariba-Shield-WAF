@@ -3,71 +3,108 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/ariba-shield/control-api/internal/store"
 )
 
-type ExceptionCondition struct {
-	Variable string `json:"variable"`
-	Operator string `json:"operator"`
-	Value    string `json:"value"`
+type exception struct {
+	ID            string  `json:"id"`
+	PolicyID      string  `json:"policy_id,omitempty"`
+	ApplicationID string  `json:"application_id,omitempty"`
+	RuleID        string  `json:"rule_id,omitempty"`
+	URLPattern    string  `json:"url_pattern,omitempty"`
+	Parameter     string  `json:"parameter,omitempty"`
+	Reason        string  `json:"reason"`
+	ExpiresAt     *string `json:"expires_at,omitempty"`
+	Status        string  `json:"status"`
 }
 
-type ExceptionRule struct {
-	ID             string               `json:"id"`
-	TargetRuleID   string               `json:"target_rule_id"`
-	ApplicationID  string               `json:"application_id"`
-	MatchConditions []ExceptionCondition `json:"match_conditions"`
-	Reason         string               `json:"reason"`
-	ExpiryDays     int                  `json:"expiry_days"`
-	Status         string               `json:"status"`
-}
-
-// ListExceptions returns all configured WAF exceptions
+// ListExceptions returns policy exceptions (false-positive exclusions).
 func ListExceptions(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Mock response for now, to be replaced with PostgreSQL query
-		exceptions := []ExceptionRule{
-			{
-				ID:            "exc_001",
-				TargetRuleID:  "ARIBA-SQLI-001",
-				ApplicationID: "app_internal_hr",
-				MatchConditions: []ExceptionCondition{
-					{Variable: "URI_PATH", Operator: "EQUALS", Value: "/api/reports/query"},
-				},
-				Reason:     "Internal HR reporting payload contains SQL-like syntax",
-				ExpiryDays: 90,
-				Status:     "active",
-			},
+		rows, err := st.Pool.Query(r.Context(),
+			`SELECT id, COALESCE(policy_id,''), COALESCE(application_id,''), COALESCE(rule_id,''),
+			        COALESCE(url_pattern,''), COALESCE(parameter,''), reason, expires_at, status
+			 FROM exceptions ORDER BY created_at DESC LIMIT 100`)
+		if err != nil {
+			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
+			return
 		}
+		defer rows.Close()
 
+		exceptions := []exception{}
+		for rows.Next() {
+			var e exception
+			var expiresAt *time.Time
+			if err := rows.Scan(&e.ID, &e.PolicyID, &e.ApplicationID, &e.RuleID,
+				&e.URLPattern, &e.Parameter, &e.Reason, &expiresAt, &e.Status); err != nil {
+				continue
+			}
+			if expiresAt != nil {
+				s := expiresAt.Format(time.RFC3339)
+				e.ExpiresAt = &s
+			}
+			exceptions = append(exceptions, e)
+		}
+		if exceptions == nil {
+			exceptions = []exception{}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(exceptions)
 	}
 }
 
-// CreateException registers a new exclusion rule to mitigate false positives
+// CreateException creates a time-limited policy exception.
 func CreateException(st *store.Store) http.HandlerFunc {
+	type create struct {
+		PolicyID      string `json:"policy_id"`
+		ApplicationID string `json:"application_id"`
+		RuleID        string `json:"rule_id"`
+		URLPattern    string `json:"url_pattern"`
+		Parameter     string `json:"parameter"`
+		Reason        string `json:"reason"`
+		ExpiresAt     string `json:"expires_at"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		var body ExceptionRule
+		var body create
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 			return
 		}
-
-		if body.TargetRuleID == "" || body.ApplicationID == "" {
-			http.Error(w, `{"error":"target_rule_id and application_id are required"}`, http.StatusBadRequest)
+		if body.Reason == "" {
+			http.Error(w, `{"error":"reason (owner justification) required"}`, http.StatusBadRequest)
 			return
 		}
 
-		newID, err := st.NewID()
+		id, err := st.NewID()
 		if err != nil {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
+			return
+		}
+		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+
+		var expiresAt any
+		if body.ExpiresAt != "" {
+			if t, err := time.Parse(time.RFC3339, body.ExpiresAt); err == nil {
+				expiresAt = t
+			}
+		}
+
+		if _, err := st.Pool.Exec(r.Context(),
+			`INSERT INTO exceptions
+			   (id, organization_id, policy_id, application_id, rule_id, url_pattern, parameter, reason, expires_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			id, orgID, nullIfEmpty(body.PolicyID), nullIfEmpty(body.ApplicationID),
+			nullIfEmpty(body.RuleID), nullIfEmpty(body.URLPattern), nullIfEmpty(body.Parameter),
+			body.Reason, expiresAt); err != nil {
+			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]string{"id": newID})
+		json.NewEncoder(w).Encode(map[string]string{"id": id})
 	}
 }

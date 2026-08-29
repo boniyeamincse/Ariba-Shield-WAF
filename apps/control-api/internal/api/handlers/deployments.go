@@ -7,61 +7,77 @@ import (
 	"github.com/ariba-shield/control-api/internal/store"
 )
 
-type Deployment struct {
-	ID             string `json:"id"`
-	PolicyBundleID string `json:"policy_bundle_id"`
-	TargetClusters []string `json:"target_clusters"`
-	Status         string `json:"status"` // PENDING, SYNCING, SUCCESS, FAILED
-	DeployedBy     string `json:"deployed_by"`
-	DeployedAt     string `json:"deployed_at"`
+type deployment struct {
+	ID              string   `json:"id"`
+	PolicyVersionID string   `json:"policy_version_id,omitempty"`
+	TargetGateways  []string `json:"target_gateways"`
+	Status          string   `json:"status"`
+	Error           string   `json:"error,omitempty"`
 }
 
-// ListDeployments returns the history of configuration syncs to the data plane
+// ListDeployments returns the deployment history.
 func ListDeployments(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		deps := []Deployment{
-			{
-				ID:             "dep_001",
-				PolicyBundleID: "bundle_v1.0.4",
-				TargetClusters: []string{"cluster-us-east", "cluster-eu-west"},
-				Status:         "SUCCESS",
-				DeployedBy:     "admin@aribashield.local",
-				DeployedAt:     "2026-08-28T14:00:00Z",
-			},
+		rows, err := st.Pool.Query(r.Context(),
+			`SELECT id, COALESCE(policy_version_id,''), target_gateways, status, COALESCE(error,'')
+			 FROM deployments ORDER BY created_at DESC LIMIT 50`)
+		if err != nil {
+			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
+			return
 		}
+		defer rows.Close()
 
+		deps := []deployment{}
+		for rows.Next() {
+			var d deployment
+			if err := rows.Scan(&d.ID, &d.PolicyVersionID, &d.TargetGateways, &d.Status, &d.Error); err != nil {
+				continue
+			}
+			deps = append(deps, d)
+		}
+		if deps == nil {
+			deps = []deployment{}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(deps)
 	}
 }
 
-// SyncDeployment pushes a new declarative configuration to the WAF edge gateways
+// SyncDeployment triggers a sync of a policy version to target gateways.
 func SyncDeployment(st *store.Store) http.HandlerFunc {
+	type sync struct {
+		PolicyVersionID string   `json:"policy_version_id"`
+		TargetGateways  []string `json:"target_gateways"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		var body Deployment
+		var body sync
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 			return
 		}
-
-		if body.PolicyBundleID == "" || len(body.TargetClusters) == 0 {
-			http.Error(w, `{"error":"policy_bundle_id and target_clusters are required"}`, http.StatusBadRequest)
+		if body.PolicyVersionID == "" || len(body.TargetGateways) == 0 {
+			http.Error(w, `{"error":"policy_version_id and target_gateways required"}`, http.StatusBadRequest)
 			return
 		}
 
-		// In a real application, this triggers an asynchronous Redis/gRPC sync pipeline
-
-		newID, err := st.NewID()
+		id, err := st.NewID()
 		if err != nil {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
 			return
 		}
+		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+
+		if _, err := st.Pool.Exec(r.Context(),
+			`INSERT INTO deployments (id, organization_id, policy_version_id, target_gateways, status)
+			 VALUES ($1, $2, $3, $4, 'active')`,
+			id, orgID, body.PolicyVersionID, body.TargetGateways); err != nil {
+			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusAccepted) // Return 202 Accepted as it's async
-		json.NewEncoder(w).Encode(map[string]string{
-			"id":     newID,
-			"status": "SYNCING",
-		})
+		w.WriteHeader(http.StatusAccepted)
+		json.NewEncoder(w).Encode(map[string]string{"id": id, "status": "active"})
 	}
 }
