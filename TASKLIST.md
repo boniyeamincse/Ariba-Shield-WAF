@@ -21,18 +21,18 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 
 ## P1 — High (blocking Phase 4 deliverables or major features)
 
-^- [x] **P1.1** Multi-gateway config distribution: add `GET /api/v1/gateways/{id}/config/current` that returns the signed bundle (with `304 Not Modified`). Add `applied_hash` reconciliation.
-^- [x] **P1.2** Load-balancing algorithms: implement `ip_hash` (sticky sessions by client IP) and `consistent_hash` (by URI) in the policy compiler. The `weighted` algorithm is a no-op alias for `round_robin` — fix.
-^- [x] **P1.3** TLS re-encryption to upstreams: add `protocol` (`http`/`https`) per backend node, emit `proxy_ssl_*` directives and `proxy_pass https://` when `protocol=https`.
-^- [x] **P1.4** Session persistence: add `sticky_cookie` / `sticky_route` fields to the backend pool schema and render `ip_hash` or `sticky` in the nginx config.
-^- [x] **P1.5** Connection draining: add `drain` state + `slow_start` to backend nodes. Active=false nodes should drain gracefully, not be hard-dropped from the upstream.
-^- [x] **P1.6** Active health checks: `HealthMonitor` fields (interval, thresholds, HTTP path, expected status) are declared in the schema but never rendered in the nginx config. Wire them to `health_check` directives.
-^- [x] **P1.7** Backup/restore: add `POST /api/v1/backups` (trigger encrypted DB dump) and `POST /api/v1/backups/restore`. Add `backups` table.
-^- [x] **P1.8** `make test` must include `services/waf-engine`, `services/policy-compiler`, and `services/event-ingestor`. Currently only `apps/control-api` is tested.
-^- [x] **P1.9** `make gen-check` must run in CI as part of the `schema` job to catch schema-SDK drift.
+- [x] **P1.1** Multi-gateway config distribution: add `GET /api/v1/gateways/{id}/config/current` that returns the signed bundle (with `304 Not Modified`). Add `applied_hash` reconciliation.
+- [x] **P1.2** Load-balancing algorithms: implement `ip_hash` (sticky sessions by client IP) and `consistent_hash` (by URI) in the policy compiler. The `weighted` algorithm is a no-op alias for `round_robin` — fix.
+- [x] **P1.3** TLS re-encryption to upstreams: add `protocol` (`http`/`https`) per backend node, emit `proxy_ssl_*` directives and `proxy_pass https://` when `protocol=https`.
+- [x] **P1.4** Session persistence: add `sticky_cookie` / `sticky_route` fields to the backend pool schema and render `ip_hash` or `sticky` in the nginx config.
+- [x] **P1.5** Connection draining: add `drain` state + `slow_start` to backend nodes. Active=false nodes should drain gracefully, not be hard-dropped from the upstream.
+- [x] **P1.6** Active health checks: `HealthMonitor` fields (interval, thresholds, HTTP path, expected status) are declared in the schema but never rendered in the nginx config. Wire them to `health_check` directives.
+- [x] **P1.7** Backup/restore: add `POST /api/v1/backups` (trigger encrypted DB dump) and `POST /api/v1/backups/restore`. Add `backups` table.
+- [x] **P1.8** `make test` must include `services/waf-engine`, `services/policy-compiler`, and `services/event-ingestor`. Currently only `apps/control-api` is tested.
+- [x] **P1.9** `make gen-check` must run in CI as part of the `schema` job to catch schema-SDK drift.
 - [x] **P1.10** Real auth: session-cookie auth replaces `X-User-Email`/`X-User-Role` headers. Login/logout/me endpoints, bcrypt password hashing, HTTP-only/Secure/SameSite cookies, user_roles table + role seeding. ⚠️ Remaining: refresh endpoint, Redis session storage (Postgres today), CSRF protection.
-^- [x] **P1.11** Idempotency keys: implement `Idempotency-Key` middleware + table. FR-0.1-043 (M) — documented in OpenAPI but zero code.
-^- [x] **P1.12** Optimistic concurrency: implement `If-Match`/ETag + `WHERE version =` checks on all mutation handlers. FR-0.1-044 (M) — version columns exist but no checks.
+- [x] **P1.11** Idempotency keys: implement `Idempotency-Key` middleware + table. FR-0.1-043 (M) — documented in OpenAPI but zero code.
+- [x] **P1.12** Optimistic concurrency: implement `If-Match`/ETag + `WHERE version =` checks on all mutation handlers. FR-0.1-044 (M) — version columns exist but no checks.
 - [x] **P1.13** `engine.go`/`iplist`: `IsAllowed` is never called in the handler. `--allowed-ips` has zero effect. Fix: check allow list before block list.
 
 ---
@@ -55,25 +55,25 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 - [ ] **P2.14** `replay.sh` should verify security events are emitted in detect mode (not just HTTP status codes).
 - [ ] **P2.15** `replay.sh` should support POST bodies and header injection, not just GET query strings.
 - [ ] **P2.16** `replay.sh` should verify rule IDs and match details in emitted events.
-^- [x] **P2.17** Detach the duplicated nginx template (`gateways/openresty-gateway/nginx/templates/shield.conf.tmpl` vs `services/policy-compiler/internal/compiler/templates/shield.conf.tmpl`). Use a symlink or single source of truth.
-^- [x] **P2.18** `engine.go` `newID()` is not a ULID — uses `fmt.Sprintf("%d-%x", time.Now().UnixNano(), os.Getpid())`. Replace with ULID generation.
-^- [x] **P2.19** `engine.go` `event.go` never populates `virtual_server_id`/`application_id` (only `GATEWAY_ID` env var). These are empty in all events.
-^- [x] **P2.20** `ratelimit/limit.go` buckets map is never evicted — unbounded memory growth per unique client IP. Add TTL eviction.
-^- [x] **P2.21** `event-ingestor/ingest.go` — unbounded `in.buf` growth on DB outage (OOM risk). Add a cap and backoff.
-^- [x] **P2.22** `event-ingestor/ingest.go` — final flush on shutdown uses a cancelled context, dropping the last batch.
+- [x] **P2.17** Detach the duplicated nginx template (`gateways/openresty-gateway/nginx/templates/shield.conf.tmpl` vs `services/policy-compiler/internal/compiler/templates/shield.conf.tmpl`). Use a symlink or single source of truth.
+- [x] **P2.18** `engine.go` `newID()` is not a ULID — uses `fmt.Sprintf("%d-%x", time.Now().UnixNano(), os.Getpid())`. Replace with ULID generation.
+- [x] **P2.19** `engine.go` `event.go` never populates `virtual_server_id`/`application_id` (only `GATEWAY_ID` env var). These are empty in all events.
+- [x] **P2.20** `ratelimit/limit.go` buckets map is never evicted — unbounded memory growth per unique client IP. Add TTL eviction.
+- [x] **P2.21** `event-ingestor/ingest.go` — unbounded `in.buf` growth on DB outage (OOM risk). Add a cap and backoff.
+- [x] **P2.22** `event-ingestor/ingest.go` — final flush on shutdown uses a cancelled context, dropping the last batch.
 - [ ] **P2.23** `handlers/auth.go` (unrouted mock) — delete or route. Contains a hardcoded password check ("admin").
 - [ ] **P2.24** `handlers/certificates.go`, `custom_rules.go`, `managed_rules.go`, `deployments.go`, `webhooks.go`, `exceptions.go` — all unrouted mock handlers. Delete or implement.
-^- [x] **P2.25** `security_events.go` hardcodes `LIMIT 50` with no pagination (`limit`/`offset`/cursor). Add pagination.
+- [x] **P2.25** `security_events.go` hardcodes `LIMIT 50` with no pagination (`limit`/`offset`/cursor). Add pagination.
 - [ ] **P2.26** `metrics.go` declares `shield_control_request_duration_ms` histogram but never records observations. Process start time reports request start time, not process start.
-^- [x] **P2.27** `mask.go` has no test file. Add `mask_test.go`.
-^- [x] **P2.28** `iplist/`, `ratelimit/`, `blockpage/` have no direct unit tests. Add tests.
+- [x] **P2.27** `mask.go` has no test file. Add `mask_test.go`.
+- [x] **P2.28** `iplist/`, `ratelimit/`, `blockpage/` have no direct unit tests. Add tests.
 - [ ] **P2.29** `cmd/wazuh-forward/main.go` "syslog" mode writes formatted lines to `stdout` — no TCP/UDP/TLS socket, no Wazuh agent API. Implement actual syslog transport.
 - [ ] **P2.30** `wazuh-forward` forwards the entire `raw` event to Wazuh `data` without redaction. Add masking at this hop.
-^- [x] **P2.31** `policy-v0.json` uses `additionalProperties: false` at the top level, contradicting ADR-002 D1 (forward-compat: unknown fields must be preserved). Fix to `true`.
+- [x] **P2.31** `policy-v0.json` uses `additionalProperties: false` at the top level, contradicting ADR-002 D1 (forward-compat: unknown fields must be preserved). Fix to `true`.
 - [ ] **P2.32** `event-v0.json` uses nested objects; Go `SecurityEvent` uses flat fields. Reconcile the schema with the code.
 - [ ] **P2.33** `tools/schema-gen` only generates `$defs` — no root document types (`Policy`, `Event`). Inline nested objects are mangled to `string`. Required/const/pattern/format are all dropped. Expand coverage.
-^- [x] **P2.34** Missing ADR-005: document the Coraza v3 integration decision (architecture, transaction lifecycle, fail-open semantics, rule loading).
-^- [x] **P2.35** Missing ADR-007: document the high-volume event transport decision (NATS/Kafka vs Redis Streams, ClickHouse migration).
+- [x] **P2.34** Missing ADR-005: document the Coraza v3 integration decision (architecture, transaction lifecycle, fail-open semantics, rule loading).
+- [x] **P2.35** Missing ADR-007: document the high-volume event transport decision (NATS/Kafka vs Redis Streams, ClickHouse migration).
 - [ ] **P2.36** `docs/security/` directory is empty. Add at least a security model overview.
 - [ ] **P2.37** `docs/api/openapi-v0.yaml` is significantly out of sync with the actual router. Reconcile: add missing routes, remove non-existent routes, fix path mismatches.
 - [x] **P2.38** `release-0.1.md` RBAC claim says "placeholder" — code has working RBAC. Update.
