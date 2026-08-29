@@ -8,14 +8,14 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 
 ## P0 — Critical bugs (breaks functionality or security)
 
-- [ ] **P0.1** `apply-config.sh:28` validates the bare generated config fragment, not the wrapper main config. `nginx -t -c "$staging_dir/generated.conf"` always fails because the fragment has no `http {}` wrapper. Every config apply is rejected. Fix: write a wrapper main config (as `entrypoint.sh` does), then `nginx -t -c` on the wrapper.
-- [ ] **P0.2** `engine.go` detect-only path: `handleInterruption` returns an empty 200 **without calling `proxy.ServeHTTP`**. The backend never receives matched requests. In "transparent" mode, the WAF silently drops traffic instead of forwarding it. Fix: log the event, then call `proxy.ServeHTTP` to forward to the backend.
-- [ ] **P0.3** `docker-compose.yml:88` mounts the gateway config volume at `/etc/shield-waf/config`, but the Dockerfile sets `CONFIG_STORE=/var/lib/shield-waf/config`. The dev stack lands at the wrong path → gateway always boots into safe-mode 503.
-- [ ] **P0.4** `middleware/auth.go` trusts `X-User-Email` and `X-User-Role` headers verbatim. A caller can send `X-User-Role: Super Admin` and get full access. Anonymous (no headers) gets Read Only. Fix: either remove the dev-mode bypass or add a real session/auth middleware.
-- [ ] **P0.5** `store.go:66-68` stores the admin password as plaintext in `password_hash`. No bcrypt/argon2 in the dependency tree. Fix: hash with bcrypt before storing.
-- [ ] **P0.6** `middleware/audit.go` is placed **before** Auth and RequestID in the middleware stack (`router.go:53-59`). The goroutine reads `AuditFromContext(r.Context())` and `RequestIDFromContext(r.Context())` which are always empty because they haven't been set yet. The audit trail is untraceable (empty actor, empty request ID, path-as-resource).
-- [ ] **P0.7** `engine.go:209` `io.ReadAll(r.Body)` buffers the entire request body before Coraza's `SecRequestBodyLimit` is checked. A 1 GB upload is held in RAM. Fix: wrap with `http.MaxBytesReader`.
-- [ ] **P0.8** `engine.go` `clientIP(r.RemoteAddr)` ignores `X-Forwarded-For`/`X-Real-IP`. Behind the gateway, every client is the gateway's IP → IP blocklist and rate limiter apply to the proxy, not the client. Also splits on last colon, breaking IPv6 (`[::1]:8080` → `[::1]` which `netip.ParseAddr` rejects).
+- [x] **P0.1** `apply-config.sh:28` validates the bare generated config fragment, not the wrapper main config. `nginx -t -c "$staging_dir/generated.conf"` always fails because the fragment has no `http {}` wrapper. Every config apply is rejected. Fix: write a wrapper main config (as `entrypoint.sh` does), then `nginx -t -c` on the wrapper.
+- [x] **P0.2** `engine.go` detect-only path: `handleInterruption` returns an empty 200 **without calling `proxy.ServeHTTP`**. The backend never receives matched requests. In "transparent" mode, the WAF silently drops traffic instead of forwarding it. Fix: log the event, then call `proxy.ServeHTTP` to forward to the backend.
+- [x] **P0.3** `docker-compose.yml:88` mounts the gateway config volume at `/etc/shield-waf/config`, but the Dockerfile sets `CONFIG_STORE=/var/lib/shield-waf/config`. The dev stack lands at the wrong path → gateway always boots into safe-mode 503.
+- [x] **P0.4** `middleware/auth.go` trusts `X-User-Email` and `X-User-Role` headers verbatim. A caller can send `X-User-Role: Super Admin` and get full access. Anonymous (no headers) gets Read Only. Fix: session-cookie auth; mock gated behind `AUTH_MOCK_ENABLED=true`.
+- [x] **P0.5** `store.go:66-68` stores the admin password as plaintext in `password_hash`. No bcrypt/argon2 in the dependency tree. Fix: hash with bcrypt before storing.
+- [x] **P0.6** `middleware/audit.go` is placed **before** Auth and RequestID in the middleware stack (`router.go:53-59`). The goroutine reads `AuditFromContext(r.Context())` and `RequestIDFromContext(r.Context())` which are always empty because they haven't been set yet. The audit trail is untraceable (empty actor, empty request ID, path-as-resource). Fix: reorder so Auth+RequestID run before Audit.
+- [x] **P0.7** `engine.go:209` `io.ReadAll(r.Body)` buffers the entire request body before Coraza's `SecRequestBodyLimit` is checked. A 1 GB upload is held in RAM. Fix: wrap with `io.LimitReader` (13 MB cap) + 413 rejection.
+- [x] **P0.8** `engine.go` `clientIP(r.RemoteAddr)` ignores `X-Forwarded-For`/`X-Real-IP`. Behind the gateway, every client is the gateway's IP → IP blocklist and rate limiter apply to the proxy, not the client. Also splits on last colon, breaking IPv6 (`[::1]:8080` → `[::1]` which `netip.ParseAddr` rejects). Fix: `net.SplitHostPort` + optional trusted-proxy XFF handling.
 
 ---
 
@@ -33,7 +33,7 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 - [ ] **P1.10** Real auth: replace `X-User-Email`/`X-User-Role` dev headers with session-cookie-based auth. Add login/logout/refresh endpoints, session storage in Redis, HTTP-only/Secure/SameSite cookies, CSRF protection.
 - [ ] **P1.11** Idempotency keys: implement `Idempotency-Key` middleware + table. FR-0.1-043 (M) — documented in OpenAPI but zero code.
 - [ ] **P1.12** Optimistic concurrency: implement `If-Match`/ETag + `WHERE version =` checks on all mutation handlers. FR-0.1-044 (M) — version columns exist but no checks.
-- [ ] **P1.13** `engine.go`/`iplist`: `IsAllowed` is never called in the handler. `--allowed-ips` has zero effect. Fix: check allow list before block list.
+- [x] **P1.13** `engine.go`/`iplist`: `IsAllowed` is never called in the handler. `--allowed-ips` has zero effect. Fix: check allow list before block list.
 
 ---
 

@@ -91,6 +91,18 @@ CREATE TABLE IF NOT EXISTS applications (
     UNIQUE (organization_id, name)
 );
 
+CREATE TABLE IF NOT EXISTS backend_pools (
+    id              TEXT PRIMARY KEY,        -- ULID
+    organization_id TEXT NOT NULL REFERENCES organizations(id),
+    application_id  TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    lb_algorithm    TEXT NOT NULL DEFAULT 'round_robin',
+    version         BIGINT NOT NULL DEFAULT 1,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (organization_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS virtual_servers (
     id                      TEXT PRIMARY KEY, -- ULID
     organization_id         TEXT NOT NULL REFERENCES organizations(id),
@@ -116,17 +128,7 @@ CREATE TABLE IF NOT EXISTS routes (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS backend_pools (
-    id              TEXT PRIMARY KEY,        -- ULID
-    organization_id TEXT NOT NULL REFERENCES organizations(id),
-    application_id  TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-    name            TEXT NOT NULL,
-    lb_algorithm    TEXT NOT NULL DEFAULT 'round_robin',
-    version         BIGINT NOT NULL DEFAULT 1,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (organization_id, name)
-);
+
 
 CREATE TABLE IF NOT EXISTS backend_nodes (
     id              TEXT PRIMARY KEY,        -- ULID

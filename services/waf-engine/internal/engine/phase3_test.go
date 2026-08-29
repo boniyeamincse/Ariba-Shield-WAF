@@ -87,6 +87,38 @@ func TestRateLimit(t *testing.T) {
 	}
 }
 
+func TestAllowListBypassesBlock(t *testing.T) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer backend.Close()
+
+	eng := newTestEngine(t, backend.URL, false)
+	// Allow list and block list are separate CIDRs; the allowed range also
+	// appears in the block list to prove allow wins.
+	if err := eng.SetIPLists([]string{"198.51.100.0/24"}, []string{"198.51.100.0/24", "192.0.2.0/24"}); err != nil {
+		t.Fatalf("SetIPLists: %v", err)
+	}
+
+	// Allowed IP must pass even though it is also in the block list.
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "198.51.100.10:1234"
+	rec := httptest.NewRecorder()
+	eng.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for allowed IP despite blocklist, got %d", rec.Code)
+	}
+
+	// A non-allowed, blocked IP is still blocked.
+	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+	req2.RemoteAddr = "192.0.2.10:1234"
+	rec2 := httptest.NewRecorder()
+	eng.Handler().ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-allowed blocked IP, got %d", rec2.Code)
+	}
+}
+
 func TestBlockPageContent(t *testing.T) {
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

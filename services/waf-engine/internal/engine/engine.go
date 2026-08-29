@@ -182,7 +182,9 @@ func (e *Engine) Handler() http.Handler {
 		}
 
 		// Phase 3: IP reputation pre-check (step 7 of the pipeline).
-		if e.ipList.IsBlocked(ip) {
+		// The allow-list bypasses the block-list and rate limiting (P1.13).
+		isAllowed := e.ipList.IsAllowed(ip)
+		if !isAllowed && e.ipList.IsBlocked(ip) {
 			event.DecisionAction = "block"
 			event.Severity = "medium"
 			event.Reason = "ip_blocklist"
@@ -193,8 +195,8 @@ func (e *Engine) Handler() http.Handler {
 			return
 		}
 
-		// Phase 3: rate limit (step 14 of the pipeline).
-		if e.rateLimiter != nil {
+		// Phase 3: rate limit (step 14 of the pipeline). Allowed IPs bypass.
+		if e.rateLimiter != nil && !isAllowed {
 			routeOK := e.rateLimitRoute == "" || strings.HasPrefix(r.URL.Path, e.rateLimitRoute)
 			if routeOK {
 				allowed, remaining := e.rateLimiter.Allow(ip)
