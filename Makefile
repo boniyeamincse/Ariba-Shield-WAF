@@ -60,5 +60,9 @@ test-failover: ## Run gateway + API failure drills
 	@echo "Skipping: run manually with docker compose up -d first"
 	@echo "  bash tests/failover/api-failure-tests.sh"
 
+test-replay: ## Run WAF replay corpus (requires live waf-engine on :8082)
+	bash tests/replay/replay.sh --mode detect
+	bash tests/replay/replay.sh --mode block
+
 clean:
 	rm -rf apps/console-web/node_modules apps/control-api/bin gateways/rust-gateway/target

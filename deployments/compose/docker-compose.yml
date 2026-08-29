@@ -102,6 +102,30 @@ services:
     ports:
       - "127.0.0.1:8081:80"
 
+  # WAF engine (Coraza sidecar, detection-only default).
+  waf-engine:
+    build:
+      context: ../..
+      dockerfile: services/waf-engine/Dockerfile
+    environment:
+      GATEWAY_ID: gw-01
+    ports:
+      - "127.0.0.1:8082:8082"
+    depends_on:
+      - backend-a
+    command: ["--listen", ":8082", "--backend", "http://backend-a:80", "--rules", "/rules/baseline.conf", "--detect-only"]
+
+  # Event-ingestor: reads JSON-lines from stdin, writes to PostgreSQL.
+  event-ingestor:
+    build:
+      context: ../../services/event-ingestor
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-shield}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-shield}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend-b:
     image: nginx:1.27-alpine
     environment:

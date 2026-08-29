@@ -1,0 +1,6 @@
+# Command injection corpus — EXPECT:block
+GET /?cmd=%3B%20whoami
+GET /?c=%3B%2Fbin%2Fsh%20-i
+GET /api/exec?arg=id%3B%20cat%20%2Fetc%2Fpasswd
+GET /?x=;%20powershell%20-command%20Get-Process
+GET /?y=%3B%20pwd

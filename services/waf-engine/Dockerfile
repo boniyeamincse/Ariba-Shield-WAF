@@ -1,9 +1,10 @@
-# Build stage
+# Build stage. Build context is the repo root:
+#   docker build -t ariba-shield/waf-engine:0.1 -f services/waf-engine/Dockerfile .
 FROM golang:1.26-alpine AS build
-WORKDIR /src
-COPY go.mod go.sum ./
+WORKDIR /src/services/waf-engine
+COPY services/waf-engine/go.mod services/waf-engine/go.sum ./
 RUN go mod download
-COPY . .
+COPY services/waf-engine/ .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /bin/waf-engine .
 
 # Runtime stage

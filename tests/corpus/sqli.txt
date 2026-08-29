@@ -1,0 +1,6 @@
+# SQL Injection corpus — EXPECT:block
+GET /?q=1%27%20UNION%20SELECT%20*%20FROM%20users--
+GET /?id=1%20UNION%20SELECT%20username,password%20FROM%20admin
+GET /?search=foo%27%20OR%201=1%20--
+GET /login?user=%27%20UNION%20SELECT%201,2,3--
+GET /api/items?filter=name%3D%27x%27%20OR%201=1

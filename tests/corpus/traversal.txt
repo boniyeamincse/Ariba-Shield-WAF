@@ -1,0 +1,6 @@
+# Path traversal corpus — EXPECT:block
+GET /static/..%2F..%2F..%2Fetc%2Fpasswd
+GET /download?file=..%2F..%2Fetc%2Fshadow
+GET /files/../../../etc/passwd
+GET /images%2F..%2F..%2F..%2Fetc%2Fpasswd
+GET /%2e%2e%2f%2e%2e%2fetc%2fpasswd

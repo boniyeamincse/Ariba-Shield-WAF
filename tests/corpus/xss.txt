@@ -1,0 +1,6 @@
+# Cross-Site Scripting corpus — EXPECT:block
+GET /?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E
+GET /?name=%3Cscript%3Edocument.cookie%3C%2Fscript%3E
+GET /search?term=javascript%3Aalert(1)
+GET /?x=%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E
+GET /?q=%3Cbody%20onload%3Dalert(1)%3E

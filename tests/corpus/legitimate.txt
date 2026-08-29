@@ -1,0 +1,12 @@
+# Legitimate traffic corpus — EXPECT:pass (false-positive check)
+# These should NEVER trigger a WAF rule.
+GET /?q=hello+world
+GET /search?q=normal+search+query&page=1
+GET /about
+GET /api/v1/health
+GET /api/items?filter=name%3Dvisible
+GET /index.html
+GET /css/style.css
+GET /js/app.js
+GET /favicon.ico
+GET /images/logo.png

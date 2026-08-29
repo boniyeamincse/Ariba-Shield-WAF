@@ -35,6 +35,9 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Security events (Phase 2).
 	mux.HandleFunc("GET /api/v1/security-events", handlers.ListSecurityEvents(st))
 
+	// Policy binding (Phase 2).
+	mux.HandleFunc("POST /api/v1/security-policies/bind", handlers.BindPolicy(st))
+
 	// Apply middleware stack (outermost first).
 	var h http.Handler = mux
 	h = middleware.Logging(h)
