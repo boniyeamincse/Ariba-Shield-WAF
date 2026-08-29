@@ -53,5 +53,12 @@ audit: ## Run dependency and secret scans
 	cd apps/control-api && go list -m all | govulncheck ./...
 	npm --prefix apps/console-web run audit
 
+test-failover: ## Run gateway + API failure drills
+	@echo "=== Gateway failure tests ==="
+	bash tests/failover/gateway-failure-tests.sh
+	@echo "=== API failure tests (requires compose stack) ==="
+	@echo "Skipping: run manually with docker compose up -d first"
+	@echo "  bash tests/failover/api-failure-tests.sh"
+
 clean:
 	rm -rf apps/console-web/node_modules apps/control-api/bin gateways/rust-gateway/target

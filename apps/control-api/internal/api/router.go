@@ -15,9 +15,22 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 
 	// Public routes.
 	mux.HandleFunc("GET /api/v1/health", handlers.Health())
+	mux.HandleFunc("GET /api/v1/metrics", handlers.Metrics(st))
 
-	// Authenticated routes (placeholder auth; real auth in Sprint 3).
+	// Phase 1 API (placeholder auth; real auth + RBAC in Phase 3).
 	mux.HandleFunc("GET /api/v1/applications", handlers.ListApplications(st))
+	mux.HandleFunc("POST /api/v1/applications", handlers.CreateApplication(st))
+	mux.HandleFunc("GET /api/v1/applications/{id}/domains", handlers.ListDomains(st))
+	mux.HandleFunc("POST /api/v1/applications/{id}/domains", handlers.CreateDomain(st))
+	mux.HandleFunc("GET /api/v1/applications/{id}/origins", handlers.ListOrigins(st))
+	mux.HandleFunc("POST /api/v1/applications/{id}/origins", handlers.CreateOrigin(st))
+	mux.HandleFunc("GET /api/v1/security-policies", handlers.ListSecurityPolicies(st))
+	mux.HandleFunc("POST /api/v1/security-policies", handlers.CreateSecurityPolicy(st))
+
+	// Gateway fleet (Phase 2 operations).
+	mux.HandleFunc("POST /api/v1/gateways/register", handlers.RegisterGateway(st))
+	mux.HandleFunc("POST /api/v1/gateways/{id}/heartbeat", handlers.Heartbeat(st))
+	mux.HandleFunc("GET /api/v1/gateways", handlers.ListGateways(st))
 
 	// Apply middleware stack (outermost first).
 	var h http.Handler = mux

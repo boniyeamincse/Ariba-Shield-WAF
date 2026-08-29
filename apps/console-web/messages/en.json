@@ -11,7 +11,8 @@
     "applications": "Applications",
     "no_applications": "No applications yet. Create one to get started.",
     "gateways": "Gateways",
-    "no_gateways": "No gateways registered."
+    "no_gateways": "No gateways registered.",
+    "no_policies": "No security policies yet."
   },
   "nav": {
     "overview": "Overview",
@@ -22,5 +23,20 @@
     "gateways": "Gateways",
     "settings": "Settings",
     "audit_log": "Audit Log"
+  },
+  "applications": {
+    "title": "Applications",
+    "no_applications": "No applications yet.",
+    "domains": "Domains",
+    "origins": "Origins"
+  },
+  "gateways": {
+    "title": "Gateways",
+    "no_gateways": "No gateways registered.",
+    "hostname": "Hostname",
+    "status": "Status",
+    "version": "Version",
+    "last_seen": "Last Seen",
+    "applied_hash": "Applied Hash"
   }
 }

@@ -28,5 +28,8 @@ Guidance for AI agents and humans working in this repository. Read the
 ## Docs to keep updated
 
 - `docs/phase0_srs.md` — the day-to-day contract (FR/NFR IDs, use cases).
+- `docs/api/endpoint.md` — The complete API Master Plan and Architecture roadmap (Phases 1-5). **Must be checked before adding any new API endpoint.**
+- `docs/api/API Specification Document.md` — Detailed JSON schemas and payloads for the enterprise API.
 - `docs/architecture/` — ADRs + diagrams (update diagrams with any boundary/data-flow change).
 - `docs/AI_SKILL.md` — AI-oriented project summary; keep in sync with the source docs (it must not override them).
+

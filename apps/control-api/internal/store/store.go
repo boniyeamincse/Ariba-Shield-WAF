@@ -6,11 +6,17 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/oklog/ulid/v2"
 )
 
 // Store wraps the PostgreSQL connection pool.
 type Store struct {
 	Pool *pgxpool.Pool
+}
+
+// NewID generates a new ULID public identifier.
+func (s *Store) NewID() (string, error) {
+	return ulid.Make().String(), nil
 }
 
 // Open creates a connection pool and verifies connectivity.
