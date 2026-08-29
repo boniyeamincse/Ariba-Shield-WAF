@@ -57,9 +57,18 @@ type Engine struct {
 
 // New builds the engine from config.
 func New(cfg Config) (*Engine, error) {
-	waf, err := coraza.NewWAF(
-		coraza.NewWAFConfig().WithDirectivesFromFile(cfg.RulesPath),
-	)
+	wafCfg := coraza.NewWAFConfig().WithDirectivesFromFile(cfg.RulesPath)
+
+	// Phase 3: anomaly threshold override. The baseline.conf already has the
+	// blocking rule (949110) with a default threshold. If the user requests a
+	// different threshold, we override tx.blocking_anomaly_score.
+	if cfg.AnomalyThreshold > 0 {
+		wafCfg = wafCfg.WithDirectives(
+			fmt.Sprintf("SecAction \"id:949101,phase:1,pass,nolog,setvar:tx.blocking_anomaly_score=%d\"", cfg.AnomalyThreshold),
+		)
+	}
+
+	waf, err := coraza.NewWAF(wafCfg)
 	if err != nil {
 		return nil, fmt.Errorf("load rules: %w", err)
 	}
