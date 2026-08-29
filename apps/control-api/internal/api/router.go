@@ -35,8 +35,16 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/applications/{id}/origins", handlers.CreateOrigin(st))
 	mux.HandleFunc("GET /api/v1/security-policies", handlers.ListSecurityPolicies(st))
 	mux.HandleFunc("POST /api/v1/security-policies", handlers.CreateSecurityPolicy(st))
+	mux.HandleFunc("GET /api/v1/security-policies/{id}", handlers.GetSecurityPolicy(st))
 	mux.HandleFunc("PATCH /api/v1/security-policies/{id}", handlers.UpdateSecurityPolicy(st))
 	mux.HandleFunc("DELETE /api/v1/security-policies/{id}", handlers.DeleteSecurityPolicy(st))
+	mux.HandleFunc("POST /api/v1/security-policies/{id}/validate", handlers.ValidatePolicy(st))
+	mux.HandleFunc("POST /api/v1/security-policies/{id}/activate", handlers.ActivatePolicy(st))
+	mux.HandleFunc("POST /api/v1/security-policies/{id}/disable", handlers.DisablePolicy(st))
+	mux.HandleFunc("POST /api/v1/security-policies/{id}/rollback", handlers.RollbackPolicy(st))
+	mux.HandleFunc("GET /api/v1/security-policies/{id}/versions", handlers.ListPolicyVersions(st))
+	mux.HandleFunc("GET /api/v1/security-policies/{id}/diff", handlers.DiffPolicy(st))
+	mux.HandleFunc("POST /api/v1/security-policies/{id}/clone", handlers.ClonePolicy(st))
 
 	// Gateway fleet (Phase 2 operations).
 	mux.HandleFunc("POST /api/v1/gateways/register", handlers.RegisterGateway(st))

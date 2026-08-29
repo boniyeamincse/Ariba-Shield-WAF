@@ -30,7 +30,6 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "POST", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "PATCH", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "DELETE", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyAdmin}},
-
 	{Method: "GET", PathPrefix: "/api/v1/security-events", Permissions: []string{PermEventRead, PermAuditRead}},
 	{Method: "GET", PathPrefix: "/api/v1/audit-events", Permissions: []string{PermAuditRead}},
 
