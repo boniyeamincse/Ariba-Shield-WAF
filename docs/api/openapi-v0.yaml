@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Ariba Shield WAF Control API
+  version: 0.1.0
+  description: >
+    Management REST/JSON API for Release 0.1 (Lab). HTTPS only, bound to the
+    management network. Write endpoints accept `Idempotency-Key`; resources use
+    optimistic concurrency via `version`/ETag.
+servers:
+  - url: https://control-api.example.local
+    description: Management network
+tags:
+  - name: health
+  - name: auth
+  - name: applications
+  - name: virtual-servers
+  - name: backend-pools
+  - name: config-versions
+  - name: traffic
+  - name: audit
+paths:
+  /api/v1/health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness/readiness check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Authenticate and issue a session cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Session established
+        "401":
+          description: Invalid credentials
+  /api/v1/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: Current user, language, and roles
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /api/v1/applications:
+    get:
+      tags: [applications]
+      operationId: listApplications
+      summary: List applications
+      responses:
+        "200":
+          description: Applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Application" }
+    post:
+      tags: [applications]
+      operationId: createApplication
+      summary: Create an application
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "409":
+          description: Idempotency key replay or name conflict
+  /api/v1/virtual-servers:
+    get:
+      tags: [virtual-servers]
+      operationId: listVirtualServers
+      summary: List virtual servers
+      responses:
+        "200":
+          description: Virtual servers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/VirtualServer" }
+  /api/v1/backend-pools:
+    get:
+      tags: [backend-pools]
+      operationId: listBackendPools
+      summary: List backend pools
+      responses:
+        "200":
+          description: Backend pools
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BackendPool" }
+  /api/v1/config-versions:
+    get:
+      tags: [config-versions]
+      operationId: listConfigVersions
+      summary: List config versions
+      responses:
+        "200":
+          description: Config versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ConfigVersion" }
+  /api/v1/traffic/requests:
+    get:
+      tags: [traffic]
+      operationId: queryTraffic
+      summary: Query structured access logs
+      parameters:
+        - { name: application_id, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: limit, in: query, schema: { type: integer, default: 100 } }
+      responses:
+        "200":
+          description: Access events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AccessEvent" }
+  /api/v1/audit-events:
+    get:
+      tags: [audit]
+      operationId: listAuditEvents
+      summary: Query the immutable audit log (Auditor+)
+      responses:
+        "200":
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditEvent" }
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+      description: Client-supplied key so retries do not duplicate mutations.
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, timestamp, version]
+      properties:
+        status: { type: string, enum: [ok] }
+        timestamp: { type: string, format: date-time }
+        version: { type: string }
+    User:
+      type: object
+      required: [id, email, language]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        language: { type: string, enum: [en, bn] }
+        roles:
+          type: array
+          items: { type: string }
+    Application:
+      type: object
+      required: [id, name, description, status, version]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [active, disabled] }
+        owner_user_id: { type: string }
+        version: { type: integer }
+    ApplicationCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 128 }
+        description: { type: string, default: "" }
+    VirtualServer:
+      type: object
+      required: [id, name, listen_addr, listen_port, tls_enabled]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        listen_addr: { type: string, default: "0.0.0.0" }
+        listen_port: { type: integer, minimum: 1, maximum: 65535 }
+        tls_enabled: { type: boolean, default: true }
+        default_backend_pool_id: { type: string }
+        version: { type: integer }
+    BackendPool:
+      type: object
+      required: [id, name, application_id, lb_algorithm, version]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        application_id: { type: string }
+        lb_algorithm: { type: string, enum: [round_robin, weighted, least_conn] }
+        version: { type: integer }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/BackendNode" }
+    BackendNode:
+      type: object
+      required: [id, host, port]
+      properties:
+        id: { type: string }
+        host: { type: string }
+        port: { type: integer, minimum: 1, maximum: 65535 }
+        weight: { type: integer, default: 1 }
+        active: { type: boolean, default: true }
+    ConfigVersion:
+      type: object
+      required: [id, version, bundle_hash, status]
+      properties:
+        id: { type: string }
+        version: { type: integer }
+        bundle_hash: { type: string }
+        status:
+          type: string
+          enum: [draft, validating, approved, active, superseded, rolled_back]
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+    AccessEvent:
+      type: object
+      required: [event_id, request_id, timestamp, method, path, status, decision_action]
+      properties:
+        event_id: { type: string }
+        request_id: { type: string }
+        timestamp: { type: string, format: date-time }
+        gateway_id: { type: string }
+        application_id: { type: string }
+        client_ip: { type: string }
+        method: { type: string }
+        path: { type: string }
+        status: { type: integer }
+        latency_ms: { type: number }
+        backend_node: { type: string }
+        decision_action: { type: string }
+    AuditEvent:
+      type: object
+      required: [id, action, resource_type, resource_id, created_at, request_id]
+      properties:
+        id: { type: string }
+        action: { type: string }
+        resource_type: { type: string }
+        resource_id: { type: string }
+        actor_user_id: { type: string }
+        ip: { type: string }
+        request_id: { type: string }
+        created_at: { type: string, format: date-time }

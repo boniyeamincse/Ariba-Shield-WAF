@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ariba-shield.dev/schema/policy-v0.json",
+  "title": "Policy Document v0",
+  "description": "Declarative policy/config bundle distributed to gateways. Additive-only: fields are added, never removed or renamed (ADR-002).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "config_id",
+    "created_at",
+    "created_by",
+    "settings",
+    "virtual_servers",
+    "backend_pools"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "config_id": { "$ref": "#/$defs/ulid" },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "created_by": { "$ref": "#/$defs/ulid" },
+    "replaces": { "$ref": "#/$defs/ulid" },
+    "gateway_targets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "default": ["local"]
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["log_level", "event_retention_days"],
+      "properties": {
+        "log_level": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
+        "event_retention_days": { "type": "integer", "minimum": 1, "maximum": 3650 }
+      }
+    },
+    "virtual_servers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/virtual_server" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "backend_pools": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/backend_pool" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "headers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trusted_proxy_headers", "request_id_header"],
+      "properties": {
+        "trusted_proxy_headers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["x-forwarded-for", "x-forwarded-proto", "x-forwarded-host"]
+        },
+        "request_id_header": { "type": "string", "default": "x-request-id" }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": { "type": "string", "enum": ["ed25519"] },
+        "key_id": { "type": "string" },
+        "value": { "type": "string", "description": "base64 signature over canonical JSON" }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Reserved for Phase 2+ (waf_policy, rate_limits, ip_lists, bot_policy, api_schemas). Additive-only.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "ulid": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "ULID, 26 char Crockford base32" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "virtual_server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "listen_addr", "listen_port", "tls", "default_backend_pool_id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ulid" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "listen_addr": { "type": "string", "default": "0.0.0.0" },
+        "listen_port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "tls": { "$ref": "#/$defs/tls_profile" },
+        "default_backend_pool_id": { "$ref": "#/$defs/ulid" },
+        "routes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/route" },
+          "default": []
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_request_line": { "type": "integer", "minimum": 1024, "maximum": 1048576, "default": 8192 },
+            "max_header_size": { "type": "integer", "minimum": 4096, "maximum": 1048576, "default": 32768 },
+            "max_body_size": { "type": "integer", "minimum": 0, "maximum": 2147483648, "default": 10485760 }
+          }
+        }
+      }
+    },
+    "tls_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "certificate_ref": { "type": "string", "description": "reference to certificate metadata, never the key material" },
+        "min_version": { "type": "string", "enum": ["1.2", "1.3"], "default": "1.2" },
+        "protocols": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["http/1.1", "h2"] },
+          "default": ["http/1.1", "h2"]
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "match", "backend_pool_id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ulid" },
+        "path": { "type": "string", "minLength": 1 },
+        "match": { "type": "string", "enum": ["prefix", "exact"] },
+        "backend_pool_id": { "$ref": "#/$defs/ulid" },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 100, "default": 0 }
+      }
+    },
+    "backend_pool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "application_id", "lb_algorithm", "nodes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ulid" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "application_id": { "$ref": "#/$defs/ulid" },
+        "lb_algorithm": { "type": "string", "enum": ["round_robin", "weighted", "least_conn"], "default": "round_robin" },
+        "health_monitor": { "$ref": "#/$defs/health_monitor" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/backend_node" },
+          "minItems": 1
+        }
+      }
+    },
+    "health_monitor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "interval_ms", "timeout_ms", "fail_threshold", "pass_threshold"],
+      "properties": {
+        "type": { "type": "string", "enum": ["tcp", "http"] },
+        "interval_ms": { "type": "integer", "minimum": 100, "maximum": 600000 },
+        "timeout_ms": { "type": "integer", "minimum": 50, "maximum": 60000 },
+        "fail_threshold": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "pass_threshold": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "http_path": { "type": "string", "minLength": 1 },
+        "http_expected_status": { "type": "array", "items": { "type": "integer", "minimum": 100, "maximum": 599 }, "uniqueItems": true }
+      }
+    },
+    "backend_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "host", "port"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ulid" },
+        "host": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "weight": { "type": "integer", "minimum": 1, "maximum": 100, "default": 1 },
+        "active": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

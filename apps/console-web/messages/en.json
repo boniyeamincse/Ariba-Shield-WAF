@@ -1,0 +1,26 @@
+{
+  "login": {
+    "title": "Sign in to Ariba Shield",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in"
+  },
+  "overview": {
+    "title": "Overview",
+    "description": "Welcome to Ariba Shield WAF. Manage your applications, policies, and gateways from this console.",
+    "applications": "Applications",
+    "no_applications": "No applications yet. Create one to get started.",
+    "gateways": "Gateways",
+    "no_gateways": "No gateways registered."
+  },
+  "nav": {
+    "overview": "Overview",
+    "applications": "Applications",
+    "traffic": "Traffic",
+    "security_events": "Security Events",
+    "policies": "Policies",
+    "gateways": "Gateways",
+    "settings": "Settings",
+    "audit_log": "Audit Log"
+  }
+}

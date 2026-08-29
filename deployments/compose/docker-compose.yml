@@ -1,0 +1,114 @@
+name: ariba-shield-dev
+
+# Release 0.1 development environment (single Linux node).
+# Control plane + gateway + dependencies on the management network.
+# WARNING: dev only. No default passwords are acceptable; credentials come
+# from .env (see .env.example). Never commit .env.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shield}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-shield}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrations:
+    image: ghcr.io/golang-migrate/migrate:v4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../apps/control-api/migrations:/migrations
+    command:
+      - -path=/migrations
+      - -database=postgres://${POSTGRES_USER:-shield}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-shield}?sslmode=disable
+      - up
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  control-api:
+    build:
+      context: ../../apps/control-api
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-shield}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-shield}?sslmode=disable
+      REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379/0
+      ADMIN_INITIAL_EMAIL: ${ADMIN_INITIAL_EMAIL:?set ADMIN_INITIAL_EMAIL in .env}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:?set ADMIN_INITIAL_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:8443:8443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  console-web:
+    build:
+      context: ../../apps/console-web
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://127.0.0.1:8443}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - control-api
+
+  gateway:
+    build:
+      context: ../../gateways/openresty-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "443:443"
+    volumes:
+      - gateway-config:/etc/shield-waf/config
+    depends_on:
+      - control-api
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Placeholder app backends for the reference test application.
+  backend-a:
+    image: nginx:1.27-alpine
+    environment:
+      SHIELD_BACKEND_ID: backend-a
+    ports:
+      - "127.0.0.1:8081:80"
+
+  backend-b:
+    image: nginx:1.27-alpine
+    environment:
+      SHIELD_BACKEND_ID: backend-b
+    ports:
+      - "127.0.0.1:8082:80"
+
+volumes:
+  pgdata:
+  gateway-config:
