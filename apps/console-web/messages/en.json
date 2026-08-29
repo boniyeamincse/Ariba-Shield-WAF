@@ -38,5 +38,16 @@
     "version": "Version",
     "last_seen": "Last Seen",
     "applied_hash": "Applied Hash"
+  },
+  "security_events": {
+    "title": "Security Events",
+    "no_events": "No security events yet.",
+    "severity": "Severity",
+    "time": "Time",
+    "method": "Method",
+    "path": "Path",
+    "reason": "Reason",
+    "rules": "Rules",
+    "client_ip": "Client IP"
   }
 }

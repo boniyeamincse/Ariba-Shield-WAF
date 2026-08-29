@@ -32,6 +32,9 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/gateways/{id}/heartbeat", handlers.Heartbeat(st))
 	mux.HandleFunc("GET /api/v1/gateways", handlers.ListGateways(st))
 
+	// Security events (Phase 2).
+	mux.HandleFunc("GET /api/v1/security-events", handlers.ListSecurityEvents(st))
+
 	// Apply middleware stack (outermost first).
 	var h http.Handler = mux
 	h = middleware.Logging(h)
