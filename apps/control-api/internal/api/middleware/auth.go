@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,6 +31,28 @@ func Auth(pool *pgxpool.Pool) func(http.Handler) http.Handler {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
 				_, _ = w.Write([]byte(`{"error":"unauthorized","code":"no_session"}`))
+				return
+			}
+
+			// DEV bypass (P0.4): only when AUTH_MOCK_ENABLED=true. Grants the
+			// requested role from X-User-Role for UI testing.
+			if os.Getenv("AUTH_MOCK_ENABLED") == "true" && cookie.Value == "mock_session_token" {
+				role := r.Header.Get("X-User-Role")
+				if role == "" {
+					role = "Read Only"
+				}
+				perms := RolePermissions[role]
+				if perms == nil {
+					perms = RolePermissions["Read Only"]
+				}
+				rbac := &RBACContext{
+					User: RBACUser{ID: "usr_mock_001", Email: "mock@aribashield.local", OrganizationID: "01ARZ3NDEKTSV4RRFFQ69G5FAV"},
+					Roles:       []string{role},
+					Permissions: perms,
+				}
+				ctx := ContextWithRBAC(r.Context(), rbac)
+				ctx = ContextWithActor(ctx, "usr_mock_001")
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 

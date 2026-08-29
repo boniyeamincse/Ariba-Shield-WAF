@@ -6,11 +6,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/ariba-shield/control-api/internal/store"
 	"github.com/oklog/ulid/v2"
 )
+
+// mockAuthEnabled gates the dev mock-login bypass. It MUST be off by default
+// (P0.4): the mock path accepts the hardcoded password "admin", which is not
+// acceptable in any non-dev environment. Enable with AUTH_MOCK_ENABLED=true.
+func mockAuthEnabled() bool {
+	return os.Getenv("AUTH_MOCK_ENABLED") == "true"
+}
 
 // Login authenticates with email+password, creates a session, returns a cookie.
 func Login(st *store.Store) http.HandlerFunc {
@@ -30,36 +38,39 @@ func Login(st *store.Store) http.HandlerFunc {
 			return
 		}
 
-		// DEV BYPASS: Mock users for RBAC UI testing
-		mockRoles := map[string]string{
-			"superadmin@aribashield.local": "SUPER_ADMIN",
-			"platform@aribashield.local":   "PLATFORM_ADMIN",
-			"security@aribashield.local":   "SECURITY_ADMIN",
-			"appowner@aribashield.local":   "APP_OWNER",
-			"soc@aribashield.local":        "SOC_ANALYST",
-			"auditor@aribashield.local":    "AUDITOR",
-			"readonly@aribashield.local":   "READ_ONLY",
-		}
+		// DEV BYPASS (P0.4): only active when AUTH_MOCK_ENABLED=true. The mock
+		// path accepts the hardcoded password "admin"; never enable in prod.
+		if mockAuthEnabled() {
+			mockRoles := map[string]string{
+				"superadmin@aribashield.local": "SUPER_ADMIN",
+				"platform@aribashield.local":   "PLATFORM_ADMIN",
+				"security@aribashield.local":   "SECURITY_ADMIN",
+				"appowner@aribashield.local":   "APP_OWNER",
+				"soc@aribashield.local":        "SOC_ANALYST",
+				"auditor@aribashield.local":    "AUDITOR",
+				"readonly@aribashield.local":   "READ_ONLY",
+			}
 
-		if role, isMock := mockRoles[body.Email]; isMock && body.Password == "admin" {
-			expiresAt := time.Now().Add(24 * time.Hour)
-			http.SetCookie(w, &http.Cookie{
-				Name:     "shield_session",
-				Value:    "mock_session_token",
-				Path:     "/",
-				Expires:  expiresAt,
-				HttpOnly: true,
-				Secure:   false, // False for localhost dev
-				SameSite: http.SameSiteLaxMode,
-			})
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
-				"user_id":  "usr_mock_001",
-				"email":    body.Email,
-				"role":     role,
-				"expires":  expiresAt.Format(time.RFC3339),
-			})
-			return
+			if role, isMock := mockRoles[body.Email]; isMock && body.Password == "admin" {
+				expiresAt := time.Now().Add(24 * time.Hour)
+				http.SetCookie(w, &http.Cookie{
+					Name:     "shield_session",
+					Value:    "mock_session_token",
+					Path:     "/",
+					Expires:  expiresAt,
+					HttpOnly: true,
+					Secure:   false, // False for localhost dev
+					SameSite: http.SameSiteLaxMode,
+				})
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]any{
+					"user_id":  "usr_mock_001",
+					"email":    body.Email,
+					"role":     role,
+					"expires":  expiresAt.Format(time.RFC3339),
+				})
+				return
+			}
 		}
 
 		// Look up the user and verify the password hash.
@@ -153,28 +164,60 @@ func Me(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("shield_session")
 		if err != nil || cookie.Value == "" {
-			// Mock bypass check for dev testing
-			if err == nil && cookie.Value == "mock_session_token" {
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]any{
-					"user": map[string]string{
-						"id":    "usr_mock_001",
-						"name":  "Mock User",
-						"role":  "Mock Role", // The UI reads this
-					},
-				})
-				return
-			}
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
 
-		// (DB logic to fetch user skipped for brevity, just return basic OK for real users)
+		// DEV bypass (P0.4): only when AUTH_MOCK_ENABLED=true.
+		if mockAuthEnabled() && cookie.Value == "mock_session_token" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{
+				"user": map[string]string{
+					"id":    "usr_mock_001",
+					"name":  "Mock User",
+					"role":  "Mock Role",
+				},
+			})
+			return
+		}
+
+		// Parse "userID:token".
+		val := cookie.Value
+		var userID, token string
+		for i := 0; i < len(val); i++ {
+			if val[i] == ':' {
+				userID = val[:i]
+				token = val[i+1:]
+				break
+			}
+		}
+		if userID == "" || token == "" {
+			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// Fetch the real user from the session.
+		var email, role string
+		err = st.Pool.QueryRow(r.Context(),
+			`SELECT u.email, COALESCE(
+			  (SELECT r.name FROM roles r
+			   JOIN user_group_memberships ugm ON ugm.group_id = r.id
+			   WHERE ugm.user_id = u.id LIMIT 1), 'Read Only')
+			 FROM sessions s
+			 JOIN users u ON u.id = s.user_id
+			 WHERE s.token_hash = $1 AND s.user_id = $2 AND s.expires_at > now()`,
+			token, userID).Scan(&email, &role)
+		if err != nil {
+			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
 			"user": map[string]string{
-				"id":   "real_user",
-				"role": "MEMBER",
+				"id":    userID,
+				"email": email,
+				"role":  role,
 			},
 		})
 	}

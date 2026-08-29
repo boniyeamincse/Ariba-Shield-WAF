@@ -68,14 +68,16 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/certificates", handlers.ListCertificates(st))
 	mux.HandleFunc("POST /api/v1/certificates", handlers.UploadCertificate(st))
 
-	// Apply middleware stack (outermost first).
+	// Apply middleware stack. Order matters (P0.6): Auth and RequestID must set
+	// the request context BEFORE Audit reads it, otherwise the audit trail has
+	// empty actor/request_id. Execution order (outermost first):
+	//   Recovery -> RBACEnforcer -> RequestID -> Auth -> Audit -> Logging -> mux
 	var h http.Handler = mux
 	h = middleware.Logging(h)
-	h = middleware.RequestID(h)
-	// Temporarily skip strict Auth enforcement for demo/dev purposes, or implement real auth.
-	// We'll leave it as is if it doesn't block /api/v1/auth. Let's assume Auth middleware ignores /auth/login.
-	h = middleware.Auth(st.Pool)(h)
 	h = middleware.Audit(st.Pool, h)
+	h = middleware.Auth(st.Pool)(h)
+	h = middleware.RequestID(h)
+	h = middleware.RBACEnforcer(h)
 	h = middleware.Recovery(h)
 
 	// Global CORS Middleware
