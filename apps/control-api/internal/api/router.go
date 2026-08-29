@@ -37,6 +37,14 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/gateways/{id}/heartbeat", handlers.Heartbeat(st))
 	mux.HandleFunc("GET /api/v1/gateways", handlers.ListGateways(st))
 	mux.HandleFunc("GET /api/v1/gateways/{id}/config/current", handlers.ConfigPull(st))
+	mux.HandleFunc("GET /api/v1/gateways/{id}", handlers.GetGateway(st))
+	mux.HandleFunc("PATCH /api/v1/gateways/{id}", handlers.UpdateGateway(st))
+	mux.HandleFunc("DELETE /api/v1/gateways/{id}", handlers.DeleteGateway(st))
+	mux.HandleFunc("GET /api/v1/gateways/{id}/status", handlers.GatewayStatus(st))
+	mux.HandleFunc("GET /api/v1/gateways/{id}/config", handlers.GatewayConfig(st))
+	mux.HandleFunc("POST /api/v1/gateways/{id}/config/apply", handlers.ApplyGatewayConfig(st))
+	mux.HandleFunc("POST /api/v1/gateways/{id}/config/rollback", handlers.RollbackGatewayConfig(st))
+	mux.HandleFunc("GET /api/v1/gateways/{id}/metrics", handlers.GatewayMetrics(st))
 
 	// Security events (Phase 2).
 	mux.HandleFunc("GET /api/v1/security-events", handlers.ListSecurityEvents(st))

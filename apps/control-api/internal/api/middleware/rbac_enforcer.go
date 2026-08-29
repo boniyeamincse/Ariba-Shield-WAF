@@ -23,7 +23,8 @@ var DefaultRoutePermissions = []RoutePermission{
 
 	{Method: "GET", PathPrefix: "/api/v1/gateways", Permissions: []string{PermGatewayRead, PermGatewayWrite}},
 	{Method: "POST", PathPrefix: "/api/v1/gateways", Permissions: []string{PermGatewayWrite}},
-	{Method: "PUT", PathPrefix: "/api/v1/gateways", Permissions: []string{PermGatewayWrite}},
+	{Method: "PATCH", PathPrefix: "/api/v1/gateways", Permissions: []string{PermGatewayWrite}},
+	{Method: "DELETE", PathPrefix: "/api/v1/gateways", Permissions: []string{PermGatewayWrite}},
 
 	{Method: "GET", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
