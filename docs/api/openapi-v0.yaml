@@ -1,41 +1,60 @@
 openapi: 3.0.3
 info:
   title: Ariba Shield WAF Control API
-  version: 0.1.0
+  version: 0.2.0
   description: >
-    Management REST/JSON API for Release 0.1 (Lab). HTTPS only, bound to the
-    management network. Write endpoints accept `Idempotency-Key`; resources use
-    optimistic concurrency via `version`/ETag.
+    Management REST/JSON API for the Ariba Shield WAF control plane. HTTPS only,
+    bound to the management network. Authenticated via the `shield_session`
+    cookie (set by POST /auth/login). Write endpoints accept `Idempotency-Key`;
+    optimistic concurrency via `If-Match`/`X-Expected-Version` (409 on mismatch).
 servers:
-  - url: https://control-api.example.local
+  - url: https://control-api.ariba-shield.local
     description: Management network
+security:
+  - CookieAuth: []
 tags:
-  - name: health
   - name: auth
   - name: applications
   - name: virtual-servers
   - name: backend-pools
-  - name: config-versions
+  - name: health-monitors
+  - name: security-policies
+  - name: policy-versions
+  - name: ip-lists
+  - name: rate-limits
+  - name: custom-rules
+  - name: managed-rules
+  - name: webhooks
+  - name: exceptions
+  - name: certificates
+  - name: deployments
+  - name: gateways
+  - name: security-events
+  - name: audit-events
   - name: traffic
-  - name: audit
+  - name: config-versions
+  - name: users
+  - name: backups
+  - name: health
 paths:
   /api/v1/health:
     get:
       tags: [health]
-      operationId: getHealth
-      summary: Liveness/readiness check
+      summary: Liveness/readiness check (no auth)
       responses:
-        "200":
-          description: Service is healthy
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
+        "200": { description: Healthy }
+  /api/v1/metrics:
+    get:
+      tags: [health]
+      summary: Prometheus metrics (no auth)
+      responses:
+        "200": { description: Metrics text }
+
+  # ---------- Auth ----------
   /api/v1/auth/login:
     post:
       tags: [auth]
-      operationId: login
-      summary: Authenticate and issue a session cookie
+      summary: Authenticate with email+password; sets shield_session cookie
       requestBody:
         required: true
         content:
@@ -45,28 +64,39 @@ paths:
               required: [email, password]
               properties:
                 email: { type: string, format: email }
-                password: { type: string, format: password }
+                password: { type: string }
       responses:
-        "200":
-          description: Session established
-        "401":
-          description: Invalid credentials
-  /api/v1/me:
+        "200": { description: Session established }
+        "401": { description: Invalid credentials }
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Invalidate session and clear cookie
+      responses:
+        "200": { description: Logged out }
+  /api/v1/auth/me:
     get:
       tags: [auth]
-      operationId: getMe
-      summary: Current user, language, and roles
+      summary: Current user (email + role)
       responses:
         "200":
           description: User profile
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      email: { type: string }
+                      role: { type: string }
+
+  # ---------- Applications ----------
   /api/v1/applications:
     get:
       tags: [applications]
-      operationId: listApplications
       summary: List applications
       responses:
         "200":
@@ -78,29 +108,121 @@ paths:
                 items: { $ref: "#/components/schemas/Application" }
     post:
       tags: [applications]
-      operationId: createApplication
       summary: Create an application
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApplicationCreate"
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
       responses:
-        "201":
-          description: Created
+        "201": { description: Created }
+  /api/v1/applications/{id}:
+    patch:
+      tags: [applications]
+      summary: Update an application (partial)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                status: { type: string, enum: [active, disabled] }
+      responses:
+        "200": { description: Updated }
+        "409": { description: Version conflict }
+    delete:
+      tags: [applications]
+      summary: Delete an application
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+        "404": { description: Not found }
+  /api/v1/applications/{id}/domains:
+    get:
+      tags: [applications]
+      summary: List domains for an application
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Domains
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Application"
-        "409":
-          description: Idempotency key replay or name conflict
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    hostname: { type: string }
+                    enabled: { type: boolean }
+    post:
+      tags: [applications]
+      summary: Add a domain
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hostname]
+              properties:
+                hostname: { type: string }
+                enabled: { type: boolean }
+      responses:
+        "201": { description: Created }
+  /api/v1/applications/{id}/origins:
+    get:
+      tags: [applications]
+      summary: List origins (upstreams) for an application
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Origins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    name: { type: string }
+                    protocol: { type: string }
+                    host: { type: string }
+                    port: { type: integer }
+                    weight: { type: integer }
+                    enabled: { type: boolean }
+    post:
+      tags: [applications]
+      summary: Add an origin
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, host]
+              properties:
+                name: { type: string }
+                protocol: { type: string, enum: [http, https] }
+                host: { type: string }
+                port: { type: integer }
+                weight: { type: integer }
+      responses:
+        "201": { description: Created }
+
+  # ---------- Virtual servers ----------
   /api/v1/virtual-servers:
     get:
       tags: [virtual-servers]
-      operationId: listVirtualServers
       summary: List virtual servers
       responses:
         "200":
@@ -110,11 +232,37 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/VirtualServer" }
+    post:
+      tags: [virtual-servers]
+      summary: Create a virtual server
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, listen_port]
+              properties:
+                name: { type: string }
+                listen_addr: { type: string, default: "0.0.0.0" }
+                listen_port: { type: integer }
+                tls_enabled: { type: boolean, default: true }
+                certificate_ref: { type: string }
+                default_backend_pool_id: { type: string }
+      responses:
+        "201": { description: Created }
+  /api/v1/virtual-servers/{id}:
+    delete:
+      tags: [virtual-servers]
+      summary: Delete a virtual server
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+
+  # ---------- Backend pools ----------
   /api/v1/backend-pools:
     get:
       tags: [backend-pools]
-      operationId: listBackendPools
-      summary: List backend pools
+      summary: List backend pools (with nodes)
       responses:
         "200":
           description: Backend pools
@@ -123,26 +271,609 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/BackendPool" }
-  /api/v1/config-versions:
+    post:
+      tags: [backend-pools]
+      summary: Create a backend pool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, application_id]
+              properties:
+                name: { type: string }
+                application_id: { type: string }
+                lb_algorithm: { type: string, enum: [round_robin, weighted, least_conn, ip_hash, consistent_hash] }
+      responses:
+        "201": { description: Created }
+  /api/v1/backend-pools/{id}:
+    delete:
+      tags: [backend-pools]
+      summary: Delete a backend pool
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+
+  # ---------- Health monitors ----------
+  /api/v1/health-monitors:
     get:
-      tags: [config-versions]
-      operationId: listConfigVersions
-      summary: List config versions
+      tags: [health-monitors]
+      summary: List health monitors
       responses:
         "200":
-          description: Config versions
+          description: Health monitors
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/ConfigVersion" }
+                items: { $ref: "#/components/schemas/HealthMonitor" }
+    post:
+      tags: [health-monitors]
+      summary: Create a health monitor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pool_id]
+              properties:
+                pool_id: { type: string }
+                type: { type: string, enum: [tcp, http], default: http }
+                interval_ms: { type: integer, default: 5000 }
+                timeout_ms: { type: integer, default: 2000 }
+                fail_threshold: { type: integer, default: 3 }
+                pass_threshold: { type: integer, default: 2 }
+                http_path: { type: string, default: /healthz }
+      responses:
+        "201": { description: Created }
+  /api/v1/health-monitors/{id}:
+    delete:
+      tags: [health-monitors]
+      summary: Delete a health monitor
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+
+  # ---------- Security policies ----------
+  /api/v1/security-policies:
+    get:
+      tags: [security-policies]
+      summary: List security policies
+      responses:
+        "200":
+          description: Security policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SecurityPolicy" }
+    post:
+      tags: [security-policies]
+      summary: Create a security policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                enforcement_mode: { type: string, enum: [transparent, alarm, blocking], default: transparent }
+                application_id: { type: string }
+      responses:
+        "201": { description: Created }
+  /api/v1/security-policies/{id}:
+    patch:
+      tags: [security-policies]
+      summary: Update a security policy (partial)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                enforcement_mode: { type: string, enum: [transparent, alarm, blocking] }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [security-policies]
+      summary: Delete a security policy
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+  /api/v1/security-policies/bind:
+    post:
+      tags: [security-policies]
+      summary: Bind a policy to an application
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy_id, application_id]
+              properties:
+                policy_id: { type: string }
+                application_id: { type: string }
+                enforcement_mode: { type: string, enum: [transparent, alarm, blocking] }
+      responses:
+        "200": { description: Bound }
+
+  # ---------- Policy versions ----------
+  /api/v1/security-policies/{id}/versions:
+    post:
+      tags: [policy-versions]
+      summary: Create an immutable policy version (first auto-stages)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [document]
+              properties:
+                document: { type: object }
+                bundle_hash: { type: string }
+      responses:
+        "201": { description: Created }
+  /api/v1/policy-versions/diff:
+    get:
+      tags: [policy-versions]
+      summary: Field-level diff between two versions
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string } }
+        - { name: to, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Diff
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added: { type: array, items: { type: string } }
+                  removed: { type: array, items: { type: string } }
+                  changed: { type: array, items: { type: string } }
+  /api/v1/policy-versions/{id}/activate:
+    post:
+      tags: [policy-versions]
+      summary: Activate a version (demotes prior active)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Activated }
+  /api/v1/policy-versions/{id}/promote:
+    post:
+      tags: [policy-versions]
+      summary: Promote draft->staging->approved->canary->active
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: to, in: query, schema: { type: string, enum: [staging, approved, canary, active] } }
+      responses:
+        "200": { description: Promoted }
+  /api/v1/policy-versions/{id}/rollback:
+    post:
+      tags: [policy-versions]
+      summary: Roll back to the last active version
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Rolled back }
+
+  # ---------- IP lists ----------
+  /api/v1/ip-lists:
+    get:
+      tags: [ip-lists]
+      summary: List IP lists
+      responses:
+        "200":
+          description: IP lists
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/IPList" }
+    post:
+      tags: [ip-lists]
+      summary: Create an IP list
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, list_type]
+              properties:
+                name: { type: string }
+                list_type: { type: string, enum: [allowed, blocked] }
+                entries: { type: array, items: { type: string } }
+                description: { type: string }
+      responses:
+        "201": { description: Created }
+  /api/v1/ip-lists/{id}:
+    patch:
+      tags: [ip-lists]
+      summary: Update an IP list
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                list_type: { type: string, enum: [allowed, blocked] }
+                entries: { type: array, items: { type: string } }
+                description: { type: string }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [ip-lists]
+      summary: Delete an IP list
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+
+  # ---------- Rate limits ----------
+  /api/v1/rate-limits:
+    get:
+      tags: [rate-limits]
+      summary: List rate limit policies
+      responses:
+        "200":
+          description: Rate limit policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RateLimit" }
+    post:
+      tags: [rate-limits]
+      summary: Create a rate limit policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, limit_count]
+              properties:
+                name: { type: string }
+                application_id: { type: string }
+                route_prefix: { type: string }
+                limit_count: { type: integer }
+                window_seconds: { type: integer, default: 60 }
+                action: { type: string, enum: [throttle, block], default: throttle }
+      responses:
+        "201": { description: Created }
+  /api/v1/rate-limits/{id}:
+    patch:
+      tags: [rate-limits]
+      summary: Update a rate limit policy
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                route_prefix: { type: string }
+                limit_count: { type: integer }
+                window_seconds: { type: integer }
+                action: { type: string }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [rate-limits]
+      summary: Delete a rate limit policy
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+
+  # ---------- Custom rules ----------
+  /api/v1/custom-rules:
+    get:
+      tags: [custom-rules]
+      summary: List custom rules
+      responses:
+        "200":
+          description: Custom rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CustomRule" }
+    post:
+      tags: [custom-rules]
+      summary: Create a custom rule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                policy_id: { type: string }
+                name: { type: string }
+                description: { type: string }
+                action: { type: string, enum: [BLOCK, LOG, ALLOW], default: BLOCK }
+                match_conditions: { type: object }
+      responses:
+        "201": { description: Created }
+
+  # ---------- Managed rules ----------
+  /api/v1/managed-rules:
+    get:
+      tags: [managed-rules]
+      summary: List managed rule sets
+      responses:
+        "200":
+          description: Managed rule sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ManagedRule" }
+  /api/v1/managed-rules/{id}:
+    post:
+      tags: [managed-rules]
+      summary: Configure a managed rule set (enabled/sensitivity)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                sensitivity: { type: string }
+      responses:
+        "200": { description: Updated }
+
+  # ---------- Webhooks ----------
+  /api/v1/webhooks:
+    get:
+      tags: [webhooks]
+      summary: List webhooks
+      responses:
+        "200":
+          description: Webhooks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Webhook" }
+    post:
+      tags: [webhooks]
+      summary: Create a webhook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, url]
+              properties:
+                name: { type: string }
+                url: { type: string }
+                severity: { type: array, items: { type: string } }
+                event_types: { type: array, items: { type: string } }
+                custom_headers: { type: object }
+                max_retry_attempts: { type: integer, default: 3 }
+      responses:
+        "201": { description: Created }
+
+  # ---------- Exceptions ----------
+  /api/v1/exceptions:
+    get:
+      tags: [exceptions]
+      summary: List policy exceptions
+      responses:
+        "200":
+          description: Exceptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Exception" }
+    post:
+      tags: [exceptions]
+      summary: Create a time-limited exception (reason required)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                policy_id: { type: string }
+                application_id: { type: string }
+                rule_id: { type: string }
+                url_pattern: { type: string }
+                parameter: { type: string }
+                reason: { type: string }
+                expires_at: { type: string, format: date-time }
+      responses:
+        "201": { description: Created }
+
+  # ---------- Certificates ----------
+  /api/v1/certificates:
+    get:
+      tags: [certificates]
+      summary: List certificate metadata (never key material)
+      responses:
+        "200":
+          description: Certificates
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Certificate" }
+    post:
+      tags: [certificates]
+      summary: Upload a certificate (PEM); parses metadata; never stores the key
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, domain, certificate]
+              properties:
+                name: { type: string }
+                domain: { type: string }
+                certificate: { type: string }
+      responses:
+        "201": { description: Imported }
+
+  # ---------- Deployments ----------
+  /api/v1/deployments:
+    get:
+      tags: [deployments]
+      summary: List deployment history
+      responses:
+        "200":
+          description: Deployments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Deployment" }
+    post:
+      tags: [deployments]
+      summary: Sync a policy version to target gateways
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy_version_id, target_gateways]
+              properties:
+                policy_version_id: { type: string }
+                target_gateways: { type: array, items: { type: string } }
+      responses:
+        "202": { description: Accepted }
+
+  # ---------- Gateways ----------
+  /api/v1/gateways:
+    get:
+      tags: [gateways]
+      summary: List gateway fleet with status + applied hash
+      responses:
+        "200":
+          description: Gateways
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Gateway" }
+  /api/v1/gateways/register:
+    post:
+      tags: [gateways]
+      summary: Register a gateway (idempotent)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gateway_id, hostname]
+              properties:
+                gateway_id: { type: string }
+                hostname: { type: string }
+                ip: { type: string }
+                version: { type: string }
+                capabilities: { type: array, items: { type: string } }
+      responses:
+        "200": { description: Registered }
+  /api/v1/gateways/{id}/heartbeat:
+    post:
+      tags: [gateways]
+      summary: Report heartbeat + applied config hash
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string }
+                applied_hash: { type: string }
+                version: { type: string }
+                health: { type: object }
+                last_error: { type: string }
+      responses:
+        "200": { description: Heartbeat recorded }
+  /api/v1/gateways/{id}/config/current:
+    get:
+      tags: [gateways]
+      summary: Pull the latest active config bundle (ETag/304)
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: If-None-Match, in: header, schema: { type: string } }
+      responses:
+        "200":
+          description: Config bundle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  config_id: { type: string }
+                  bundle_hash: { type: string }
+                  document: { type: object }
+                  created_at: { type: string }
+        "304": { description: Not modified }
+
+  # ---------- Security events ----------
+  /api/v1/security-events:
+    get:
+      tags: [security-events]
+      summary: List security events with pagination + filters
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: application_id, in: query, schema: { type: string } }
+        - { name: severity, in: query, schema: { type: string } }
+        - { name: client_ip, in: query, schema: { type: string } }
+        - { name: rule_id, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: "#/components/schemas/SecurityEvent" }
+                  pagination:
+                    type: object
+                    properties:
+                      limit: { type: integer }
+                      offset: { type: integer }
+                      count: { type: integer }
+
+  # ---------- Audit ----------
+  /api/v1/audit-events:
+    get:
+      tags: [audit-events]
+      summary: List immutable audit events (newest first)
+      responses:
+        "200":
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AuditEvent" }
+
+  # ---------- Traffic ----------
   /api/v1/traffic/requests:
     get:
       tags: [traffic]
-      operationId: queryTraffic
       summary: Query structured access logs
       parameters:
         - { name: application_id, in: query, schema: { type: string } }
+        - { name: client_ip, in: query, schema: { type: string } }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
         - { name: limit, in: query, schema: { type: integer, default: 100 } }
@@ -152,194 +883,296 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items: { $ref: "#/components/schemas/AccessEvent" }
-  /api/v1/audit-events:
+                type: object
+                properties:
+                  requests:
+                    type: array
+                    items: { $ref: "#/components/schemas/AccessEvent" }
+
+  # ---------- Config versions ----------
+  /api/v1/config-versions:
     get:
-      tags: [audit]
-      operationId: listAuditEvents
-      summary: Query the immutable audit log (Auditor+)
+      tags: [config-versions]
+      summary: List config version history
       responses:
         "200":
-          description: Audit events
+          description: Config versions
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/AuditEvent" }
-  /api/v1/applications/{id}/domains:
+                items: { $ref: "#/components/schemas/ConfigVersion" }
+  /api/v1/config-versions/{id}:
     get:
-      tags: [applications]
-      operationId: listDomains
-      summary: List domains for an application
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string } }
+      tags: [config-versions]
+      summary: Get a config version document
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Config document }
+
+  # ---------- Users ----------
+  /api/v1/users:
+    get:
+      tags: [users]
+      summary: List users with roles
       responses:
         "200":
-          description: List of domains
-  /api/v1/applications/{id}/origins:
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: "#/components/schemas/User" }
+    post:
+      tags: [users]
+      summary: Create a user and assign a role
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                role: { type: string, default: "Read Only" }
+      responses:
+        "201": { description: Created }
+  /api/v1/users/{id}:
+    patch:
+      tags: [users]
+      summary: Update a user's role or status
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string }
+                status: { type: string }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [users]
+      summary: Delete a user
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Deleted }
+
+  # ---------- Backups ----------
+  /api/v1/backups:
     get:
-      tags: [applications]
-      operationId: listOrigins
-      summary: List upstream origins for an application
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string } }
+      tags: [backups]
+      summary: List backups
       responses:
         "200":
-          description: List of origins
-  /api/v1/security-policies:
-    get:
-      tags: [security-policies]
-      operationId: listSecurityPolicies
-      summary: List security policies
+          description: Backups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    status: { type: string }
+                    artifact_ref: { type: string }
+                    size_bytes: { type: integer }
+                    created_at: { type: string }
+    post:
+      tags: [backups]
+      summary: Create a backup (async snapshot)
       responses:
-        "200":
-          description: Security policies
-  /api/v1/gateways:
-    get:
-      tags: [gateways]
-      operationId: listGateways
-      summary: List active gateway nodes
+        "202": { description: Accepted }
+  /api/v1/backups/{id}/restore:
+    post:
+      tags: [backups]
+      summary: Request a restore (records intent)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
       responses:
-        "200":
-          description: List of gateways
-  /api/v1/metrics:
-    get:
-      tags: [health]
-      operationId: getMetrics
-      summary: Prometheus metrics endpoint
-      responses:
-        "200":
-          description: Metrics data
-  /api/v1/traffic-control/ip-lists:
-    get:
-      tags: [traffic]
-      operationId: listIpLists
-      summary: Manage IP allowlists and blocklists
-      responses:
-        "200":
-          description: IP Lists
-  /api/v1/traffic-control/rate-limits:
-    get:
-      tags: [traffic]
-      operationId: listRateLimits
-      summary: Manage API rate limits
-      responses:
-        "200":
-          description: Rate limit configurations
-  /api/v1/security-events:
-    get:
-      tags: [audit]
-      operationId: listSecurityEvents
-      summary: Query security block/alert events
-      responses:
-        "200":
-          description: Security events
+        "200": { description: Restore requested }
+
 components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: shield_session
   parameters:
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: false
-      schema: { type: string, format: uuid }
-      description: Client-supplied key so retries do not duplicate mutations.
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
   schemas:
-    HealthResponse:
-      type: object
-      required: [status, timestamp, version]
-      properties:
-        status: { type: string, enum: [ok] }
-        timestamp: { type: string, format: date-time }
-        version: { type: string }
-    User:
-      type: object
-      required: [id, email, language]
-      properties:
-        id: { type: string }
-        email: { type: string, format: email }
-        language: { type: string, enum: [en, bn] }
-        roles:
-          type: array
-          items: { type: string }
     Application:
       type: object
-      required: [id, name, description, status, version]
       properties:
         id: { type: string }
         name: { type: string }
         description: { type: string }
-        status: { type: string, enum: [active, disabled] }
+        status: { type: string }
         owner_user_id: { type: string }
         version: { type: integer }
-    ApplicationCreate:
-      type: object
-      required: [name]
-      properties:
-        name: { type: string, minLength: 1, maxLength: 128 }
-        description: { type: string, default: "" }
     VirtualServer:
       type: object
-      required: [id, name, listen_addr, listen_port, tls_enabled]
       properties:
         id: { type: string }
         name: { type: string }
-        listen_addr: { type: string, default: "0.0.0.0" }
-        listen_port: { type: integer, minimum: 1, maximum: 65535 }
-        tls_enabled: { type: boolean, default: true }
+        listen_addr: { type: string }
+        listen_port: { type: integer }
+        tls_enabled: { type: boolean }
+        certificate_ref: { type: string }
         default_backend_pool_id: { type: string }
         version: { type: integer }
     BackendPool:
       type: object
-      required: [id, name, application_id, lb_algorithm, version]
       properties:
         id: { type: string }
         name: { type: string }
         application_id: { type: string }
-        lb_algorithm: { type: string, enum: [round_robin, weighted, least_conn] }
+        lb_algorithm: { type: string }
         version: { type: integer }
         nodes:
           type: array
-          items: { $ref: "#/components/schemas/BackendNode" }
-    BackendNode:
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              host: { type: string }
+              port: { type: integer }
+              weight: { type: integer }
+              active: { type: boolean }
+    HealthMonitor:
       type: object
-      required: [id, host, port]
       properties:
         id: { type: string }
-        host: { type: string }
-        port: { type: integer, minimum: 1, maximum: 65535 }
-        weight: { type: integer, default: 1 }
-        active: { type: boolean, default: true }
-    ConfigVersion:
+        pool_id: { type: string }
+        type: { type: string }
+        interval_ms: { type: integer }
+        timeout_ms: { type: integer }
+        fail_threshold: { type: integer }
+        pass_threshold: { type: integer }
+        http_path: { type: string }
+    SecurityPolicy:
       type: object
-      required: [id, version, bundle_hash, status]
       properties:
         id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        enforcement_mode: { type: string }
+        application_id: { type: string }
         version: { type: integer }
-        bundle_hash: { type: string }
-        status:
-          type: string
-          enum: [draft, validating, approved, active, superseded, rolled_back]
-        created_by: { type: string }
-        created_at: { type: string, format: date-time }
-    AccessEvent:
+    IPList:
       type: object
-      required: [event_id, request_id, timestamp, method, path, status, decision_action]
       properties:
+        id: { type: string }
+        name: { type: string }
+        list_type: { type: string }
+        entries: { type: array, items: { type: string } }
+        description: { type: string }
+        version: { type: integer }
+    RateLimit:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        application_id: { type: string }
+        route_prefix: { type: string }
+        limit_count: { type: integer }
+        window_seconds: { type: integer }
+        action: { type: string }
+        version: { type: integer }
+    CustomRule:
+      type: object
+      properties:
+        id: { type: string }
+        policy_id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        action: { type: string }
+        status: { type: string }
+    ManagedRule:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        category: { type: string }
+        enabled: { type: boolean }
+        sensitivity: { type: string }
+        status: { type: string }
+    Webhook:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        url: { type: string }
+        severity: { type: array, items: { type: string } }
+        event_types: { type: array, items: { type: string } }
+        max_retry_attempts: { type: integer }
+        status: { type: string }
+    Exception:
+      type: object
+      properties:
+        id: { type: string }
+        policy_id: { type: string }
+        application_id: { type: string }
+        rule_id: { type: string }
+        url_pattern: { type: string }
+        parameter: { type: string }
+        reason: { type: string }
+        expires_at: { type: string }
+        status: { type: string }
+    Certificate:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        domain: { type: string }
+        issuer: { type: string }
+        serial: { type: string }
+        not_before: { type: string }
+        not_after: { type: string }
+        status: { type: string }
+    Deployment:
+      type: object
+      properties:
+        id: { type: string }
+        policy_version_id: { type: string }
+        target_gateways: { type: array, items: { type: string } }
+        status: { type: string }
+        error: { type: string }
+    Gateway:
+      type: object
+      properties:
+        id: { type: string }
+        hostname: { type: string }
+        ip: { type: string }
+        version: { type: string }
+        status: { type: string }
+        last_seen_at: { type: string }
+        applied_hash: { type: string }
+    SecurityEvent:
+      type: object
+      properties:
+        id: { type: string }
         event_id: { type: string }
         request_id: { type: string }
-        timestamp: { type: string, format: date-time }
-        gateway_id: { type: string }
-        application_id: { type: string }
+        severity: { type: string }
+        decision_action: { type: string }
+        reason: { type: string }
+        rule_ids: { type: array, items: { type: string } }
         client_ip: { type: string }
         method: { type: string }
         path: { type: string }
         status: { type: integer }
-        latency_ms: { type: number }
-        backend_node: { type: string }
-        decision_action: { type: string }
+        created_at: { type: string }
     AuditEvent:
       type: object
-      required: [id, action, resource_type, resource_id, created_at, request_id]
       properties:
         id: { type: string }
         action: { type: string }
@@ -348,4 +1181,38 @@ components:
         actor_user_id: { type: string }
         ip: { type: string }
         request_id: { type: string }
-        created_at: { type: string, format: date-time }
+        created_at: { type: string }
+    AccessEvent:
+      type: object
+      properties:
+        event_id: { type: string }
+        request_id: { type: string }
+        gateway_id: { type: string }
+        application_id: { type: string }
+        client_ip: { type: string }
+        method: { type: string }
+        path: { type: string }
+        host: { type: string }
+        status: { type: integer }
+        bytes: { type: integer }
+        latency_ms: { type: number }
+        backend_node: { type: string }
+        decision_action: { type: string }
+        created_at: { type: string }
+    ConfigVersion:
+      type: object
+      properties:
+        id: { type: string }
+        version: { type: integer }
+        bundle_hash: { type: string }
+        status: { type: string }
+        created_by: { type: string }
+        created_at: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        role: { type: string }
+        status: { type: string }
+        created_at: { type: string }
