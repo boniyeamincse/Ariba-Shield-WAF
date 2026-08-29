@@ -67,7 +67,7 @@ var DefaultRoutePermissions = []RoutePermission{
 // CheckRoutePermission returns true if the request method+path is authorized
 // for the RBAC context.
 func CheckRoutePermission(ctx context.Context, method, path string) bool {
-	if path == "/api/v1/health" || path == "/api/v1/metrics" {
+	if path == "/api/v1/health" || path == "/api/v1/metrics" || strings.HasPrefix(path, "/api/v1/auth/") {
 		return true
 	}
 	for _, rp := range DefaultRoutePermissions {

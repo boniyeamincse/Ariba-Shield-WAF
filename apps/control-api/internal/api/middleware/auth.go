@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/ariba-shield/control-api/internal/store"
 )
 
 // Auth returns middleware that extracts the authenticated user from the
 // shield_session cookie, loads their roles from PostgreSQL, and sets the RBAC
 // context. Unauthenticated requests are rejected with 401 (P0.4).
-func Auth(pool *pgxpool.Pool) func(http.Handler) http.Handler {
+func Auth(st *store.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Health and metrics are always open (no auth required).
@@ -74,21 +74,23 @@ func Auth(pool *pgxpool.Pool) func(http.Handler) http.Handler {
 			}
 
 			// Look up the session and user.
-			var email, roleName string
-			err = pool.QueryRow(r.Context(),
-				`SELECT u.email, COALESCE(
-				  (SELECT r.name FROM roles r
-				   JOIN user_group_memberships ugm ON ugm.group_id = r.id
-				   WHERE ugm.user_id = u.id LIMIT 1), 'Read Only')
+			var email string
+			err = st.Pool.QueryRow(r.Context(),
+				`SELECT u.email
 				 FROM sessions s
 				 JOIN users u ON u.id = s.user_id
 				 WHERE s.token_hash = $1 AND s.user_id = $2 AND s.expires_at > now()`,
-				token, userID).Scan(&email, &roleName)
+				token, userID).Scan(&email)
 			if err != nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
 				_, _ = w.Write([]byte(`{"error":"unauthorized","code":"session_expired"}`))
 				return
+			}
+
+			roleName, err := st.LookupUserRole(r.Context(), userID)
+			if err != nil {
+				roleName = "Read Only"
 			}
 
 			perms := RolePermissions[roleName]

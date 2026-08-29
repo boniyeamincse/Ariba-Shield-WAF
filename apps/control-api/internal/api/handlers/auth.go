@@ -74,15 +74,12 @@ func Login(st *store.Store) http.HandlerFunc {
 		}
 
 		// Look up the user and verify the password hash.
-		var userID, passwordHash, orgID, role string
+		var userID, passwordHash, orgID string
 		var totpEnabled bool
 		err := st.Pool.QueryRow(r.Context(),
-			`SELECT u.id, u.password_hash, u.organization_id, u.totp_enabled,
-			        COALESCE((SELECT r.name FROM roles r
-			          JOIN user_group_memberships ugm ON ugm.group_id = r.id
-			          WHERE ugm.user_id = u.id LIMIT 1), 'Read Only')
+			`SELECT u.id, u.password_hash, u.organization_id, u.totp_enabled
 			 FROM users u WHERE u.email = $1 AND u.status = 'active'`,
-			body.Email).Scan(&userID, &passwordHash, &orgID, &totpEnabled, &role)
+			body.Email).Scan(&userID, &passwordHash, &orgID, &totpEnabled)
 		if err != nil {
 			http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
 			return
@@ -91,6 +88,11 @@ func Login(st *store.Store) http.HandlerFunc {
 		if !store.CheckPassword(body.Password, passwordHash) {
 			http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
 			return
+		}
+
+		role, err := st.LookupUserRole(r.Context(), userID)
+		if err != nil {
+			role = "Read Only"
 		}
 
 		// Create a session.
@@ -197,19 +199,19 @@ func Me(st *store.Store) http.HandlerFunc {
 		}
 
 		// Fetch the real user from the session.
-		var email, role string
+		var email string
 		err = st.Pool.QueryRow(r.Context(),
-			`SELECT u.email, COALESCE(
-			  (SELECT r.name FROM roles r
-			   JOIN user_group_memberships ugm ON ugm.group_id = r.id
-			   WHERE ugm.user_id = u.id LIMIT 1), 'Read Only')
-			 FROM sessions s
+			`SELECT u.email FROM sessions s
 			 JOIN users u ON u.id = s.user_id
 			 WHERE s.token_hash = $1 AND s.user_id = $2 AND s.expires_at > now()`,
-			token, userID).Scan(&email, &role)
+			token, userID).Scan(&email)
 		if err != nil {
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 			return
+		}
+		role, err := st.LookupUserRole(r.Context(), userID)
+		if err != nil {
+			role = "Read Only"
 		}
 
 		w.Header().Set("Content-Type", "application/json")

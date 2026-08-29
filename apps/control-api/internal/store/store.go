@@ -10,10 +10,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// cost for bcrypt hashing
 const bcryptCost = 10
 
-// HashPassword returns a bcrypt hash of the password.
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
@@ -22,9 +20,64 @@ func HashPassword(password string) (string, error) {
 	return string(bytes), nil
 }
 
-// CheckPassword verifies a password against a bcrypt hash.
 func CheckPassword(password, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
+
+// DefaultRoles and their permissions (mirrors middleware.RolePermissions).
+var DefaultRoles = map[string][]string{
+	"Super Admin":     {"app:admin", "gateway:write", "policy:admin", "event:read", "audit:read", "user:admin", "system:admin", "cert:write", "ip:write", "ratelimit:write"},
+	"Platform Admin":  {"app:admin", "gateway:write", "policy:admin", "event:read", "audit:read", "user:read", "cert:write", "ip:write", "ratelimit:write"},
+	"Security Admin":  {"app:write", "policy:write", "event:read", "audit:read", "ip:write", "ratelimit:write", "cert:read"},
+	"App Owner":       {"app:read", "app:write", "gateway:read", "policy:read", "event:read"},
+	"SOC Analyst":     {"event:read", "app:read", "gateway:read", "policy:read"},
+	"Auditor":         {"audit:read", "event:read", "app:read", "gateway:read", "policy:read"},
+	"Read Only":       {"app:read", "gateway:read", "policy:read", "event:read"},
+}
+
+// SeedRoles inserts the default roles and permissions if they don't exist.
+func (s *Store) SeedRoles(ctx context.Context) error {
+	for name, perms := range DefaultRoles {
+		_, err := s.Pool.Exec(ctx,
+			`INSERT INTO roles (id, name, permissions) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING`,
+			ulid.Make().String(), name, perms)
+		if err != nil {
+			return fmt.Errorf("seed role %q: %w", name, err)
+		}
+	}
+	return nil
+}
+
+// LookupUserRole returns the user's role name. Uses user_roles (direct mapping)
+// with fallback to the old group-based lookup for backward compatibility.
+func (s *Store) LookupUserRole(ctx context.Context, userID string) (string, error) {
+	var role string
+	err := s.Pool.QueryRow(ctx,
+		`SELECT r.name FROM user_roles ur
+		 JOIN roles r ON r.id = ur.role_id
+		 WHERE ur.user_id = $1
+		 LIMIT 1`, userID).Scan(&role)
+	if err == nil {
+		return role, nil
+	}
+	// Fallback: group-based lookup (legacy, for existing data).
+	err = s.Pool.QueryRow(ctx,
+		`SELECT r.name FROM roles r
+		 JOIN user_group_memberships ugm ON ugm.group_id = r.id
+		 WHERE ugm.user_id = $1
+		 LIMIT 1`, userID).Scan(&role)
+	if err == nil {
+		return role, nil
+	}
+	return "Read Only", nil
+}
+
+// AssignRole assigns a role to a user.
+func (s *Store) AssignRole(ctx context.Context, userID, roleID string) error {
+	_, err := s.Pool.Exec(ctx,
+		`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		userID, roleID)
+	return err
 }
 
 // Store wraps the PostgreSQL connection pool.
@@ -87,6 +140,15 @@ func (s *Store) EnsureInitialAdmin(ctx context.Context, email, password string) 
 	if _, err := s.Pool.Exec(ctx, `INSERT INTO users (id, organization_id, email, password_hash, language) VALUES ($1, $2, $3, $4, 'en') ON CONFLICT DO NOTHING`,
 		userID, orgID, email, hash); err != nil {
 		return fmt.Errorf("create initial admin: %w", err)
+	}
+
+	// Seed roles and assign Super Admin to the initial user.
+	if err := s.SeedRoles(ctx); err != nil {
+		return fmt.Errorf("seed roles: %w", err)
+	}
+	var roleID string
+	if err := s.Pool.QueryRow(ctx, `SELECT id FROM roles WHERE name = 'Super Admin'`).Scan(&roleID); err == nil {
+		_ = s.AssignRole(ctx, userID, roleID)
 	}
 	return nil
 }

@@ -75,7 +75,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	var h http.Handler = mux
 	h = middleware.Logging(h)
 	h = middleware.Audit(st.Pool, h)
-	h = middleware.Auth(st.Pool)(h)
+	h = middleware.Auth(st)(h)
 	h = middleware.RequestID(h)
 	h = middleware.RBACEnforcer(h)
 	h = middleware.Recovery(h)
