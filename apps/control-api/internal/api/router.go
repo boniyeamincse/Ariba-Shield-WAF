@@ -230,6 +230,15 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/bot-management", handlers.CreateResource(st, handlers.CRUDConfig{Table: "bot_policies", JSONName: "bot policy", Required: []string{"name"}, Columns: []string{"application_id", "name", "challenge_type", "known_bots", "automation_signals", "login_protection", "scrape_protection", "status"}}))
 	mux.HandleFunc("PATCH /api/v1/bot-management/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "bot_policies", JSONName: "bot policy", Columns: []string{"challenge_type", "known_bots", "automation_signals", "login_protection", "scrape_protection", "status"}}))
 	mux.HandleFunc("DELETE /api/v1/bot-management/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "bot_policies", JSONName: "bot policy"}))
+	// Bot & abuse protection (canonical paths per API list)
+	mux.HandleFunc("GET /api/v1/bot-policies", handlers.ListResource(st, handlers.CRUDConfig{Table: "bot_policies", JSONName: "bot policy"}))
+	mux.HandleFunc("POST /api/v1/bot-policies", handlers.CreateResource(st, handlers.CRUDConfig{Table: "bot_policies", JSONName: "bot policy", Required: []string{"name"}, Columns: []string{"application_id", "name", "challenge_type", "known_bots", "automation_signals", "login_protection", "scrape_protection", "status"}}))
+	mux.HandleFunc("GET /api/v1/bot-policies/{id}", handlers.GetBotPolicy(st))
+	mux.HandleFunc("PATCH /api/v1/bot-policies/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "bot_policies", JSONName: "bot policy", Columns: []string{"challenge_type", "known_bots", "automation_signals", "login_protection", "scrape_protection", "status"}}))
+	mux.HandleFunc("DELETE /api/v1/bot-policies/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "bot_policies", JSONName: "bot policy"}))
+	mux.HandleFunc("GET /api/v1/bot/events", handlers.ListBotEvents(st))
+	mux.HandleFunc("GET /api/v1/bot/clients", handlers.ListBotClients(st))
+	mux.HandleFunc("POST /api/v1/bot/challenges/{id}/revoke", handlers.RevokeBotChallenge(st))
 
 	// Phase 3: DLP
 	mux.HandleFunc("GET /api/v1/dlp", handlers.ListResource(st, handlers.CRUDConfig{Table: "dlp_profiles", JSONName: "dlp profile"}))
