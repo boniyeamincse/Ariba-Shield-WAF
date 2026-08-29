@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { API_BASE } from "@/lib/api";
 
 interface UserProfile {
   id: string;
-  name: string;
   email: string;
   role: string;
 }
@@ -31,14 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/v1/auth/me", {
-          // If using HTTP-only cookies, include credentials
-          credentials: "omit", 
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
-          }
+        // Cookie-based session (HTTP-only shield_session cookie).
+        const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
+          credentials: "include",
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           setUser(data.user);
@@ -48,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.push("/en/login");
           }
         }
-      } catch (err) {
+      } catch {
         setUser(null);
         if (!pathname.includes("/login")) {
           router.push("/en/login");
@@ -63,13 +60,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("http://localhost:8080/api/v1/auth/logout", {
+      await fetch(`${API_BASE}/api/v1/auth/logout`, {
         method: "POST",
+        credentials: "include",
       });
-    } catch (e) {
-      console.error("Logout failed", e);
+    } catch {
+      // Ignore; still clear client state.
     } finally {
-      localStorage.removeItem("token");
       setUser(null);
       router.push("/en/login");
     }

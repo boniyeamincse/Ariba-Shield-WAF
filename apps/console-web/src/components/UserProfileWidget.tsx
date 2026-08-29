@@ -10,7 +10,7 @@ export default function UserProfileWidget() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: '#e5e7eb' }}>{user.name}</div>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: '#e5e7eb' }}>{user.email}</div>
         <div style={{ fontSize: '12px', color: '#9ca3af' }}>{user.role}</div>
       </div>
       <div 
@@ -28,7 +28,7 @@ export default function UserProfileWidget() {
           fontSize: '14px'
         }}
       >
-        {user.name.charAt(0)}
+        {(user.email || user.role || "?").charAt(0)}
       </div>
       <button 
         onClick={logout}

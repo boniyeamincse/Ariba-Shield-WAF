@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE } from "@/lib/api";
 
 export default function LoginPage() {
   const t = useTranslations("login");
@@ -19,10 +20,10 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Simulate API call to the backend
-      const res = await fetch("http://localhost:8080/api/v1/auth/login", {
+      const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -30,12 +31,9 @@ export default function LoginPage() {
         throw new Error("Invalid credentials");
       }
 
-      const data = await res.json();
-      // Store token (in real app, use HTTP-only cookies)
-      localStorage.setItem("token", data.token);
       router.push("/en");
-    } catch (err: any) {
-      setError(err.message || "Failed to login");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to login");
     } finally {
       setLoading(false);
     }
