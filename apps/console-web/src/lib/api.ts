@@ -120,3 +120,19 @@ export type User = {
 export function listUsers(role?: string): Promise<User[]> {
   return request<{ users: User[] }>("/users", undefined, role).then((r) => r.users ?? []);
 }
+
+export function createUser(
+  email: string,
+  password: string,
+  role: string,
+  callerRole?: string
+): Promise<{ id: string; email: string; role: string; status: string }> {
+  return request<{ id: string; email: string; role: string; status: string }>(
+    "/users",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, password, role }),
+    },
+    callerRole
+  );
+}

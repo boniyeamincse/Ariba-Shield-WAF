@@ -80,6 +80,13 @@ func (s *Store) AssignRole(ctx context.Context, userID, roleID string) error {
 	return err
 }
 
+// RoleID returns the role id for a role name. Errors if not seeded.
+func (s *Store) RoleID(ctx context.Context, name string) (string, error) {
+	var roleID string
+	err := s.Pool.QueryRow(ctx, `SELECT id FROM roles WHERE name = $1`, name).Scan(&roleID)
+	return roleID, err
+}
+
 // Store wraps the PostgreSQL connection pool.
 type Store struct {
 	Pool *pgxpool.Pool

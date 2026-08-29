@@ -63,6 +63,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 
 	// Users (Phase 3 — RBAC-protected, read by SUPER_ADMIN / PLATFORM_ADMIN)
 	mux.HandleFunc("GET /api/v1/users", handlers.ListUsers(st))
+	mux.HandleFunc("POST /api/v1/users", handlers.CreateUser(st))
 
 	// Phase 3 — Webhooks, Exceptions, Rules, Certificates, Deployments
 	mux.HandleFunc("GET /api/v1/webhooks", handlers.ListWebhooks(st))
