@@ -26,11 +26,11 @@ A single-node lab platform on Ubuntu Server LTS:
 | Security events pipeline (engine → ingestor → PostgreSQL) | ✅ |
 | Sensitive-field masking (rule 5) | ✅ |
 | Wazuh/syslog forwarder (adapter, not yet wired to a live Wazuh) | ⚠️ adapter ready |
-| Audit log (append-only) | ⚠️ schema only; full CRUD in Phase 3 |
-| Real authentication/RBAC | ❌ placeholder (Phase 3) |
+| Audit log (append-only, immutable) | ✅ |
+| Real authentication/RBAC | ✅ session-cookie auth + 7 roles (mock gated behind `AUTH_MOCK_ENABLED`) |
 
 **Explicitly NOT included:** blocking enforcement, OWASP CRS full set, rate limits,
-IP lists, bot defense, HA, mTLS fleet, multi-tenancy.
+IP lists, bot defense, HA, mTLS fleet, multi-tenancy, SSO/MFA.
 
 ---
 
@@ -125,7 +125,8 @@ Reference result on the lab bench (Oct 2026):
 
 ## 5. Known limitations (Release 0.1)
 
-1. **No real authN/authZ** — API handlers are open placeholders; RBAC/MFA is Phase 3.
+1. **No SSO/MFA** — session-cookie auth + role-based access is implemented,
+   but OIDC/SAML SSO, TOTP MFA, and break-glass are Phase 8.
 2. **No full OWASP CRS** — baseline rules only; CRS integration is Phase 2+.
 3. **Wazuh forwarder** is an adapter that reads JSON-lines stdin; a live Wazuh
    agent + output transport is not yet wired.

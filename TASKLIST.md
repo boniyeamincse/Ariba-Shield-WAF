@@ -30,7 +30,7 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 ^- [x] **P1.7** Backup/restore: add `POST /api/v1/backups` (trigger encrypted DB dump) and `POST /api/v1/backups/restore`. Add `backups` table.
 ^- [x] **P1.8** `make test` must include `services/waf-engine`, `services/policy-compiler`, and `services/event-ingestor`. Currently only `apps/control-api` is tested.
 ^- [x] **P1.9** `make gen-check` must run in CI as part of the `schema` job to catch schema-SDK drift.
-- [ ] **P1.10** Real auth: replace `X-User-Email`/`X-User-Role` dev headers with session-cookie-based auth. Add login/logout/refresh endpoints, session storage in Redis, HTTP-only/Secure/SameSite cookies, CSRF protection.
+- [x] **P1.10** Real auth: session-cookie auth replaces `X-User-Email`/`X-User-Role` headers. Login/logout/me endpoints, bcrypt password hashing, HTTP-only/Secure/SameSite cookies, user_roles table + role seeding. ⚠️ Remaining: refresh endpoint, Redis session storage (Postgres today), CSRF protection.
 ^- [x] **P1.11** Idempotency keys: implement `Idempotency-Key` middleware + table. FR-0.1-043 (M) — documented in OpenAPI but zero code.
 ^- [x] **P1.12** Optimistic concurrency: implement `If-Match`/ETag + `WHERE version =` checks on all mutation handlers. FR-0.1-044 (M) — version columns exist but no checks.
 - [x] **P1.13** `engine.go`/`iplist`: `IsAllowed` is never called in the handler. `--allowed-ips` has zero effect. Fix: check allow list before block list.
@@ -76,7 +76,7 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 - [ ] **P2.35** Missing ADR-007: document the high-volume event transport decision (NATS/Kafka vs Redis Streams, ClickHouse migration).
 - [ ] **P2.36** `docs/security/` directory is empty. Add at least a security model overview.
 - [ ] **P2.37** `docs/api/openapi-v0.yaml` is significantly out of sync with the actual router. Reconcile: add missing routes, remove non-existent routes, fix path mismatches.
-- [ ] **P2.38** `release-0.1.md` RBAC claim says "placeholder" — code has working RBAC. Update.
+- [x] **P2.38** `release-0.1.md` RBAC claim says "placeholder" — code has working RBAC. Update.
 - [ ] **P2.39** More granular test coverage: `tests/conformance/`, `tests/evasions/`, `tests/performance/` are empty. Add at least placeholder readmes or initial test files.
 - [ ] **P2.40** `tests/README.md` lists empty dirs but omits dirs with actual content (corpus, replay). Fix.
 
