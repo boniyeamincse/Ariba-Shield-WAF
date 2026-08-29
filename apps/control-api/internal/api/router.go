@@ -79,7 +79,13 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Auth & Identity
 	mux.HandleFunc("POST /api/v1/auth/login", handlers.Login(st))
 	mux.HandleFunc("POST /api/v1/auth/logout", handlers.Logout(st))
+	mux.HandleFunc("POST /api/v1/auth/refresh", handlers.Refresh(st))
 	mux.HandleFunc("GET /api/v1/auth/me", handlers.Me(st))
+	mux.HandleFunc("POST /api/v1/auth/mfa/enable", handlers.EnableMFA(st))
+	mux.HandleFunc("POST /api/v1/auth/mfa/verify", handlers.VerifyMFA(st))
+	mux.HandleFunc("POST /api/v1/auth/mfa/disable", handlers.DisableMFA(st))
+	mux.HandleFunc("POST /api/v1/auth/password/change", handlers.ChangePassword(st))
+	mux.HandleFunc("POST /api/v1/auth/break-glass", handlers.BreakGlass(st))
 
 	// Backup / restore (Phase 4).
 	mux.HandleFunc("GET /api/v1/backups", handlers.ListBackups(st))

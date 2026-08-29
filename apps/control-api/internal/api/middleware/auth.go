@@ -20,8 +20,9 @@ func Auth(st *store.Store) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Login/logout don't need a session.
-			if path == "/api/v1/auth/login" || path == "/api/v1/auth/logout" {
+			// Login, logout, and break-glass don't need a session.
+			if path == "/api/v1/auth/login" || path == "/api/v1/auth/logout" ||
+				path == "/api/v1/auth/break-glass" {
 				next.ServeHTTP(w, r)
 				return
 			}
