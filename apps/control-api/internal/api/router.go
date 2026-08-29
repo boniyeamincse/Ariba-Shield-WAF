@@ -191,9 +191,18 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/analytics", handlers.SecurityAnalytics(st))
 	mux.HandleFunc("GET /api/v1/rule-analytics", handlers.RuleAnalytics(st))
 
-	// Phase 4: organizations / workspaces (multi-tenancy foundation)
+	// Phase 4: organizations / workspaces / tenants
 	mux.HandleFunc("GET /api/v1/organizations", handlers.ListResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization"}))
-	mux.HandleFunc("POST /api/v1/organizations", handlers.CreateResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization", Required: []string{"name"}, Columns: []string{"name"}}))
+	mux.HandleFunc("POST /api/v1/organizations", handlers.CreateResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization", Required: []string{"name"}, Columns: []string{"name", "description", "contact_email", "plan", "quotas", "status"}}))
+	mux.HandleFunc("GET /api/v1/organizations/{id}", handlers.GetResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization"}))
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization", Columns: []string{"name", "description", "contact_email", "plan", "quotas", "status"}}))
+	mux.HandleFunc("DELETE /api/v1/organizations/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization"}))
+
+	mux.HandleFunc("GET /api/v1/tenants", handlers.ListResource(st, handlers.CRUDConfig{Table: "tenants", JSONName: "tenant"}))
+	mux.HandleFunc("POST /api/v1/tenants", handlers.CreateResource(st, handlers.CRUDConfig{Table: "tenants", JSONName: "tenant", Required: []string{"name"}, Columns: []string{"organization_id", "name", "description", "contact_email", "plan", "quotas", "status"}}))
+	mux.HandleFunc("GET /api/v1/tenants/{id}", handlers.GetResource(st, handlers.CRUDConfig{Table: "tenants", JSONName: "tenant"}))
+	mux.HandleFunc("PATCH /api/v1/tenants/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "tenants", JSONName: "tenant", Columns: []string{"name", "description", "contact_email", "plan", "quotas", "status"}}))
+	mux.HandleFunc("DELETE /api/v1/tenants/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "tenants", JSONName: "tenant"}))
 
 	// Sites / data centers
 	mux.HandleFunc("GET /api/v1/sites", handlers.ListResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site"}))

@@ -20,6 +20,22 @@ type CRUDConfig struct {
 	Required []string
 }
 
+// GetResource returns a single row by id as JSON.
+func GetResource(st *store.Store, cfg CRUDConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var b []byte
+		err := st.Pool.QueryRow(r.Context(),
+			"SELECT row_to_json(t) FROM (SELECT * FROM "+cfg.Table+" WHERE id = $1) t", id).Scan(&b)
+		if err != nil {
+			http.Error(w, `{"error":"`+cfg.JSONName+` not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+	}
+}
+
 // ListResource returns a handler that lists all rows of a table.
 func ListResource(st *store.Store, cfg CRUDConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
