@@ -180,6 +180,17 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/secrets", handlers.CreateResource(st, handlers.CRUDConfig{Table: "secrets", JSONName: "secret", Required: []string{"name", "secret_ref"}, Columns: []string{"name", "secret_ref", "provider"}}))
 	mux.HandleFunc("DELETE /api/v1/secrets/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "secrets", JSONName: "secret"}))
 
+	// Gateway Clusters (aliased to clusters table, HA fleet management)
+	mux.HandleFunc("GET /api/v1/gateway-clusters", handlers.ListResource(st, handlers.CRUDConfig{Table: "clusters", JSONName: "cluster"}))
+	mux.HandleFunc("POST /api/v1/gateway-clusters", handlers.CreateResource(st, handlers.CRUDConfig{Table: "clusters", JSONName: "cluster", Required: []string{"name"}, Columns: []string{"name", "site", "gateway_ids", "ha_enabled", "status"}}))
+	mux.HandleFunc("GET /api/v1/gateway-clusters/{id}", handlers.GetGatewayCluster(st))
+	mux.HandleFunc("PATCH /api/v1/gateway-clusters/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "clusters", JSONName: "cluster", Columns: []string{"name", "site", "gateway_ids", "ha_enabled", "status"}}))
+	mux.HandleFunc("DELETE /api/v1/gateway-clusters/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "clusters", JSONName: "cluster"}))
+	mux.HandleFunc("GET /api/v1/gateway-clusters/{id}/gateways", handlers.ClusterGateways(st))
+	mux.HandleFunc("POST /api/v1/gateway-clusters/{id}/deploy", handlers.DeployClusterConfig(st))
+	mux.HandleFunc("POST /api/v1/gateway-clusters/{id}/rollback", handlers.RollbackClusterConfig(st))
+	mux.HandleFunc("GET /api/v1/gateway-clusters/{id}/health", handlers.ClusterHealth(st))
+
 	// Phase 4: incidents + automation + clusters + caching
 	mux.HandleFunc("GET /api/v1/incident-response", handlers.ListResource(st, handlers.CRUDConfig{Table: "incidents", JSONName: "incident"}))
 	mux.HandleFunc("POST /api/v1/incident-response", handlers.CreateResource(st, handlers.CRUDConfig{Table: "incidents", JSONName: "incident", Required: []string{"title"}, Columns: []string{"title", "severity", "status", "owner_user_id", "notes", "related_events"}}))
