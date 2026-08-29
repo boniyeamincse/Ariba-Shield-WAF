@@ -32,6 +32,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/gateways/register", handlers.RegisterGateway(st))
 	mux.HandleFunc("POST /api/v1/gateways/{id}/heartbeat", handlers.Heartbeat(st))
 	mux.HandleFunc("GET /api/v1/gateways", handlers.ListGateways(st))
+	mux.HandleFunc("GET /api/v1/gateways/{id}/config/current", handlers.ConfigPull(st))
 
 	// Security events (Phase 2).
 	mux.HandleFunc("GET /api/v1/security-events", handlers.ListSecurityEvents(st))
@@ -54,6 +55,11 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", handlers.Login(st))
 	mux.HandleFunc("POST /api/v1/auth/logout", handlers.Logout(st))
 	mux.HandleFunc("GET /api/v1/auth/me", handlers.Me(st))
+
+	// Backup / restore (Phase 4).
+	mux.HandleFunc("GET /api/v1/backups", handlers.ListBackups(st))
+	mux.HandleFunc("POST /api/v1/backups", handlers.CreateBackup(st))
+	mux.HandleFunc("POST /api/v1/backups/{id}/restore", handlers.RestoreBackup(st))
 
 	// Users (Phase 3 — RBAC-protected, read by SUPER_ADMIN / PLATFORM_ADMIN)
 	mux.HandleFunc("GET /api/v1/users", handlers.ListUsers(st))

@@ -22,8 +22,8 @@ func ListUsers(st *store.Store) http.HandlerFunc {
 			SELECT u.id, u.email, u.status, u.created_at,
 			       COALESCE(r.name, 'Read Only') AS role
 			FROM users u
-			LEFT JOIN user_role_assignments ura ON ura.user_id = u.id
-			LEFT JOIN roles r ON r.id = ura.role_id
+			LEFT JOIN user_roles ur ON ur.user_id = u.id
+			LEFT JOIN roles r ON r.id = ur.role_id
 			ORDER BY u.created_at ASC
 		`)
 		if err != nil {
