@@ -33,3 +33,6 @@ coverage.out
 data/
 *.sqlite
 *.db
+
+# TS build info
+*.tsbuildinfo
