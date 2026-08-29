@@ -46,6 +46,13 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/security-policies/{id}/diff", handlers.DiffPolicy(st))
 	mux.HandleFunc("POST /api/v1/security-policies/{id}/clone", handlers.ClonePolicy(st))
 
+	// Policy approvals (four-eyes workflow, §7.1)
+	mux.HandleFunc("GET /api/v1/policy-approvals", handlers.ListPolicyApprovals(st))
+	mux.HandleFunc("POST /api/v1/policy-approvals", handlers.CreatePolicyApproval(st))
+	mux.HandleFunc("GET /api/v1/policy-approvals/{id}", handlers.GetPolicyApproval(st))
+	mux.HandleFunc("POST /api/v1/policy-approvals/{id}/approve", handlers.ApprovePolicyApproval(st))
+	mux.HandleFunc("POST /api/v1/policy-approvals/{id}/reject", handlers.RejectPolicyApproval(st))
+
 	// Gateway fleet (Phase 2 operations).
 	mux.HandleFunc("POST /api/v1/gateways/register", handlers.RegisterGateway(st))
 	mux.HandleFunc("POST /api/v1/gateways/{id}/heartbeat", handlers.Heartbeat(st))

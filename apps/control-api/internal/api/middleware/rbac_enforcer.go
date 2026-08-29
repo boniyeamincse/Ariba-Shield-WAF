@@ -60,6 +60,8 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "POST", PathPrefix: "/api/v1/security-policies", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/policy-versions", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
 	{Method: "GET", PathPrefix: "/api/v1/policy-versions", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/policy-approvals", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/policy-approvals", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
 
 	// Custom/managed rules and deployments.
 	{Method: "GET", PathPrefix: "/api/v1/custom-rules", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
