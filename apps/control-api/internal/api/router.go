@@ -45,12 +45,16 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/rate-limits", handlers.CreateRateLimit(st))
 	mux.HandleFunc("POST /api/v1/security-policies/{id}/versions", handlers.CreatePolicyVersion(st))
 	mux.HandleFunc("POST /api/v1/policy-versions/{id}/activate", handlers.ActivatePolicyVersion(st))
+	mux.HandleFunc("POST /api/v1/policy-versions/{id}/promote", handlers.PromotePolicyVersion(st))
 	mux.HandleFunc("POST /api/v1/policy-versions/{id}/rollback", handlers.RollbackPolicyVersion(st))
+	mux.HandleFunc("GET /api/v1/policy-versions/diff", handlers.DiffPolicyVersions(st))
 
 	// Apply middleware stack (outermost first).
 	var h http.Handler = mux
 	h = middleware.Logging(h)
 	h = middleware.RequestID(h)
+	h = middleware.Auth(st.Pool)(h)
+	h = middleware.RBACEnforcer(h)
 	h = middleware.Audit(st.Pool, h)
 	h = middleware.Recovery(h)
 

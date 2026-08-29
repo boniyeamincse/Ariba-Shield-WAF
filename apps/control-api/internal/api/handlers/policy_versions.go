@@ -10,9 +10,9 @@ import (
 // CreatePolicyVersion creates a new immutable version of a security policy.
 func CreatePolicyVersion(st *store.Store) http.HandlerFunc {
 	type create struct {
-		PolicyID  string          `json:"policy_id"`
-		Document  json.RawMessage `json:"document"`
-		BundleHash string         `json:"bundle_hash"`
+		PolicyID   string          `json:"policy_id"`
+		Document   json.RawMessage `json:"document"`
+		BundleHash string          `json:"bundle_hash"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +24,16 @@ func CreatePolicyVersion(st *store.Store) http.HandlerFunc {
 		if body.PolicyID == "" {
 			http.Error(w, `{"error":"policy_id required"}`, http.StatusBadRequest)
 			return
+		}
+
+		// Determine initial status: staging if the policy has no active version, else draft.
+		var hasActive bool
+		_ = st.Pool.QueryRow(r.Context(),
+			`SELECT EXISTS(SELECT 1 FROM policy_versions WHERE policy_id = $1 AND status = 'active')`, body.PolicyID).Scan(&hasActive)
+
+		initStatus := "draft"
+		if !hasActive {
+			initStatus = "staging" // first version auto-stages
 		}
 
 		// Get the next version number.
@@ -42,16 +52,80 @@ func CreatePolicyVersion(st *store.Store) http.HandlerFunc {
 		userID := "01ARZ3NDEKTSV4RRFFQ69G5FAW"
 
 		if _, err := st.Pool.Exec(r.Context(),
-			`INSERT INTO policy_versions (id, policy_id, version, document, bundle_hash, created_by)
-			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			id, body.PolicyID, nextVersion, body.Document, body.BundleHash, userID); err != nil {
+			`INSERT INTO policy_versions (id, policy_id, version, document, bundle_hash, status, created_by)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			id, body.PolicyID, nextVersion, body.Document, body.BundleHash, initStatus, userID); err != nil {
 			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]any{"id": id, "version": nextVersion})
+		json.NewEncoder(w).Encode(map[string]any{"id": id, "version": nextVersion, "status": initStatus})
+	}
+}
+
+// PromotePolicyVersion moves a version from draft/staging to the next stage.
+// POST /api/v1/policy-versions/{id}/promote?to=staging|approved|canary|active
+func PromotePolicyVersion(st *store.Store) http.HandlerFunc {
+	type promote struct {
+		To string `json:"to"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		versionID := r.PathValue("id")
+		to := r.URL.Query().Get("to")
+
+		if to == "" {
+			var body promote
+			if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+				to = body.To
+			}
+		}
+
+		validTargets := map[string]bool{"staging": true, "approved": true, "canary": true, "active": true}
+		if !validTargets[to] {
+			http.Error(w, `{"error":"invalid target status"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Get the current status and policy ID.
+		var curStatus, policyID string
+		if err := st.Pool.QueryRow(r.Context(),
+			`SELECT status, policy_id FROM policy_versions WHERE id = $1`, versionID).Scan(&curStatus, &policyID); err != nil {
+			http.Error(w, `{"error":"version not found"}`, http.StatusNotFound)
+			return
+		}
+
+		// Validate the transition.
+		allowed := map[string]map[string]bool{
+			"draft":    {"staging": true, "approved": true},
+			"staging":  {"approved": true, "canary": true},
+			"approved": {"canary": true, "active": true},
+			"canary":   {"active": true, "rolled_back": true},
+		}
+		if !allowed[curStatus][to] {
+			http.Error(w, `{"error":"invalid transition"}`, http.StatusBadRequest)
+			return
+		}
+
+		// If promoting to active, demote the current active version.
+		if to == "active" {
+			if _, err := st.Pool.Exec(r.Context(),
+				`UPDATE policy_versions SET status = 'superseded' WHERE policy_id = $1 AND status = 'active'`, policyID); err != nil {
+				http.Error(w, `{"error":"demote failed"}`, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if _, err := st.Pool.Exec(r.Context(),
+			`UPDATE policy_versions SET status = $1 WHERE id = $2`, to, versionID); err != nil {
+			http.Error(w, `{"error":"promote failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": to})
 	}
 }
 
