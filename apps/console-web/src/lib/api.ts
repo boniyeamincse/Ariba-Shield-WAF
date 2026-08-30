@@ -655,6 +655,41 @@ export function deleteRateLimit(id: string): Promise<{ status: string }> {
   return request<{ status: string }>(`/rate-limits/${id}`, { method: "DELETE" });
 }
 
+export type ThreatFeed = {
+  id: string;
+  name: string;
+  source: string;
+  indicator_type: string;
+  indicators: unknown[];
+  confidence: string;
+  category: string;
+  ttl_hours: number;
+  provenance: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export function listThreatFeeds(): Promise<ThreatFeed[]> {
+  return request<ThreatFeed[]>("/threat-feeds");
+}
+
+export function createThreatFeed(payload: { name: string; source: string; indicator_type?: string; indicators?: unknown[]; confidence?: string; category?: string; ttl_hours?: number }): Promise<{ id: string }> {
+  return request<{ id: string }>("/threat-feeds", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function deleteThreatFeed(id: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/threat-feeds/${id}`, { method: "DELETE" });
+}
+
+export function syncThreatFeed(id: string): Promise<{ id: string }> {
+  return request<{ id: string }>(`/threat-feeds/${id}/sync`, { method: "POST" });
+}
+
+export function testThreatFeed(id: string): Promise<{ id: string }> {
+  return request<{ id: string }>(`/threat-feeds/${id}/test`, { method: "POST" });
+}
+
 // ===== Certificates =====
 
 export type Certificate = {
