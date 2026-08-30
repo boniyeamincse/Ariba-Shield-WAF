@@ -101,3 +101,19 @@ This document outlines the full 37-module REST API structure required to elevate
     - GET /gateways — Gateway fleet status (total, active, offline, detail list).
 
     All widgets accept an optional `days` query param (default 7, max 90).
+
+## Phase 8 — System Settings & License
+
+45. **System Settings** (`/api/v1/settings`)
+    - GET — Retrieve all settings grouped by category.
+    - PATCH — Update general settings (upsert key/value pairs).
+    - GET/PATCH /security — Security settings (session timeout, lockout, etc.).
+    - GET/PATCH /localization — Localization settings (default language, locale).
+    - GET/PATCH /retention — Retention settings (log retention days, event TTL).
+
+46. **License / Entitlements** (`/api/v1/license`)
+    - GET — Retrieve the current active license.
+    - POST /activate — Activate a license key (sets edition, seats, limits, expiry).
+    - POST /deactivate — Deactivate the current license.
+    - GET /usage — Usage against license limits (gateways, applications).
+    - GET /entitlements — Feature set granted by the license edition.

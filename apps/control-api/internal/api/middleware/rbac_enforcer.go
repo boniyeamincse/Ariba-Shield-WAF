@@ -230,6 +230,12 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "POST", PathPrefix: "/api/v1/reports/incidents", Permissions: []string{PermEventRead, PermSystemAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/reports/compliance", Permissions: []string{PermAuditRead, PermSystemAdmin}},
 	{Method: "GET", PathPrefix: "/api/v1/reports/{id}/download", Permissions: []string{PermEventRead, PermAuditRead, PermSystemAdmin}},
+	// Phase 8: system settings (read for all, write for admin)
+	{Method: "GET", PathPrefix: "/api/v1/settings", Permissions: []string{PermEventRead, PermSystemAdmin}},
+	{Method: "PATCH", PathPrefix: "/api/v1/settings", Permissions: []string{PermSystemAdmin}},
+	// Phase 8: license / entitlements
+	{Method: "GET", PathPrefix: "/api/v1/license", Permissions: []string{PermSystemAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/license", Permissions: []string{PermSystemAdmin}},
 }
 
 // CheckRoutePermission returns true if the request method+path is authorized

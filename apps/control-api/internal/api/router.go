@@ -430,6 +430,23 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("PATCH /api/v1/network-protection/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "network_protection", JSONName: "network protection", Columns: []string{"config", "status"}}))
 	mux.HandleFunc("DELETE /api/v1/network-protection/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "network_protection", JSONName: "network protection"}))
 
+	// Phase 8: system settings
+	mux.HandleFunc("GET /api/v1/settings", handlers.GetSettings(st, ""))
+	mux.HandleFunc("PATCH /api/v1/settings", handlers.UpdateSettings(st, "general"))
+	mux.HandleFunc("GET /api/v1/settings/security", handlers.GetSecuritySettings(st))
+	mux.HandleFunc("PATCH /api/v1/settings/security", handlers.UpdateSecuritySettings(st))
+	mux.HandleFunc("GET /api/v1/settings/localization", handlers.GetLocalizationSettings(st))
+	mux.HandleFunc("PATCH /api/v1/settings/localization", handlers.UpdateLocalizationSettings(st))
+	mux.HandleFunc("GET /api/v1/settings/retention", handlers.GetRetentionSettings(st))
+	mux.HandleFunc("PATCH /api/v1/settings/retention", handlers.UpdateRetentionSettings(st))
+
+	// Phase 8: license / entitlements
+	mux.HandleFunc("GET /api/v1/license", handlers.GetLicense(st))
+	mux.HandleFunc("POST /api/v1/license/activate", handlers.ActivateLicense(st))
+	mux.HandleFunc("POST /api/v1/license/deactivate", handlers.DeactivateLicense(st))
+	mux.HandleFunc("GET /api/v1/license/usage", handlers.GetLicenseUsage(st))
+	mux.HandleFunc("GET /api/v1/license/entitlements", handlers.GetLicenseEntitlements(st))
+
 	// Apply middleware stack. Execution order (outermost wraps last, runs first):
 	//   Recovery -> RequestID -> Auth -> RBACEnforcer -> Idempotency -> Audit -> Logging -> mux
 	// Auth MUST run before RBACEnforcer so that the RBAC context (user + permissions)
