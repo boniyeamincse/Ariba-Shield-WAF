@@ -1,7 +1,9 @@
 package api
 
 import (
+	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ariba-shield/control-api/internal/api/handlers"
@@ -462,9 +464,9 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Global CORS Middleware
 	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		// Allow the console web origins (localhost/127.0.0.1 on the dev ports).
-		if origin == "http://localhost:3000" || origin == "http://127.0.0.1:3000" ||
-			origin == "http://localhost:3002" || origin == "http://127.0.0.1:3002" {
+		// Allow the console origin only when it is a local/private host on the
+		// console ports. Never reflect an arbitrary origin with credentials.
+		if origin != "" && corsAllowed(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -480,4 +482,27 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	})
 
 	return corsHandler
+}
+
+// corsAllowed reports whether an Origin is a trusted console origin: a
+// loopback or private/local hostname on the console web ports.
+func corsAllowed(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil || u.Scheme != "http" {
+		return false
+	}
+	if u.Port() != "3000" && u.Port() != "3002" {
+		return false
+	}
+	host := u.Hostname()
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+		return true
+	}
+	// Allow RFC1918 / link-local private ranges so the console can be
+	// reached from other hosts on the management LAN.
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	return ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLoopback()
 }
