@@ -4,6 +4,7 @@ import {
   listGateways,
   listSecurityPolicies,
   getDashboardOverview,
+  getDashboardTraffic,
 } from "@/lib/api";
 import UserProfileWidget from "@/components/UserProfileWidget";
 
@@ -35,12 +36,21 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
   };
   let fetchError = false;
 
+  let traffic: {
+    period_days: number;
+    total_requests: number;
+    avg_latency_ms: number;
+    p99_latency_ms: number;
+    by_status: { status: string; count: number }[];
+  } = { period_days: 7, total_requests: 0, avg_latency_ms: 0, p99_latency_ms: 0, by_status: [] };
+
   try {
-    [apps, gateways, policies, overview] = await Promise.all([
+    [apps, gateways, policies, overview, traffic] = await Promise.all([
       listApplications(),
       listGateways(),
       listSecurityPolicies(),
       getDashboardOverview(),
+      getDashboardTraffic(),
     ]);
   } catch {
     fetchError = true;
@@ -136,6 +146,38 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
               <div className="metric-trend trend-down">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
                 {overview.blocked_events} blocked
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Traffic Widget */}
+        <div className="data-section animate-fade-in delay-3">
+          <div className="section-header">
+            <h2>Traffic Summary</h2>
+          </div>
+          <div className="metrics-grid" style={{ marginBottom: 0 }}>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>Total Requests</span></div>
+              <div className="metric-value">{traffic.total_requests.toLocaleString()}</div>
+            </div>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>Avg Latency</span></div>
+              <div className="metric-value">{traffic.avg_latency_ms.toFixed(1)}ms</div>
+            </div>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>P99 Latency</span></div>
+              <div className="metric-value">{traffic.p99_latency_ms.toFixed(1)}ms</div>
+            </div>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>Status Breakdown</span></div>
+              <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.8" }}>
+                {traffic.by_status.slice(0, 5).map((s) => (
+                  <div key={s.status} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                    <span>{s.status}</span>
+                    <span style={{ color: "var(--text-primary)" }}>{s.count.toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

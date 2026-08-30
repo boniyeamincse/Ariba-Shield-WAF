@@ -510,8 +510,16 @@ export function getDashboardOverview(): Promise<DashboardOverview> {
   return request<DashboardOverview>("/dashboard/overview");
 }
 
-export function getDashboardTraffic(): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>("/dashboard/traffic");
+export type DashboardTraffic = {
+  period_days: number;
+  total_requests: number;
+  avg_latency_ms: number;
+  p99_latency_ms: number;
+  by_status: { status: string; count: number }[];
+};
+
+export function getDashboardTraffic(): Promise<DashboardTraffic> {
+  return request<DashboardTraffic>("/dashboard/traffic");
 }
 
 export function getDashboardSecurity(): Promise<Record<string, unknown>> {
