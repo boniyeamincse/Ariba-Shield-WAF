@@ -14,6 +14,7 @@ const TYPE_OPTIONS = ["splunk_hec", "wazuh", "syslog", "webhook", "teams", "slac
 export default function IntegrationsPage() {
   const locale = useLocale();
   const t = useTranslations("integrations");
+  const ct = useTranslations("common");
   const [rows, setRows] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -127,13 +128,13 @@ export default function IntegrationsPage() {
             actions={(row) => (
               <div style={{ display: "flex", gap: "6px" }}>
                 <button type="button" className="btn" onClick={() => doTest(row)} style={{ padding: "6px 10px", fontSize: "12px" }}>
-                  Test
+                  {ct("test")}
                 </button>
                 <button type="button" className="btn" onClick={() => doToggle(row)} style={{ padding: "6px 10px", fontSize: "12px", color: row.enabled ? "var(--warning)" : "var(--success)" }}>
                   {row.enabled ? "Disable" : "Enable"}
                 </button>
                 <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--danger)" }}>
-                  Delete
+                  {ct("delete")}
                 </button>
               </div>
             )}
@@ -196,7 +197,7 @@ export default function IntegrationsPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button type="button" className="btn" onClick={() => setCreating(false)} disabled={submitting} style={{ padding: "10px 16px" }}>
-                Cancel
+                {ct("cancel")}
               </button>
               <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !form.name} style={{ padding: "10px 16px" }}>
                 {submitting ? "Creating…" : "Create Integration"}

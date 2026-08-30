@@ -21,6 +21,7 @@ import {
 export default function IncidentsPage() {
   const locale = useLocale();
   const t = useTranslations("incidents");
+  const ct = useTranslations("common");
   const [rows, setRows] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -147,20 +148,20 @@ export default function IncidentsPage() {
               <div style={{ display: "flex", gap: "6px" }}>
                 {row.status === "resolved" ? (
                   <button type="button" className="btn" onClick={() => doAction("reopen", row)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--warning)" }}>
-                    Reopen
+                    {ct("reopen")}
                   </button>
                 ) : (
                   <>
                     <button type="button" className="btn" onClick={() => doAction("escalate", row)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--danger)" }}>
-                      Escalate
+                      {ct("escalate")}
                     </button>
                     <button type="button" className="btn" onClick={() => doAction("close", row)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--success)" }}>
-                      Close
+                      {ct("close")}
                     </button>
                   </>
                 )}
                 <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--danger)" }}>
-                  Delete
+                  {ct("delete")}
                 </button>
               </div>
             )}
@@ -225,7 +226,7 @@ export default function IncidentsPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button type="button" className="btn" onClick={() => setCreating(false)} disabled={submitting} style={{ padding: "10px 16px" }}>
-                Cancel
+                {ct("cancel")}
               </button>
               <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !form.title} style={{ padding: "10px 16px" }}>
                 {submitting ? "Creating…" : "Create Incident"}

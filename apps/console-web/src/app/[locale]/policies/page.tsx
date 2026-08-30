@@ -20,6 +20,7 @@ import {
 export default function PoliciesPage() {
   const locale = useLocale();
   const t = useTranslations("policies");
+  const ct = useTranslations("common");
   const [rows, setRows] = useState<SecurityPolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -138,13 +139,13 @@ export default function PoliciesPage() {
             actions={(row) => (
               <div style={{ display: "flex", gap: "8px" }}>
                 <button type="button" className="btn" onClick={() => doActivate(row.id)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--success)" }}>
-                  Activate
+                  {ct("activate")}
                 </button>
                 <button type="button" className="btn" onClick={() => doDisable(row.id)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--warning)" }}>
-                  Disable
+                  {ct("disable")}
                 </button>
                 <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 10px", fontSize: "12px", color: "var(--danger)" }}>
-                  Delete
+                  {ct("delete")}
                 </button>
               </div>
             )}
@@ -208,7 +209,7 @@ export default function PoliciesPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button type="button" className="btn" onClick={() => setCreating(false)} disabled={submitting} style={{ padding: "10px 16px" }}>
-                Cancel
+                {ct("cancel")}
               </button>
               <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !form.name} style={{ padding: "10px 16px" }}>
                 {submitting ? "Creating…" : "Create Policy"}

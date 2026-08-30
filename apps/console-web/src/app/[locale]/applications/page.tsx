@@ -22,6 +22,7 @@ type AppRow = Application & { origins: number; domains: number };
 export default function ApplicationsPage() {
   const locale = useLocale();
   const t = useTranslations("applications");
+  const ct = useTranslations("common");
   const [rows, setRows] = useState<AppRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -143,12 +144,12 @@ export default function ApplicationsPage() {
               <div style={{ display: "flex", gap: "8px" }}>
                 {canUser("edit") && (
                   <button type="button" className="btn" onClick={() => openEdit(row)} style={{ padding: "6px 12px", fontSize: "12px" }}>
-                    Edit
+                    {ct("edit")}
                   </button>
                 )}
                 {canUser("delete") && (
                   <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 12px", fontSize: "12px", color: "var(--danger)" }}>
-                    Delete
+                    {ct("delete")}
                   </button>
                 )}
               </div>
@@ -200,7 +201,7 @@ export default function ApplicationsPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button type="button" className="btn" onClick={() => setModal(null)} disabled={submitting} style={{ padding: "10px 16px" }}>
-                Cancel
+                {ct("cancel")}
               </button>
               <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !form.name} style={{ padding: "10px 16px" }}>
                 {submitting ? "Saving…" : "Save"}

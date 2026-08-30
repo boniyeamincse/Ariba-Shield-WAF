@@ -18,6 +18,7 @@ import {
 export default function GatewaysPage() {
   const locale = useLocale();
   const t = useTranslations("gateways");
+  const ct = useTranslations("common");
   const [rows, setRows] = useState<Gateway[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -122,12 +123,12 @@ export default function GatewaysPage() {
               <div style={{ display: "flex", gap: "8px" }}>
                 {canUser("edit") && (
                   <button type="button" className="btn" onClick={() => openEdit(row)} style={{ padding: "6px 12px", fontSize: "12px" }}>
-                    Edit
+                    {ct("edit")}
                   </button>
                 )}
                 {canUser("delete") && (
                   <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 12px", fontSize: "12px", color: "var(--danger)" }}>
-                    Delete
+                    {ct("delete")}
                   </button>
                 )}
               </div>
@@ -176,7 +177,7 @@ export default function GatewaysPage() {
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button type="button" className="btn" onClick={() => setEditing(null)} disabled={submitting} style={{ padding: "10px 16px" }}>
-                Cancel
+                {ct("cancel")}
               </button>
               <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !form.hostname} style={{ padding: "10px 16px" }}>
                 {submitting ? "Saving…" : "Save"}
