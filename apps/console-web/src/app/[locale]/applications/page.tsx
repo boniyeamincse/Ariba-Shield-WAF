@@ -8,6 +8,7 @@ import UserProfileWidget from "@/components/UserProfileWidget";
 import DataTable, { type Column } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/Badges";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { usePermission } from "@/hooks/usePermission";
 import {
   listApplications,
   createApplication,
@@ -28,6 +29,7 @@ export default function ApplicationsPage() {
   const [deleting, setDeleting] = useState<Application | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
+  const { can: canUser } = usePermission();
 
   const load = async () => {
     setLoading(true);
@@ -118,9 +120,11 @@ export default function ApplicationsPage() {
             <p style={{ color: "var(--text-secondary)" }}>Manage your protected applications.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <button type="button" className="btn btn-primary" onClick={openCreate}>
-              + New Application
-            </button>
+            {canUser("create") && (
+              <button type="button" className="btn btn-primary" onClick={openCreate}>
+                + New Application
+              </button>
+            )}
             <UserProfileWidget />
           </div>
         </div>
@@ -136,12 +140,16 @@ export default function ApplicationsPage() {
             emptyMessage="No applications yet."
             actions={(row) => (
               <div style={{ display: "flex", gap: "8px" }}>
-                <button type="button" className="btn" onClick={() => openEdit(row)} style={{ padding: "6px 12px", fontSize: "12px" }}>
-                  Edit
-                </button>
-                <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 12px", fontSize: "12px", color: "var(--danger)" }}>
-                  Delete
-                </button>
+                {canUser("edit") && (
+                  <button type="button" className="btn" onClick={() => openEdit(row)} style={{ padding: "6px 12px", fontSize: "12px" }}>
+                    Edit
+                  </button>
+                )}
+                {canUser("delete") && (
+                  <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 12px", fontSize: "12px", color: "var(--danger)" }}>
+                    Delete
+                  </button>
+                )}
               </div>
             )}
           />

@@ -7,6 +7,7 @@ import UserProfileWidget from "@/components/UserProfileWidget";
 import DataTable, { type Column } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/Badges";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { usePermission } from "@/hooks/usePermission";
 import {
   listGateways,
   updateGateway,
@@ -23,6 +24,7 @@ export default function GatewaysPage() {
   const [deleting, setDeleting] = useState<Gateway | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ hostname: "", ip: "" });
+  const { can: canUser } = usePermission();
 
   const load = async () => {
     setLoading(true);
@@ -117,12 +119,16 @@ export default function GatewaysPage() {
             emptyMessage="No gateways registered."
             actions={(row) => (
               <div style={{ display: "flex", gap: "8px" }}>
-                <button type="button" className="btn" onClick={() => openEdit(row)} style={{ padding: "6px 12px", fontSize: "12px" }}>
-                  Edit
-                </button>
-                <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 12px", fontSize: "12px", color: "var(--danger)" }}>
-                  Delete
-                </button>
+                {canUser("edit") && (
+                  <button type="button" className="btn" onClick={() => openEdit(row)} style={{ padding: "6px 12px", fontSize: "12px" }}>
+                    Edit
+                  </button>
+                )}
+                {canUser("delete") && (
+                  <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 12px", fontSize: "12px", color: "var(--danger)" }}>
+                    Delete
+                  </button>
+                )}
               </div>
             )}
           />
