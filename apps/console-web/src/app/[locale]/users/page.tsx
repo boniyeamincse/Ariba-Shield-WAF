@@ -1,56 +1,102 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import CreateUserButton from "@/components/CreateUserButton";
-import { listUsers, User } from "@/lib/api";
+import DataTable, { type Column } from "@/components/shared/DataTable";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { listUsers, updateUser, deleteUser, type User } from "@/lib/api";
 
-export default async function UsersAccessPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  const t = await getTranslations("users");
+const ROLE_OPTIONS = ["Super Admin", "Platform Admin", "Security Admin", "App Owner", "SOC Analyst", "Auditor", "Read Only"];
 
-  let usersList: User[] = [];
-  let fetchError = false;
+export default function UsersAccessPage() {
+  const locale = useLocale();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState<User | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formRole, setFormRole] = useState("");
+  const [formStatus, setFormStatus] = useState("active");
 
-  try {
-    usersList = await listUsers();
-  } catch {
-    fetchError = true;
-    usersList = [
-      { id: "1", email: "superadmin@aribashield.local", role: "Super Admin", status: "active", created_at: new Date().toISOString() },
-      { id: "2", email: "security@aribashield.local", role: "Security Admin", status: "active", created_at: new Date().toISOString() },
-      { id: "3", email: "auditor@aribashield.local", role: "Auditor", status: "active", created_at: new Date().toISOString() },
-      { id: "4", email: "readonly@aribashield.local", role: "Read Only", status: "active", created_at: new Date().toISOString() },
-    ];
-  }
-
-  const getInitials = (email: string) => email.charAt(0).toUpperCase();
-
-  const roleColors: Record<string, string> = {
-    "Super Admin": "rgba(239,68,68,0.15)",
-    "Platform Admin": "rgba(168,85,247,0.15)",
-    "Security Admin": "rgba(245,158,11,0.15)",
-    "SOC Analyst": "rgba(59,130,246,0.15)",
-    "Auditor": "rgba(16,185,129,0.15)",
-    "App Owner": "rgba(6,182,212,0.15)",
-    "Read Only": "rgba(107,114,128,0.15)",
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setUsers(await listUsers());
+    } catch {
+      setError("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const roleTextColors: Record<string, string> = {
-    "Super Admin": "#f87171",
-    "Platform Admin": "#c084fc",
-    "Security Admin": "#fbbf24",
-    "SOC Analyst": "#60a5fa",
-    "Auditor": "#34d399",
-    "App Owner": "#22d3ee",
-    "Read Only": "#9ca3af",
+  useEffect(() => {
+    load();
+  }, []);
+
+  const openEdit = (user: User) => {
+    setEditing(user);
+    setFormRole(user.role);
+    setFormStatus(user.status);
   };
 
-  const avatarGradients = [
-    "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-    "linear-gradient(135deg, #10b981, #06b6d4)",
-    "linear-gradient(135deg, #f59e0b, #ef4444)",
-    "linear-gradient(135deg, #8b5cf6, #ec4899)",
-    "linear-gradient(135deg, #06b6d4, #3b82f6)",
+  const submit = async () => {
+    if (!editing) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await updateUser(editing.id, { role: formRole, status: formStatus });
+      setEditing(null);
+      await load();
+    } catch {
+      setError("Failed to update user");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setSubmitting(true);
+    try {
+      await deleteUser(deleting.id);
+      setDeleting(null);
+      await load();
+    } catch {
+      setError("Failed to delete user");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const activeCount = users.filter((u) => u.status === "active").length;
+
+  const columns: Column<User>[] = [
+    {
+      key: "email",
+      label: "User",
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 500, fontSize: "14px" }}>{row.email.split("@")[0]}</div>
+          <div style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{row.email}</div>
+        </div>
+      ),
+    },
+    {
+      key: "role",
+      label: "Role",
+      render: (row) => (
+        <span style={{ padding: "4px 12px", borderRadius: "6px", background: "rgba(59,130,246,0.15)", color: "#60a5fa", fontSize: "12px", fontWeight: 600 }}>
+          {row.role}
+        </span>
+      ),
+    },
+    { key: "status", label: "Status" },
+    { key: "created_at", label: "Member Since", render: (row) => new Date(row.created_at).toLocaleDateString() },
   ];
 
   return (
@@ -60,13 +106,13 @@ export default async function UsersAccessPage({ params }: { params: Promise<{ lo
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>{t("title")}</h1>
-            <p style={{ color: "var(--text-secondary)" }}>{t("description")}</p>
+            <h1>Users & Access</h1>
+            <p style={{ color: "var(--text-secondary)" }}>Manage users, roles, and access.</p>
           </div>
-          <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {fetchError && (
+          <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {error && (
               <span style={{ fontSize: "12px", color: "var(--warning)", background: "rgba(245,158,11,0.1)", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(245,158,11,0.2)" }}>
-                ⚠ Showing cached data — API offline
+                ⚠ API offline
               </span>
             )}
             <UserProfileWidget />
@@ -77,85 +123,108 @@ export default async function UsersAccessPage({ params }: { params: Promise<{ lo
         {/* Stats row */}
         <div className="metrics-grid animate-fade-in delay-1" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxWidth: "600px", marginBottom: "28px" }}>
           <div className="glass-panel metric-card" style={{ padding: "20px" }}>
-            <div className="metric-header"><span>Total Users</span><div className="icon-wrapper icon-blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></div></div>
-            <div className="metric-value">{usersList.length}</div>
+            <div className="metric-header"><span>Total Users</span></div>
+            <div className="metric-value">{users.length}</div>
           </div>
           <div className="glass-panel metric-card" style={{ padding: "20px" }}>
-            <div className="metric-header"><span>Active</span><div className="icon-wrapper icon-green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg></div></div>
-            <div className="metric-value" style={{ color: "var(--success)" }}>{usersList.filter(u => u.status === "active").length}</div>
+            <div className="metric-header"><span>Active</span></div>
+            <div className="metric-value" style={{ color: "var(--success)" }}>{activeCount}</div>
           </div>
           <div className="glass-panel metric-card" style={{ padding: "20px" }}>
-            <div className="metric-header"><span>Pending</span><div className="icon-wrapper icon-purple"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div></div>
-            <div className="metric-value">{usersList.filter(u => u.status !== "active").length}</div>
+            <div className="metric-header"><span>Pending / Inactive</span></div>
+            <div className="metric-value">{users.length - activeCount}</div>
           </div>
         </div>
 
-        {/* Users Table */}
         <div className="data-section animate-fade-in delay-2">
-          <div className="glass-panel" style={{ padding: "0", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
-                  <th style={{ padding: "14px 24px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("name")}</th>
-                  <th style={{ padding: "14px 24px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("role")}</th>
-                  <th style={{ padding: "14px 24px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("status")}</th>
-                  <th style={{ padding: "14px 24px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>Member Since</th>
-                  <th style={{ padding: "14px 24px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", textAlign: "right", whiteSpace: "nowrap" }}>{t("actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usersList.map((user, idx) => {
-                  const roleBg = roleColors[user.role] ?? "rgba(255,255,255,0.06)";
-                  const roleText = roleTextColors[user.role] ?? "#9ca3af";
-                  const gradient = avatarGradients[idx % avatarGradients.length];
-                  const joinedDate = new Date(user.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-
-                  return (
-                    <tr key={user.id} style={{ borderBottom: idx !== usersList.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
-                      <td style={{ padding: "16px 24px", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: gradient, display: "grid", placeItems: "center", fontSize: "15px", fontWeight: 700, flexShrink: 0 }}>
-                            {getInitials(user.email)}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 500, fontSize: "14px" }}>{user.email.split("@")[0]}</div>
-                            <div style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{user.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: "16px 24px", whiteSpace: "nowrap" }}>
-                        <span style={{ padding: "4px 12px", borderRadius: "6px", background: roleBg, color: roleText, fontSize: "12px", fontWeight: 600 }}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td style={{ padding: "16px 24px", whiteSpace: "nowrap" }}>
-                        <span className={`badge ${user.status === "active" ? "badge-active" : "badge-warning"}`}>
-                          {user.status === "active" ? t("active") : t("invited")}
-                        </span>
-                      </td>
-                      <td style={{ padding: "16px 24px", color: "var(--text-secondary)", fontSize: "13px", whiteSpace: "nowrap" }}>{joinedDate}</td>
-                      <td style={{ padding: "16px 24px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <button style={{ padding: "6px 8px", background: "transparent", border: "none", color: "var(--text-secondary)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "6px" }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle>
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {usersList.length === 0 && (
-              <div style={{ padding: "60px", textAlign: "center", color: "var(--text-secondary)" }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: "16px", opacity: 0.4 }} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-                <p>No users found</p>
+          <DataTable
+            columns={columns}
+            data={users}
+            rowKey={(row) => row.id}
+            loading={loading}
+            error={error || undefined}
+            onRetry={load}
+            emptyMessage="No users found."
+            actions={(row) => (
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button type="button" className="btn" onClick={() => openEdit(row)} style={{ padding: "6px 12px", fontSize: "12px" }}>
+                  Edit
+                </button>
+                <button type="button" className="btn" onClick={() => setDeleting(row)} style={{ padding: "6px 12px", fontSize: "12px", color: "var(--danger)" }}>
+                  Delete
+                </button>
               </div>
             )}
-          </div>
+          />
         </div>
       </main>
+
+      {editing && (
+        <div
+          onClick={() => setEditing(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
+          }}
+        >
+          <div
+            className="glass-panel animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: "440px", padding: "28px", display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            <h3 style={{ fontSize: "17px", fontWeight: 600 }}>Edit User — {editing.email}</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Role</label>
+              <select
+                value={formRole}
+                onChange={(e) => setFormRole(e.target.value)}
+                style={{
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "10px 12px", borderRadius: "8px", color: "white", outline: "none", fontSize: "14px",
+                }}
+              >
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r} style={{ background: "#13141c", color: "#fff" }}>{r}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Status</label>
+              <select
+                value={formStatus}
+                onChange={(e) => setFormStatus(e.target.value)}
+                style={{
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "10px 12px", borderRadius: "8px", color: "white", outline: "none", fontSize: "14px",
+                }}
+              >
+                <option value="active" style={{ background: "#13141c", color: "#fff" }}>Active</option>
+                <option value="invited" style={{ background: "#13141c", color: "#fff" }}>Invited</option>
+                <option value="disabled" style={{ background: "#13141c", color: "#fff" }}>Disabled</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <button type="button" className="btn" onClick={() => setEditing(null)} disabled={submitting} style={{ padding: "10px 16px" }}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting} style={{ padding: "10px 16px" }}>
+                {submitting ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        title="Delete user"
+        message={`Are you sure you want to delete "${deleting?.email}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        loading={submitting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </div>
   );
 }
