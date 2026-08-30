@@ -6,7 +6,7 @@ import { API_BASE } from "@/lib/api";
 type AuditEvent = {
   id: string;
   action: string;
-  resource_type: string;
+  resource: string;
   resource_id: string;
   actor_user_id: string;
   ip: string;
@@ -105,7 +105,7 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
                         </span>
                       </td>
                       <td style={{ padding: "12px 20px", fontSize: "13px" }}>
-                        <div style={{ fontWeight: 500 }}>{ev.resource_type}</div>
+                        <div style={{ fontWeight: 500 }}>{ev.resource}</div>
                         <div style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{ev.resource_id}</div>
                       </td>
                       <td style={{ padding: "12px 20px", fontSize: "13px", whiteSpace: "nowrap" }}>
