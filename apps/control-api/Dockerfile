@@ -6,8 +6,10 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /bin/control-api .
 
-# Runtime stage (distroless for minimal attack surface)
-FROM gcr.io/distroless/static-debian12:nonroot
+# Runtime stage (Alpine — contains wget for healthcheck)
+FROM alpine:3.20
+RUN apk add --no-cache wget ca-certificates \
+    && addgroup -S nonroot && adduser -S nonroot -G nonroot
 COPY --from=build /bin/control-api /usr/local/bin/control-api
 EXPOSE 8443
 USER nonroot:nonroot

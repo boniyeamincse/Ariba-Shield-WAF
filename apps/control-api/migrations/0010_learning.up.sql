@@ -33,6 +33,6 @@ CREATE TABLE IF NOT EXISTS learning_suggestions (
 );
 
 -- Indexes for suggestion queries.
-CREATE INDEX IF NOT EXISTS idx_learning_suggestions_session_id ON learning_sessions (session_id);
+CREATE INDEX IF NOT EXISTS idx_learning_suggestions_session_id ON learning_suggestions (session_id);
 CREATE INDEX IF NOT EXISTS idx_learning_suggestions_status ON learning_suggestions (status);
 CREATE INDEX IF NOT EXISTS idx_learning_suggestions_app ON learning_suggestions (application_id, status);
