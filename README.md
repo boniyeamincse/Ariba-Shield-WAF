@@ -109,10 +109,10 @@ make gen       # regenerate SDK types from JSON schemas
 
 ## 📚 Documentation
 
-For deep-dives into the architecture, check out:
-- [Phase 0 SRS](docs/phase0_srs.md): The day-to-day development contract.
-- [API Master Plan](docs/api/endpoint.md): 300+ route definitions.
-- [User Guide](docs/user_guide.html): End-user HTML manual.
+For deep-dives into the architecture and usage, check out:
+- [User Guide](docs/user_guide.html): End-user HTML manual for navigating the dashboard and onboarding applications.
+- [API Documentation](docs/api/endpoint.md): Comprehensive list of our REST API endpoints.
+- [Architecture Details](docs/architecture/): Deep dives into the WAF's isolated control-plane architecture.
 
 ## 📄 License
 
