@@ -1,5 +1,10 @@
 import { getTranslations } from "next-intl/server";
-import { listApplications, listGateways, listSecurityPolicies } from "@/lib/api";
+import {
+  listApplications,
+  listGateways,
+  listSecurityPolicies,
+  getDashboardOverview,
+} from "@/lib/api";
 import UserProfileWidget from "@/components/UserProfileWidget";
 
 import Sidebar from "@/components/layout/Sidebar";
@@ -7,36 +12,41 @@ import Sidebar from "@/components/layout/Sidebar";
 export default async function OverviewPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations("overview");
-  const navT = await getTranslations("nav");
 
   let apps: { id: string; name: string; status: string }[] = [];
   let gateways: { id: string; hostname: string; status: string }[] = [];
   let policies: { id: string; name: string; enforcement_mode: string }[] = [];
+  let overview: {
+    period_days: number;
+    total_events: number;
+    blocked_events: number;
+    total_requests: number;
+    applications: number;
+    gateways: number;
+    active_incidents: number;
+  } = {
+    period_days: 7,
+    total_events: 0,
+    blocked_events: 0,
+    total_requests: 0,
+    applications: 0,
+    gateways: 0,
+    active_incidents: 0,
+  };
+  let fetchError = false;
 
   try {
-    [apps, gateways, policies] = await Promise.all([
+    [apps, gateways, policies, overview] = await Promise.all([
       listApplications(),
       listGateways(),
       listSecurityPolicies(),
+      getDashboardOverview(),
     ]);
   } catch {
-    // API not available — fallback to mock data for UI showcase
-    apps = [
-      { id: "1", name: "Enterprise Payment Gateway", status: "active" },
-      { id: "2", name: "Internal HR Portal", status: "active" },
-      { id: "3", name: "Customer CRM", status: "warning" }
-    ];
-    gateways = [
-      { id: "1", hostname: "gw-nyc-01.ariba.local", status: "active" },
-      { id: "2", hostname: "gw-lon-02.ariba.local", status: "active" },
-      { id: "3", hostname: "gw-sgp-03.ariba.local", status: "offline" }
-    ];
-    policies = [
-      { id: "1", name: "Strict SQLi Protection", enforcement_mode: "blocking" },
-      { id: "2", name: "Global Rate Limiting", enforcement_mode: "detection" },
-      { id: "3", name: "OWASP Top 10 Core Rules", enforcement_mode: "blocking" }
-    ];
+    fetchError = true;
   }
+
+  const activeGateways = gateways.filter((g) => g.status === "active" || g.status === "starting").length;
 
   return (
     <div className="dashboard-container">
@@ -47,9 +57,14 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
         <div className="top-header animate-fade-in">
           <div className="header-title">
             <h1>{t("title")}</h1>
-            <p>{t("description") || "Real-time insights and security operations overview."}</p>
+            <p>{t("description")}</p>
           </div>
           <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            {fetchError && (
+              <span style={{ fontSize: "12px", color: "var(--warning)", background: "rgba(245,158,11,0.1)", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(245,158,11,0.2)" }}>
+                ⚠ API offline
+              </span>
+            )}
             <UserProfileWidget />
             <div style={{ height: '24px', width: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }}></div>
             <button className="btn btn-primary">
@@ -59,7 +74,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
           </div>
         </div>
 
-        {/* Metrics Grid */}
+        {/* Metrics Grid — real data from /dashboard/overview */}
         <div className="metrics-grid">
           <div className="metric-card glass-panel animate-fade-in delay-1">
             <div className="metric-header">
@@ -69,10 +84,10 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
               </div>
             </div>
             <div>
-              <div className="metric-value">{apps.length}</div>
+              <div className="metric-value">{overview.applications}</div>
               <div className="metric-trend trend-up">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-                100% Protected
+                Active in last {overview.period_days}d
               </div>
             </div>
           </div>
@@ -85,10 +100,10 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
               </div>
             </div>
             <div>
-              <div className="metric-value">{gateways.filter(g => g.status === 'active').length} / {gateways.length}</div>
-              <div className="metric-trend trend-down">
+              <div className="metric-value">{overview.gateways} / {gateways.length}</div>
+              <div className={`metric-trend ${activeGateways < gateways.length && gateways.length > 0 ? "trend-down" : "trend-up"}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
-                1 Node Offline
+                {activeGateways} online
               </div>
             </div>
           </div>
@@ -104,7 +119,23 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
               <div className="metric-value">{policies.length}</div>
               <div className="metric-trend trend-up">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-                All Synced
+                Active policies
+              </div>
+            </div>
+          </div>
+
+          <div className="metric-card glass-panel animate-fade-in delay-3">
+            <div className="metric-header">
+              <span>Security Events</span>
+              <div className="icon-wrapper" style={{ background: 'rgba(239,68,68,0.12)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+            </div>
+            <div>
+              <div className="metric-value">{overview.total_events}</div>
+              <div className="metric-trend trend-down">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+                {overview.blocked_events} blocked
               </div>
             </div>
           </div>
@@ -114,9 +145,13 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
         <div className="data-section animate-fade-in delay-3">
           <div className="section-header">
             <h2>Protected Applications</h2>
-            <button className="btn" style={{ background: 'rgba(255,255,255,0.05)' }}>View All</button>
           </div>
           <div className="data-list glass-panel">
+            {apps.length === 0 && !fetchError && (
+              <div style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>
+                {t("no_applications")}
+              </div>
+            )}
             {apps.map((a) => (
               <div key={a.id} className="list-item">
                 <div className="item-info">
