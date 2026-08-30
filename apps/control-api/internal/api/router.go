@@ -376,7 +376,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/notification-channels", handlers.CreateNotificationChannel(st))
 	mux.HandleFunc("GET /api/v1/notification-channels/{id}", handlers.GetNotificationChannel(st))
 	mux.HandleFunc("PATCH /api/v1/notification-channels/{id}", handlers.UpdateNotificationChannel(st))
-	mux.HandleFunc("DELETE /api/v1/notification-channels/{id}", handlers.TestNotificationChannel(st))
+	mux.HandleFunc("DELETE /api/v1/notification-channels/{id}", handlers.DeleteNotificationChannel(st))
 	mux.HandleFunc("POST /api/v1/notification-channels/{id}/test", handlers.TestNotificationChannel(st))
 	mux.HandleFunc("GET /api/v1/integrations", handlers.ListIntegrations(st))
 	mux.HandleFunc("POST /api/v1/integrations", handlers.CreateResource(st, handlers.CRUDConfig{Table: "integrations", JSONName: "integration", Required: []string{"type", "name"}, Columns: []string{"type", "name", "endpoint", "log_types", "enabled", "config"}}))

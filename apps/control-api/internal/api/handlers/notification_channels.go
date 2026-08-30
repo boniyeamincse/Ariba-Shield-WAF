@@ -188,6 +188,24 @@ func UpdateNotificationChannel(st *store.Store) http.HandlerFunc {
 	}
 }
 
+// DeleteNotificationChannel deletes a notification channel.
+func DeleteNotificationChannel(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		ct, err := st.Pool.Exec(r.Context(), `DELETE FROM notification_channels WHERE id = $1`, id)
+		if err != nil {
+			http.Error(w, `{"error":"delete failed"}`, http.StatusInternalServerError)
+			return
+		}
+		if ct.RowsAffected() == 0 {
+			http.Error(w, `{"error":"notification channel not found"}`, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	}
+}
+
 // TestNotificationChannel tests a notification channel connection.
 func TestNotificationChannel(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
