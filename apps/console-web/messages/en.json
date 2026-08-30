@@ -27,7 +27,12 @@
     "users_access": "Users & Access",
     "audit_log": "Audit Log",
     "system_settings": "System Settings",
-    "incidents": "Incidents"
+    "incidents": "Incidents",
+    "notification_channels": "Notification Channels",
+    "certificates": "Certificates",
+    "backups": "Backups",
+    "threat_intelligence": "Threat Intelligence",
+    "license": "License"
   },
   "applications": {
     "title": "Applications",

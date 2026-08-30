@@ -27,7 +27,12 @@
     "users_access": "ইউজার ও এক্সেস",
     "audit_log": "অডিট লগ",
     "system_settings": "সিস্টেম সেটিংস",
-    "incidents": "ঘটনা"
+    "incidents": "ঘটনা",
+    "notification_channels": "বিজ্ঞপ্তি চ্যানেল",
+    "certificates": "সার্টিফিকেট",
+    "backups": "ব্যাকআপ",
+    "threat_intelligence": "থ্রেট ইন্টেলিজেন্স",
+    "license": "লাইসেন্স"
   },
   "applications": {
     "title": "অ্যাপ্লিকেশন",
