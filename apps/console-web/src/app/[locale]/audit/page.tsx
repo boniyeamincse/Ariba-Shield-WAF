@@ -1,48 +1,89 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
-import { API_BASE } from "@/lib/api";
+import DataTable, { type Column } from "@/components/shared/DataTable";
+import FilterBar from "@/components/shared/FilterBar";
+import { listAuditEvents, exportAuditEvents, type AuditEvent } from "@/lib/api";
 
-type AuditEvent = {
-  id: string;
-  action: string;
-  resource: string;
-  resource_id: string;
-  actor_user_id: string;
-  ip: string;
-  request_id: string;
-  created_at: string;
-};
+const PAGE_SIZE = 50;
 
-async function fetchAuditEvents(): Promise<AuditEvent[]> {
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/audit-events`, { cache: "no-store", credentials: "include" });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
-}
+export default function AuditLogPage() {
+  const locale = useLocale();
+  const [rows, setRows] = useState<AuditEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [exporting, setExporting] = useState(false);
 
-export default async function AuditLogPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  const t = await getTranslations("audit");
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const events = await listAuditEvents();
+      // Backend returns all events; filter client-side for the current view.
+      const filtered = events.filter((ev) => {
+        if (filters.action && ev.action !== filters.action) return false;
+        return true;
+      });
+      setRows(filtered.slice(0, PAGE_SIZE));
+    } catch {
+      setError("Failed to load audit events");
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
 
-  let events: AuditEvent[] = [];
-  let fetchError = false;
-  try {
-    events = await fetchAuditEvents();
-  } catch {
-    fetchError = true;
-  }
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const actionColors: Record<string, { bg: string; text: string }> = {
-    POST: { bg: "rgba(59,130,246,0.15)", text: "#60a5fa" },
-    PUT: { bg: "rgba(168,85,247,0.15)", text: "#c084fc" },
-    PATCH: { bg: "rgba(245,158,11,0.15)", text: "#fbbf24" },
-    DELETE: { bg: "rgba(239,68,68,0.15)", text: "#f87171" },
-    GET: { bg: "rgba(16,185,129,0.15)", text: "#34d399" },
+  const doExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportAuditEvents();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `audit-events-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Failed to export audit events");
+    } finally {
+      setExporting(false);
+    }
   };
+
+  const columns: Column<AuditEvent>[] = [
+    { key: "created_at", label: "Time", render: (row) => new Date(row.created_at).toLocaleString() },
+    {
+      key: "action",
+      label: "Action",
+      render: (row) => {
+        const colors: Record<string, { bg: string; text: string }> = {
+          POST: { bg: "rgba(59,130,246,0.15)", text: "#60a5fa" },
+          PUT: { bg: "rgba(168,85,247,0.15)", text: "#c084fc" },
+          PATCH: { bg: "rgba(245,158,11,0.15)", text: "#fbbf24" },
+          DELETE: { bg: "rgba(239,68,68,0.15)", text: "#f87171" },
+          GET: { bg: "rgba(16,185,129,0.15)", text: "#34d399" },
+        };
+        const c = colors[row.action] ?? { bg: "rgba(255,255,255,0.06)", text: "#9ca3af" };
+        return (
+          <span style={{ padding: "4px 10px", borderRadius: "6px", background: c.bg, color: c.text, fontSize: "12px", fontWeight: 600 }}>
+            {row.action}
+          </span>
+        );
+      },
+    },
+    { key: "resource", label: "Resource" },
+    { key: "resource_id", label: "Resource ID", render: (row) => <span style={{ fontFamily: "monospace", fontSize: "12px" }}>{row.resource_id || "—"}</span> },
+    { key: "actor_user_id", label: "Actor", render: (row) => (row.actor_user_id ? `${row.actor_user_id.slice(0, 12)}…` : "system") },
+    { key: "ip", label: "IP", render: (row) => row.ip || "—" },
+    { key: "request_id", label: "Request ID", render: (row) => (row.request_id ? `${row.request_id.slice(0, 12)}…` : "—") },
+  ];
 
   return (
     <div className="dashboard-container">
@@ -51,20 +92,17 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>{t("title")}</h1>
-            <p style={{ color: "var(--text-secondary)" }}>{t("description")}</p>
+            <h1>Audit Log</h1>
+            <p style={{ color: "var(--text-secondary)" }}>Immutable record of all management actions.</p>
           </div>
-          <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {fetchError && (
-              <span style={{ fontSize: "12px", color: "var(--warning)", background: "rgba(245,158,11,0.1)", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(245,158,11,0.2)" }}>
-                ⚠ API offline
-              </span>
-            )}
+          <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button type="button" className="btn" onClick={doExport} disabled={exporting} style={{ padding: "8px 14px", fontSize: "13px" }}>
+              {exporting ? "Exporting…" : "Export CSV"}
+            </button>
             <UserProfileWidget />
           </div>
         </div>
 
-        {/* Immutable audit log banner */}
         <div
           className="glass-panel animate-fade-in delay-1"
           style={{ padding: "16px 20px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "12px" }}
@@ -73,65 +111,32 @@ export default async function AuditLogPage({ params }: { params: Promise<{ local
             <rect x="3" y="11" width="18" height="11" rx="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
-          <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-            {t("immutable_note")}
-          </div>
+          <div style={{ fontSize: "13px", color: "var(--text-secondary)" }}>This log is append-only and cannot be modified.</div>
         </div>
 
-        {/* Audit table */}
-        <div className="data-section animate-fade-in delay-2">
-          <div className="glass-panel" style={{ padding: "0", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
-                  <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("time")}</th>
-                  <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("action")}</th>
-                  <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("resource")}</th>
-                  <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("actor")}</th>
-                  <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("ip")}</th>
-                  <th style={{ padding: "14px 20px", color: "var(--text-secondary)", fontWeight: 500, fontSize: "13px", whiteSpace: "nowrap" }}>{t("request_id")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((ev, idx) => {
-                  const colors = actionColors[ev.action] ?? { bg: "rgba(255,255,255,0.06)", text: "#9ca3af" };
-                  const time = new Date(ev.created_at).toLocaleString();
-                  return (
-                    <tr key={ev.id} style={{ borderBottom: idx !== events.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
-                      <td style={{ padding: "12px 20px", color: "var(--text-secondary)", fontSize: "13px", whiteSpace: "nowrap" }}>{time}</td>
-                      <td style={{ padding: "12px 20px", whiteSpace: "nowrap" }}>
-                        <span style={{ padding: "4px 10px", borderRadius: "6px", background: colors.bg, color: colors.text, fontSize: "12px", fontWeight: 600 }}>
-                          {ev.action}
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 20px", fontSize: "13px" }}>
-                        <div style={{ fontWeight: 500 }}>{ev.resource}</div>
-                        <div style={{ color: "var(--text-secondary)", fontSize: "12px" }}>{ev.resource_id}</div>
-                      </td>
-                      <td style={{ padding: "12px 20px", fontSize: "13px", whiteSpace: "nowrap" }}>
-                        {ev.actor_user_id ? (
-                          <span style={{ fontFamily: "monospace", fontSize: "12px" }}>{ev.actor_user_id.slice(0, 12)}…</span>
-                        ) : (
-                          <span style={{ color: "var(--text-secondary)" }}>system</span>
-                        )}
-                      </td>
-                      <td style={{ padding: "12px 20px", color: "var(--text-secondary)", fontSize: "13px", whiteSpace: "nowrap" }}>{ev.ip || "—"}</td>
-                      <td style={{ padding: "12px 20px", fontFamily: "monospace", fontSize: "12px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-                        {ev.request_id ? ev.request_id.slice(0, 12) + "…" : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <FilterBar
+          filters={[
+            { type: "select", key: "action", label: "Action", options: [
+              { value: "POST", label: "POST" },
+              { value: "PUT", label: "PUT" },
+              { value: "PATCH", label: "PATCH" },
+              { value: "DELETE", label: "DELETE" },
+            ]},
+          ]}
+          values={filters}
+          onChange={setFilters}
+        />
 
-            {events.length === 0 && !fetchError && (
-              <div style={{ padding: "60px", textAlign: "center", color: "var(--text-secondary)" }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: "16px", opacity: 0.4 }} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                <p>{t("no_events")}</p>
-              </div>
-            )}
-          </div>
+        <div className="data-section animate-fade-in delay-2">
+          <DataTable
+            columns={columns}
+            data={rows}
+            rowKey={(row) => row.id}
+            loading={loading}
+            error={error || undefined}
+            onRetry={load}
+            emptyMessage="No audit events yet."
+          />
         </div>
       </main>
     </div>
