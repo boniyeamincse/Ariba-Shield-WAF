@@ -9,9 +9,9 @@ import DataTable, { type Column } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/Badges";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { usePermission } from "@/hooks/usePermission";
+import ApplicationWizard from "@/components/applications/ApplicationWizard";
 import {
   listApplications,
-  createApplication,
   updateApplication,
   deleteApplication,
   type Application,
@@ -26,7 +26,7 @@ export default function ApplicationsPage() {
   const [rows, setRows] = useState<AppRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [modal, setModal] = useState<"create" | "edit" | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editing, setEditing] = useState<Application | null>(null);
   const [deleting, setDeleting] = useState<Application | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,26 +51,20 @@ export default function ApplicationsPage() {
   }, []);
 
   const openCreate = () => {
-    setForm({ name: "", description: "" });
-    setModal("create");
+    setWizardOpen(true);
   };
 
   const openEdit = (app: Application) => {
     setForm({ name: app.name, description: app.description ?? "" });
     setEditing(app);
-    setModal("edit");
   };
 
-  const submit = async () => {
+  const submitEdit = async () => {
+    if (!editing) return;
     setSubmitting(true);
     setError("");
     try {
-      if (modal === "create") {
-        await createApplication(form.name, form.description);
-      } else if (editing) {
-        await updateApplication(editing.id, { name: form.name, description: form.description });
-      }
-      setModal(null);
+      await updateApplication(editing.id, { name: form.name, description: form.description });
       setEditing(null);
       await load();
     } catch {
@@ -158,9 +152,19 @@ export default function ApplicationsPage() {
         </div>
       </main>
 
-      {modal && (
+      {wizardOpen && (
+        <ApplicationWizard
+          onClose={() => setWizardOpen(false)}
+          onCreated={async () => {
+            setWizardOpen(false);
+            await load();
+          }}
+        />
+      )}
+
+      {editing && (
         <div
-          onClick={() => setModal(null)}
+          onClick={() => setEditing(null)}
           style={{
             position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)",
             display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
@@ -172,7 +176,7 @@ export default function ApplicationsPage() {
             style={{ width: "100%", maxWidth: "440px", padding: "28px", display: "flex", flexDirection: "column", gap: "16px" }}
           >
             <h3 style={{ fontSize: "17px", fontWeight: 600 }}>
-              {modal === "create" ? "New Application" : "Edit Application"}
+              Edit Application
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <label style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Name</label>
@@ -200,10 +204,10 @@ export default function ApplicationsPage() {
               />
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
-              <button type="button" className="btn" onClick={() => setModal(null)} disabled={submitting} style={{ padding: "10px 16px" }}>
+              <button type="button" className="btn" onClick={() => setEditing(null)} disabled={submitting} style={{ padding: "10px 16px" }}>
                 {ct("cancel")}
               </button>
-              <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting || !form.name} style={{ padding: "10px 16px" }}>
+              <button type="button" className="btn btn-primary" onClick={submitEdit} disabled={submitting || !form.name} style={{ padding: "10px 16px" }}>
                 {submitting ? "Saving…" : "Save"}
               </button>
             </div>

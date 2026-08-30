@@ -2,9 +2,81 @@ export type Application = {
   id: string;
   name: string;
   description: string;
+  environment: string;
   status: string;
   owner_user_id?: string;
   version: number;
+  tags?: string[];
+  // Domain & origin
+  domain?: string;
+  origin_type?: string;
+  origin_host?: string;
+  origin_port?: number;
+  origin_protocol?: string;
+  origin_path?: string;
+  origin_load_balancing?: string;
+  // WAF policy
+  waf_policy_id?: string;
+  waf_mode?: string;
+  // TLS
+  tls_enabled?: boolean;
+  certificate_id?: string;
+  min_tls_version?: string;
+  http_redirect?: boolean;
+  // Rate limit
+  rate_limit_enabled?: boolean;
+  rate_limit?: number;
+  // Health check
+  health_check_enabled?: boolean;
+  health_check_method?: string;
+  health_check_path?: string;
+  health_check_interval?: number;
+  health_check_timeout?: number;
+  health_check_retries?: number;
+  health_check_expected_status?: number;
+  // Advanced
+  request_body_limit_mb?: number;
+  connection_timeout_s?: number;
+  keep_alive?: boolean;
+  real_client_ip_header?: string;
+  log_request_headers?: boolean;
+  log_response_status?: boolean;
+};
+
+export type ApplicationCreatePayload = {
+  name: string;
+  description?: string;
+  environment?: string;
+  status?: string;
+  tags?: string[];
+  domain?: string;
+  origin_type?: string;
+  origin_host?: string;
+  origin_port?: number;
+  origin_protocol?: string;
+  origin_path?: string;
+  origin_load_balancing?: string;
+  waf_policy_id?: string;
+  waf_mode?: string;
+  tls_enabled?: boolean;
+  certificate_id?: string;
+  min_tls_version?: string;
+  http_redirect?: boolean;
+  rate_limit_enabled?: boolean;
+  rate_limit?: number;
+  health_check_enabled?: boolean;
+  health_check_method?: string;
+  health_check_path?: string;
+  health_check_interval?: number;
+  health_check_timeout?: number;
+  health_check_retries?: number;
+  health_check_expected_status?: number;
+  request_body_limit_mb?: number;
+  connection_timeout_s?: number;
+  keep_alive?: boolean;
+  real_client_ip_header?: string;
+  log_request_headers?: boolean;
+  log_response_status?: boolean;
 };
 
 export type Origin = {
@@ -223,10 +295,10 @@ export function listApplications(): Promise<Application[]> {
   return request<Application[]>("/applications");
 }
 
-export function createApplication(name: string, description: string): Promise<{ id: string }> {
+export function createApplication(payload: ApplicationCreatePayload): Promise<{ id: string }> {
   return request<{ id: string }>("/applications", {
     method: "POST",
-    body: JSON.stringify({ name, description }),
+    body: JSON.stringify(payload),
   });
 }
 
