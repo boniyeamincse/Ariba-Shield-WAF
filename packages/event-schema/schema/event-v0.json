@@ -2,105 +2,40 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ariba-shield.dev/schema/event-v0.json",
   "title": "Event Document v0",
-  "description": "Structured gateway event (access, health, audit, security). Additive-only (ADR-002 D3). Events never contain request bodies, cookies, or credentials.",
+  "description": "Structured security event record with flat fields matching the API and DB representation. Additive-only (ADR-002 D3). Events never contain request bodies, cookies, or credentials.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version",
-    "event_id",
-    "request_id",
-    "timestamp",
-    "event_type",
-    "gateway_id",
-    "virtual_server_id",
-    "application_id",
-    "client",
-    "request",
-    "response",
-    "decision"
+    "id", "event_id", "request_id", "timestamp", "severity",
+    "decision_action", "reason", "rule_ids", "client_ip", "method", "path", "status", "created_at"
   ],
   "properties": {
-    "schema_version": { "type": "string", "const": "0.1" },
+    "id": { "$ref": "#/$defs/ulid" },
     "event_id": { "$ref": "#/$defs/ulid" },
     "request_id": { "$ref": "#/$defs/ulid" },
     "timestamp": { "$ref": "#/$defs/timestamp" },
-    "event_type": { "type": "string", "enum": ["access", "security", "audit", "health"] },
-    "gateway_id": { "type": "string", "minLength": 1 },
-    "virtual_server_id": { "$ref": "#/$defs/ulid" },
-    "application_id": { "$ref": "#/$defs/ulid" },
-    "client": { "$ref": "#/$defs/client" },
-    "request": { "$ref": "#/$defs/request" },
-    "response": { "$ref": "#/$defs/response" },
-    "decision": { "$ref": "#/$defs/decision" },
-    "matched_rules": {
+    "severity": { "type": "string" },
+    "decision_action": { "type": "string" },
+    "reason": { "type": "string" },
+    "rule_ids": { "type": "array", "items": { "type": "string" } },
+    "client_ip": { "type": "string", "format": "ipv4" },
+    "method": { "type": "string" },
+    "path": { "type": "string" },
+    "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "gateway_id": { "type": "string" },
+    "application_id": { "type": "string" },
+    "virtual_server_id": { "type": "string" },
+    "host": { "type": "string" },
+    "masked": { "type": "boolean", "default": true },
+    "match_details": {
       "type": "array",
-      "description": "Phase 2+: matched rule references.",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["rule_id", "phase", "category", "score"],
-        "properties": {
-          "rule_id": { "type": "string" },
-          "phase": { "type": "string" },
-          "category": { "type": "string" },
-          "score": { "type": "integer" }
-        }
-      },
-      "default": []
-    },
-    "extensions": {
-      "type": "object",
-      "description": "Additive extension point for later phases.",
-      "additionalProperties": true
+      "description": "Matched rule details emitted by the engine (map of string to string per matched rule).",
+      "items": { "type": "object", "additionalProperties": { "type": "string" } }
     }
   },
   "$defs": {
-    "ulid": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
-    "timestamp": { "type": "string", "format": "date-time" },
-    "client": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["ip"],
-      "properties": {
-        "ip": { "type": "string", "format": "ipv4" },
-        "port": { "type": "integer", "minimum": 0, "maximum": 65535 },
-        "forwarded_for": { "type": "string", "description": "from trusted proxy headers only, never client-supplied raw" }
-      }
-    },
-    "request": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["method", "path", "http_version", "host", "body_size"],
-      "properties": {
-        "method": { "type": "string", "pattern": "^[A-Z]+$" },
-        "path": { "type": "string", "minLength": 1 },
-        "query": { "type": "string" },
-        "http_version": { "type": "string", "enum": ["1.0", "1.1", "2"] },
-        "host": { "type": "string", "minLength": 1 },
-        "content_type": { "type": "string" },
-        "body_size": { "type": "integer", "minimum": 0 },
-        "headers_count": { "type": "integer", "minimum": 0 }
-      }
-    },
-    "response": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "latency_ms"],
-      "properties": {
-        "status": { "type": "integer", "minimum": 100, "maximum": 599 },
-        "bytes": { "type": "integer", "minimum": 0 },
-        "latency_ms": { "type": "number", "minimum": 0 },
-        "backend_node": { "type": "string" }
-      }
-    },
-    "decision": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["action"],
-      "properties": {
-        "action": { "type": "string", "enum": ["pass", "log", "block", "challenge", "rate_limit", "redirect"] },
-        "reason": { "type": "string", "description": "machine-readable code, never user-facing text" }
-      }
-    }
+    "ulid": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "ULID, 26 char Crockford base32" },
+    "timestamp": { "type": "string", "format": "date-time" }
   }
 }

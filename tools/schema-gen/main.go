@@ -7,40 +7,55 @@
 //
 // This generator is intentionally simple: it supports the subset of JSON
 // Schema used by the policy/event schemas (object, array, string, integer,
-// number, boolean, enum, refs, formats). It does not attempt full JSON Schema
-// coverage — the schemas themselves are validated independently.
+// number, boolean, enum, refs, formats, required, const, pattern). It does
+// not attempt full JSON Schema coverage — the schemas themselves are
+// validated independently.
 package main
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 type schema struct {
+	Title               string             `json:"title"`
+	Type                string             `json:"type"`
+	Description         string             `json:"description"`
+	Properties          map[string]*schema `json:"properties"`
+	Items               *schema            `json:"items"`
+	Ref                 string             `json:"$ref"`
+	Enum                []any              `json:"enum"`
+	Format              string             `json:"format"`
+	Pattern             string             `json:"pattern"`
+	Const               any                `json:"const"`
+	Required            []string           `json:"required"`
+	AdditionalProperties any               `json:"additionalProperties"`
+	Defs                map[string]*schema `json:"$defs"`
+}
+
+type file struct {
 	Title       string             `json:"title"`
 	Type        string             `json:"type"`
 	Description string             `json:"description"`
 	Properties  map[string]*schema `json:"properties"`
-	Items       *schema            `json:"items"`
-	Ref         string             `json:"$ref"`
-	Enum        []any              `json:"enum"`
-	Format      string             `json:"format"`
+	Required    []string           `json:"required"`
 	Defs        map[string]*schema `json:"$defs"`
 }
 
-type file struct {
-	Title string             `json:"title"`
-	Type  string             `json:"type"`
-	Defs  map[string]*schema `json:"$defs"`
-}
-
-// emitted tracks definition names already written across schema files.
+// emitted tracks $def names already written across schema files.
 var emitted = map[string]bool{}
+
+// inlineByName holds inline (anonymous) object types discovered while
+// traversing root documents and $defs, keyed by the generated type name.
+// Emitted once per name in sorted order.
+var inlineByName = map[string]*schema{}
 
 func main() {
 	root := "."
@@ -97,27 +112,70 @@ func main() {
 	fmt.Println("gen: wrote sdk-go/sdk.go and sdk-typescript/src/types.ts")
 }
 
-// genSchema emits types for every $def in the schema file. Definitions with
-// the same name across schema files (e.g. ulid, timestamp) are emitted once.
+// genSchema emits types for the root document plus every $def in the schema
+// file. Definitions with the same name across schema files (e.g. ulid,
+// timestamp) are emitted once. Inline (anonymous) object properties are
+// promoted to named types and emitted deterministically.
 func genSchema(f file, goOut, tsOut *bytes.Buffer) {
-	// Stable ordering for deterministic output.
-	names := make([]string, 0, len(f.Defs))
-	for n := range f.Defs {
-		names = append(names, n)
-	}
-	sort.Strings(names)
+	root := rootTypeName(f.Title)
 
-	for _, name := range names {
+	// Pre-register inline objects from the root document and each $def so
+	// that every emitted type name is known before any type is written.
+	for _, k := range sortedKeys(f.Properties) {
+		if isInlineObject(f.Properties[k]) {
+			registerInline(root, k, f.Properties[k])
+		}
+	}
+	for _, name := range sortedKeys(f.Defs) {
+		def := f.Defs[name]
+		for _, k := range sortedKeys(def.Properties) {
+			if isInlineObject(def.Properties[k]) {
+				registerInline(toGoName(name), k, def.Properties[k])
+			}
+		}
+	}
+
+	// Emit named $defs in sorted order.
+	for _, name := range sortedKeys(f.Defs) {
 		if emitted[name] {
 			continue
 		}
 		emitted[name] = true
-		def := f.Defs[name]
-		goType := toGoType(def, name)
-		goOut.WriteString(fmt.Sprintf("// %s %s\n", toGoName(name), docLine(def.Description)))
-		goOut.WriteString(fmt.Sprintf("type %s %s\n\n", toGoName(name), goType))
-		tsOut.WriteString(fmt.Sprintf("export type %s = %s;\n\n", toTSName(name), toTSType(def)))
+		emitType(toGoName(name), f.Defs[name], goOut, tsOut)
 	}
+
+	// Emit inline object types in sorted order.
+	for _, name := range sortedKeys(inlineByName) {
+		emitType(name, inlineByName[name], goOut, tsOut)
+	}
+
+	// Emit the root document type last.
+	emitType(root, &schema{
+		Type:        "object",
+		Description: f.Description,
+		Properties:  f.Properties,
+		Required:    f.Required,
+	}, goOut, tsOut)
+}
+
+// emitType writes one Go type and one TypeScript type alias.
+func emitType(name string, def *schema, goOut, tsOut *bytes.Buffer) {
+	var doc []string
+	if d := docLine(def.Description); d != "" {
+		doc = append(doc, d)
+	}
+	if def.Pattern != "" {
+		doc = append(doc, "pattern: "+def.Pattern)
+	}
+	if def.Format != "" {
+		doc = append(doc, "format: "+def.Format)
+	}
+	for _, l := range doc {
+		goOut.WriteString(fmt.Sprintf("// %s %s\n", name, l))
+		tsOut.WriteString("// " + l + "\n")
+	}
+	goOut.WriteString(fmt.Sprintf("type %s %s\n\n", name, toGoType(def, name)))
+	tsOut.WriteString(fmt.Sprintf("export type %s = %s;\n\n", toTSName(name), toTSType(def, name)))
 }
 
 // toGoType renders a Go type for a schema definition. Named object definitions
@@ -127,25 +185,24 @@ func toGoType(s *schema, name string) string {
 	case s.Type == "object" || len(s.Properties) > 0:
 		var b bytes.Buffer
 		b.WriteString("struct {\n")
-		keys := make([]string, 0, len(s.Properties))
-		for k := range s.Properties {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
+		for _, k := range sortedKeys(s.Properties) {
 			prop := s.Properties[k]
-			tag := fmt.Sprintf("`json:\"%s\"`", k)
+			tag := fmt.Sprintf("json:%q", k)
 			if !isRequired(k, s) {
-				tag = fmt.Sprintf("`json:\"%s,omitempty\"`", k)
+				tag += ",omitempty"
 			}
-			b.WriteString(fmt.Sprintf("\t%s %s %s\n", toGoName(k), goFieldType(prop), tag))
+			b.WriteString(fmt.Sprintf("\t%s %s `%s`", toGoName(k), goFieldType(prop, name, k), tag))
+			if d := fieldDoc(prop); d != "" {
+				b.WriteString(" // " + d)
+			}
+			b.WriteString("\n")
 		}
 		b.WriteString("}")
 		return b.String()
 	case s.Ref != "":
 		return toGoName(refBase(s.Ref))
 	case s.Type == "array":
-		return "[]" + goFieldType(s.Items)
+		return "[]" + goFieldType(s.Items, name, "Item")
 	case s.Type == "integer":
 		return "int"
 	case s.Type == "number":
@@ -153,80 +210,158 @@ func toGoType(s *schema, name string) string {
 	case s.Type == "boolean":
 		return "bool"
 	default:
-		if len(s.Enum) > 0 {
-			return "string"
-		}
 		return "string"
 	}
 }
 
-func goFieldType(s *schema) string {
+func goFieldType(s *schema, parentName, fieldName string) string {
 	switch {
 	case s.Ref != "":
 		return toGoName(refBase(s.Ref))
 	case s.Type == "array":
-		return "[]" + goFieldType(s.Items)
+		return "[]" + goFieldType(s.Items, parentName, "Item")
 	case s.Type == "integer":
 		return "int"
 	case s.Type == "number":
 		return "float64"
 	case s.Type == "boolean":
 		return "bool"
+	case isMapObject(s):
+		return "map[string]" + goMapValue(s)
+	case isInlineObject(s):
+		return registerInline(parentName, fieldName, s)
 	default:
 		return "string"
 	}
 }
 
 // toTSType renders a TypeScript type.
-func toTSType(s *schema) string {
+func toTSType(s *schema, name string) string {
 	switch {
 	case s.Type == "object" || len(s.Properties) > 0:
 		var b bytes.Buffer
 		b.WriteString("{\n")
-		keys := make([]string, 0, len(s.Properties))
-		for k := range s.Properties {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
+		for _, k := range sortedKeys(s.Properties) {
 			prop := s.Properties[k]
-			optional := ""
-			if !isRequired(k, s) {
-				optional = "?"
+			optional := "?"
+			if isRequired(k, s) {
+				optional = ""
 			}
-			b.WriteString(fmt.Sprintf("  %s%s: %s;\n", k, optional, tsFieldType(prop)))
+			b.WriteString(fmt.Sprintf("  %s%s: %s;", k, optional, tsFieldType(prop, name, k)))
+			if d := fieldDoc(prop); d != "" {
+				b.WriteString(" // " + d)
+			}
+			b.WriteString("\n")
 		}
 		b.WriteString("}")
 		return b.String()
 	case s.Ref != "":
 		return toTSName(refBase(s.Ref))
 	case s.Type == "array":
-		return tsFieldType(s.Items) + "[]"
+		return tsFieldType(s.Items, name, "Item") + "[]"
 	case s.Type == "integer", s.Type == "number":
 		return "number"
 	case s.Type == "boolean":
 		return "boolean"
 	default:
-		if len(s.Enum) > 0 {
-			return "string"
+		if s.Const != nil {
+			return tsConstType(s)
 		}
 		return "string"
 	}
 }
 
-func tsFieldType(s *schema) string {
+func tsFieldType(s *schema, parentName, fieldName string) string {
 	switch {
 	case s.Ref != "":
 		return toTSName(refBase(s.Ref))
 	case s.Type == "array":
-		return tsFieldType(s.Items) + "[]"
+		return tsFieldType(s.Items, parentName, "Item") + "[]"
 	case s.Type == "integer", s.Type == "number":
 		return "number"
 	case s.Type == "boolean":
 		return "boolean"
+	case isMapObject(s):
+		return "Record<string, " + tsMapValue(s) + ">"
+	case isInlineObject(s):
+		return registerInline(parentName, fieldName, s)
 	default:
+		if s.Const != nil {
+			return tsConstType(s)
+		}
 		return "string"
 	}
+}
+
+// registerInline promotes an anonymous nested object to a named type, e.g.
+// the `limits` object inside `virtual_server` becomes `VirtualServerLimits`.
+// Nested anonymous objects inside it are registered recursively. The name is
+// deduplicated so a given inline object is only emitted once.
+func registerInline(parentName, fieldName string, s *schema) string {
+	name := toGoName(parentName) + toGoName(fieldName)
+	if _, ok := inlineByName[name]; !ok {
+		inlineByName[name] = s
+		for _, k := range sortedKeys(s.Properties) {
+			if isInlineObject(s.Properties[k]) {
+				registerInline(name, k, s.Properties[k])
+			}
+		}
+	}
+	return name
+}
+
+// isInlineObject reports whether s is an anonymous object needing promotion to
+// a named type (an object with properties but no $ref, and not a free-form map).
+func isInlineObject(s *schema) bool {
+	if s == nil || s.Ref != "" {
+		return false
+	}
+	return (s.Type == "object" || len(s.Properties) > 0) && !isMapObject(s)
+}
+
+// isMapObject reports whether s is a free-form object (additionalProperties
+// as a value schema, e.g. map[string]string, or `true`).
+func isMapObject(s *schema) bool {
+	if s == nil || s.Type != "object" || len(s.Properties) > 0 {
+		return false
+	}
+	switch v := s.AdditionalProperties.(type) {
+	case bool:
+		return v
+	case map[string]any:
+		return true
+	}
+	return false
+}
+
+func goMapValue(s *schema) string {
+	if ap, ok := s.AdditionalProperties.(map[string]any); ok {
+		switch ap["type"] {
+		case "integer":
+			return "int"
+		case "number":
+			return "float64"
+		case "boolean":
+			return "bool"
+		case "string":
+			return "string"
+		}
+	}
+	return "any"
+}
+
+func tsMapValue(s *schema) string {
+	if ap, ok := s.AdditionalProperties.(map[string]any); ok {
+		switch ap["type"] {
+		case "integer", "number":
+			return "number"
+		case "boolean":
+			return "boolean"
+		case "string":
+			return "string"
+		}
+	}
+	return "unknown"
 }
 
 func refBase(ref string) string {
@@ -255,14 +390,90 @@ func toTSName(s string) string {
 	return toGoName(s)
 }
 
-// isRequired reports whether a property is in the (unused here) required list.
-// The generator does not carry required arrays; properties are emitted
-// omitempty in Go and optional in TS by default for forward compatibility.
-func isRequired(_ string, _ *schema) bool { return false }
+// rootTypeName derives the root document type name from the schema title,
+// e.g. "Policy Document v0" -> "Policy", "Event Document v0" -> "Event".
+func rootTypeName(title string) string {
+	for _, suffix := range []string{" Document v0", " v0"} {
+		if strings.HasSuffix(title, suffix) {
+			title = strings.TrimSuffix(title, suffix)
+			break
+		}
+	}
+	return toGoName(title)
+}
+
+// isRequired reports whether a property is in the enclosing object's required
+// array. Required properties are emitted without omitempty in Go and without
+// `?` in TypeScript.
+func isRequired(k string, s *schema) bool {
+	for _, r := range s.Required {
+		if r == k {
+			return true
+		}
+	}
+	return false
+}
+
+// fieldDoc renders a trailing comment documenting const/pattern/format for a
+// property, so the schema constraints survive into the generated SDK types.
+func fieldDoc(s *schema) string {
+	var parts []string
+	if s.Const != nil {
+		parts = append(parts, "const: "+constRepr(s.Const))
+	}
+	if s.Pattern != "" {
+		parts = append(parts, "pattern: "+s.Pattern)
+	}
+	if s.Format != "" {
+		parts = append(parts, "format: "+s.Format)
+	}
+	return strings.Join(parts, "; ")
+}
+
+// tsConstType renders a TypeScript literal type for a `const` value, e.g.
+// `schema_version` with const "0.1" becomes `"0.1"`.
+func tsConstType(s *schema) string {
+	switch v := s.Const.(type) {
+	case string:
+		return strconv.Quote(v)
+	case float64:
+		if v == math.Trunc(v) {
+			return fmt.Sprintf("%d", int(v))
+		}
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(v)
+	default:
+		return "string"
+	}
+}
+
+func constRepr(v any) string {
+	switch t := v.(type) {
+	case string:
+		return strconv.Quote(t)
+	case float64:
+		if t == math.Trunc(t) {
+			return fmt.Sprintf("%d", int(t))
+		}
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	default:
+		return fmt.Sprintf("%v", t)
+	}
+}
 
 func docLine(s string) string {
 	if s == "" {
 		return ""
 	}
 	return strings.ReplaceAll(s, "\n", " ")
+}
+
+func sortedKeys(m map[string]*schema) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

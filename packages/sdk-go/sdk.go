@@ -3,107 +3,152 @@
 
 package sdk
 
-// BackendNode 
 type BackendNode struct {
-	Active bool `json:"active,omitempty"`
-	Drain bool `json:"drain,omitempty"`
-	Host string `json:"host,omitempty"`
-	Id Ulid `json:"id,omitempty"`
-	Port int `json:"port,omitempty"`
-	Protocol string `json:"protocol,omitempty"`
-	SlowStart int `json:"slow_start,omitempty"`
-	Weight int `json:"weight,omitempty"`
+	Active bool `json:"active",omitempty`
+	Drain bool `json:"drain",omitempty`
+	Host string `json:"host"`
+	Id Ulid `json:"id"`
+	Port int `json:"port"`
+	Protocol string `json:"protocol",omitempty`
+	SlowStart int `json:"slow_start",omitempty`
+	Weight int `json:"weight",omitempty`
 }
 
-// BackendPool 
 type BackendPool struct {
-	ApplicationId Ulid `json:"application_id,omitempty"`
-	HealthMonitor HealthMonitor `json:"health_monitor,omitempty"`
-	Id Ulid `json:"id,omitempty"`
-	LbAlgorithm string `json:"lb_algorithm,omitempty"`
-	Name string `json:"name,omitempty"`
-	Nodes []BackendNode `json:"nodes,omitempty"`
-	Sticky bool `json:"sticky,omitempty"`
-	StickyCookie string `json:"sticky_cookie,omitempty"`
-	StickyType string `json:"sticky_type,omitempty"`
+	ApplicationId Ulid `json:"application_id"`
+	HealthMonitor HealthMonitor `json:"health_monitor",omitempty`
+	Id Ulid `json:"id"`
+	LbAlgorithm string `json:"lb_algorithm"`
+	Name string `json:"name"`
+	Nodes []BackendNode `json:"nodes"`
+	Sticky bool `json:"sticky",omitempty`
+	StickyCookie string `json:"sticky_cookie",omitempty`
+	StickyType string `json:"sticky_type",omitempty`
 }
 
-// HealthMonitor 
 type HealthMonitor struct {
-	FailThreshold int `json:"fail_threshold,omitempty"`
-	HttpExpectedStatus []int `json:"http_expected_status,omitempty"`
-	HttpPath string `json:"http_path,omitempty"`
-	IntervalMs int `json:"interval_ms,omitempty"`
-	PassThreshold int `json:"pass_threshold,omitempty"`
-	TimeoutMs int `json:"timeout_ms,omitempty"`
-	Type string `json:"type,omitempty"`
+	FailThreshold int `json:"fail_threshold"`
+	HttpExpectedStatus []int `json:"http_expected_status",omitempty`
+	HttpPath string `json:"http_path",omitempty`
+	IntervalMs int `json:"interval_ms"`
+	PassThreshold int `json:"pass_threshold"`
+	TimeoutMs int `json:"timeout_ms"`
+	Type string `json:"type"`
 }
 
-// Route 
 type Route struct {
-	BackendPoolId Ulid `json:"backend_pool_id,omitempty"`
-	Id Ulid `json:"id,omitempty"`
-	Match string `json:"match,omitempty"`
-	Path string `json:"path,omitempty"`
-	Priority int `json:"priority,omitempty"`
+	BackendPoolId Ulid `json:"backend_pool_id"`
+	Id Ulid `json:"id"`
+	Match string `json:"match"`
+	Path string `json:"path"`
+	Priority int `json:"priority",omitempty`
 }
 
-// Timestamp 
+// Timestamp format: date-time
 type Timestamp string
 
-// TlsProfile 
 type TlsProfile struct {
-	CertificateRef string `json:"certificate_ref,omitempty"`
-	Enabled bool `json:"enabled,omitempty"`
-	MinVersion string `json:"min_version,omitempty"`
-	Protocols []string `json:"protocols,omitempty"`
+	CertificateRef string `json:"certificate_ref",omitempty`
+	Enabled bool `json:"enabled"`
+	MinVersion string `json:"min_version",omitempty`
+	Protocols []string `json:"protocols",omitempty`
 }
 
 // Ulid ULID, 26 char Crockford base32
+// Ulid pattern: ^[0-9A-HJKMNP-TV-Z]{26}$
 type Ulid string
 
-// VirtualServer 
 type VirtualServer struct {
-	DefaultBackendPoolId Ulid `json:"default_backend_pool_id,omitempty"`
-	Id Ulid `json:"id,omitempty"`
-	Limits string `json:"limits,omitempty"`
-	ListenAddr string `json:"listen_addr,omitempty"`
-	ListenPort int `json:"listen_port,omitempty"`
-	Name string `json:"name,omitempty"`
-	Routes []Route `json:"routes,omitempty"`
-	Tls TlsProfile `json:"tls,omitempty"`
+	DefaultBackendPoolId Ulid `json:"default_backend_pool_id"`
+	Id Ulid `json:"id"`
+	Limits VirtualServerLimits `json:"limits",omitempty`
+	ListenAddr string `json:"listen_addr"`
+	ListenPort int `json:"listen_port"`
+	Name string `json:"name"`
+	Routes []Route `json:"routes",omitempty`
+	Tls TlsProfile `json:"tls"`
 }
 
-// Client 
-type Client struct {
-	ForwardedFor string `json:"forwarded_for,omitempty"`
-	Ip string `json:"ip,omitempty"`
-	Port int `json:"port,omitempty"`
+type PolicyHeaders struct {
+	RequestIdHeader string `json:"request_id_header"`
+	TrustedProxyHeaders []string `json:"trusted_proxy_headers"`
 }
 
-// Decision 
-type Decision struct {
-	Action string `json:"action,omitempty"`
-	Reason string `json:"reason,omitempty"`
+type PolicySettings struct {
+	EventRetentionDays int `json:"event_retention_days"`
+	LogLevel string `json:"log_level"`
 }
 
-// Request 
-type Request struct {
-	BodySize int `json:"body_size,omitempty"`
-	ContentType string `json:"content_type,omitempty"`
-	HeadersCount int `json:"headers_count,omitempty"`
-	Host string `json:"host,omitempty"`
-	HttpVersion string `json:"http_version,omitempty"`
-	Method string `json:"method,omitempty"`
-	Path string `json:"path,omitempty"`
-	Query string `json:"query,omitempty"`
+type PolicySignature struct {
+	Algorithm string `json:"algorithm"`
+	KeyId string `json:"key_id"`
+	Value string `json:"value"`
 }
 
-// Response 
-type Response struct {
-	BackendNode string `json:"backend_node,omitempty"`
-	Bytes int `json:"bytes,omitempty"`
-	LatencyMs float64 `json:"latency_ms,omitempty"`
-	Status int `json:"status,omitempty"`
+type VirtualServerLimits struct {
+	MaxBodySize int `json:"max_body_size",omitempty`
+	MaxHeaderSize int `json:"max_header_size",omitempty`
+	MaxRequestLine int `json:"max_request_line",omitempty`
+}
+
+// Policy Declarative policy/config bundle distributed to gateways. Additive-only: unknown fields are preserved and ignored by older consumers (ADR-002 D1).
+type Policy struct {
+	BackendPools []BackendPool `json:"backend_pools"`
+	ConfigId Ulid `json:"config_id"`
+	CreatedAt Timestamp `json:"created_at"`
+	CreatedBy Ulid `json:"created_by"`
+	Extensions map[string]any `json:"extensions",omitempty`
+	GatewayTargets []string `json:"gateway_targets",omitempty`
+	Headers PolicyHeaders `json:"headers",omitempty`
+	Replaces Ulid `json:"replaces",omitempty`
+	SchemaVersion string `json:"schema_version"` // const: "0.1"
+	Settings PolicySettings `json:"settings"`
+	Signature PolicySignature `json:"signature",omitempty`
+	VirtualServers []VirtualServer `json:"virtual_servers"`
+}
+
+type PolicyHeaders struct {
+	RequestIdHeader string `json:"request_id_header"`
+	TrustedProxyHeaders []string `json:"trusted_proxy_headers"`
+}
+
+type PolicySettings struct {
+	EventRetentionDays int `json:"event_retention_days"`
+	LogLevel string `json:"log_level"`
+}
+
+type PolicySignature struct {
+	Algorithm string `json:"algorithm"`
+	KeyId string `json:"key_id"`
+	Value string `json:"value"`
+}
+
+type VirtualServerLimits struct {
+	MaxBodySize int `json:"max_body_size",omitempty`
+	MaxHeaderSize int `json:"max_header_size",omitempty`
+	MaxRequestLine int `json:"max_request_line",omitempty`
+}
+
+// Event Structured security event record with flat fields matching the API and DB representation. Additive-only (ADR-002 D3). Events never contain request bodies, cookies, or credentials.
+type Event struct {
+	ApplicationId string `json:"application_id",omitempty`
+	ClientIp string `json:"client_ip"` // format: ipv4
+	CreatedAt Timestamp `json:"created_at"`
+	DecisionAction string `json:"decision_action"`
+	EventId Ulid `json:"event_id"`
+	GatewayId string `json:"gateway_id",omitempty`
+	Host string `json:"host",omitempty`
+	Id Ulid `json:"id"`
+	Masked bool `json:"masked",omitempty`
+	MatchDetails []map[string]string `json:"match_details",omitempty`
+	Method string `json:"method"`
+	Path string `json:"path"`
+	Reason string `json:"reason"`
+	RequestId Ulid `json:"request_id"`
+	RuleIds []string `json:"rule_ids"`
+	Severity string `json:"severity"`
+	Status int `json:"status"`
+	Timestamp Timestamp `json:"timestamp"`
+	VirtualServerId string `json:"virtual_server_id",omitempty`
 }
 

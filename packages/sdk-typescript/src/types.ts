@@ -4,92 +4,149 @@
 export type BackendNode = {
   active?: boolean;
   drain?: boolean;
-  host?: string;
-  id?: Ulid;
-  port?: number;
+  host: string;
+  id: Ulid;
+  port: number;
   protocol?: string;
   slow_start?: number;
   weight?: number;
 };
 
 export type BackendPool = {
-  application_id?: Ulid;
+  application_id: Ulid;
   health_monitor?: HealthMonitor;
-  id?: Ulid;
-  lb_algorithm?: string;
-  name?: string;
-  nodes?: BackendNode[];
+  id: Ulid;
+  lb_algorithm: string;
+  name: string;
+  nodes: BackendNode[];
   sticky?: boolean;
   sticky_cookie?: string;
   sticky_type?: string;
 };
 
 export type HealthMonitor = {
-  fail_threshold?: number;
+  fail_threshold: number;
   http_expected_status?: number[];
   http_path?: string;
-  interval_ms?: number;
-  pass_threshold?: number;
-  timeout_ms?: number;
-  type?: string;
+  interval_ms: number;
+  pass_threshold: number;
+  timeout_ms: number;
+  type: string;
 };
 
 export type Route = {
-  backend_pool_id?: Ulid;
-  id?: Ulid;
-  match?: string;
-  path?: string;
+  backend_pool_id: Ulid;
+  id: Ulid;
+  match: string;
+  path: string;
   priority?: number;
 };
 
+// format: date-time
 export type Timestamp = string;
 
 export type TlsProfile = {
   certificate_ref?: string;
-  enabled?: boolean;
+  enabled: boolean;
   min_version?: string;
   protocols?: string[];
 };
 
+// ULID, 26 char Crockford base32
+// pattern: ^[0-9A-HJKMNP-TV-Z]{26}$
 export type Ulid = string;
 
 export type VirtualServer = {
-  default_backend_pool_id?: Ulid;
-  id?: Ulid;
-  limits?: string;
-  listen_addr?: string;
-  listen_port?: number;
-  name?: string;
+  default_backend_pool_id: Ulid;
+  id: Ulid;
+  limits?: VirtualServerLimits;
+  listen_addr: string;
+  listen_port: number;
+  name: string;
   routes?: Route[];
-  tls?: TlsProfile;
+  tls: TlsProfile;
 };
 
-export type Client = {
-  forwarded_for?: string;
-  ip?: string;
-  port?: number;
+export type PolicyHeaders = {
+  request_id_header: string;
+  trusted_proxy_headers: string[];
 };
 
-export type Decision = {
-  action?: string;
-  reason?: string;
+export type PolicySettings = {
+  event_retention_days: number;
+  log_level: string;
 };
 
-export type Request = {
-  body_size?: number;
-  content_type?: string;
-  headers_count?: number;
+export type PolicySignature = {
+  algorithm: string;
+  key_id: string;
+  value: string;
+};
+
+export type VirtualServerLimits = {
+  max_body_size?: number;
+  max_header_size?: number;
+  max_request_line?: number;
+};
+
+// Declarative policy/config bundle distributed to gateways. Additive-only: unknown fields are preserved and ignored by older consumers (ADR-002 D1).
+export type Policy = {
+  backend_pools: BackendPool[];
+  config_id: Ulid;
+  created_at: Timestamp;
+  created_by: Ulid;
+  extensions?: Record<string, unknown>;
+  gateway_targets?: string[];
+  headers?: PolicyHeaders;
+  replaces?: Ulid;
+  schema_version: "0.1"; // const: "0.1"
+  settings: PolicySettings;
+  signature?: PolicySignature;
+  virtual_servers: VirtualServer[];
+};
+
+export type PolicyHeaders = {
+  request_id_header: string;
+  trusted_proxy_headers: string[];
+};
+
+export type PolicySettings = {
+  event_retention_days: number;
+  log_level: string;
+};
+
+export type PolicySignature = {
+  algorithm: string;
+  key_id: string;
+  value: string;
+};
+
+export type VirtualServerLimits = {
+  max_body_size?: number;
+  max_header_size?: number;
+  max_request_line?: number;
+};
+
+// Structured security event record with flat fields matching the API and DB representation. Additive-only (ADR-002 D3). Events never contain request bodies, cookies, or credentials.
+export type Event = {
+  application_id?: string;
+  client_ip: string; // format: ipv4
+  created_at: Timestamp;
+  decision_action: string;
+  event_id: Ulid;
+  gateway_id?: string;
   host?: string;
-  http_version?: string;
-  method?: string;
-  path?: string;
-  query?: string;
-};
-
-export type Response = {
-  backend_node?: string;
-  bytes?: number;
-  latency_ms?: number;
-  status?: number;
+  id: Ulid;
+  masked?: boolean;
+  match_details?: Record<string, string>[];
+  method: string;
+  path: string;
+  reason: string;
+  request_id: Ulid;
+  rule_ids: string[];
+  severity: string;
+  status: number;
+  timestamp: Timestamp;
+  virtual_server_id?: string;
 };
 
