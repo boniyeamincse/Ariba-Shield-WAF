@@ -296,6 +296,10 @@ export function getGateway(id: string): Promise<Gateway> {
   return request<Gateway>(`/gateways/${id}`);
 }
 
+export function updateGateway(id: string, patch: Partial<Gateway>): Promise<{ id: string }> {
+  return request<{ id: string }>(`/gateways/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
 export function getGatewayStatus(id: string): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>(`/gateways/${id}/status`);
 }
