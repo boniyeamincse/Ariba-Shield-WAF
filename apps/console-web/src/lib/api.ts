@@ -654,8 +654,23 @@ export function deleteRateLimit(id: string): Promise<{ status: string }> {
 
 // ===== Certificates =====
 
-export function listCertificates(): Promise<unknown[]> {
-  return request<unknown[]>("/certificates");
+export type Certificate = {
+  id: string;
+  name: string;
+  domain: string;
+  issuer?: string;
+  serial?: string;
+  not_before?: string;
+  not_after?: string;
+  status?: string;
+};
+
+export function listCertificates(): Promise<Certificate[]> {
+  return request<Certificate[]>("/certificates");
+}
+
+export function getCertificate(id: string): Promise<Certificate> {
+  return request<Certificate>(`/certificates/${id}`);
 }
 
 export function deleteCertificate(id: string): Promise<{ status: string }> {
