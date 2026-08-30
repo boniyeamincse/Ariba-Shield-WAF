@@ -708,8 +708,27 @@ export function rejectSuggestion(id: string): Promise<{ id: string }> {
 
 // ===== Integrations =====
 
-export function listIntegrations(): Promise<unknown[]> {
-  return request<unknown[]>("/integrations");
+export type Integration = {
+  id: string;
+  type: string;
+  name: string;
+  endpoint?: string;
+  log_types?: string[];
+  enabled?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export function listIntegrations(): Promise<Integration[]> {
+  return request<Integration[]>("/integrations");
+}
+
+export function createIntegration(payload: { name: string; type: string; endpoint?: string; enabled?: boolean }): Promise<{ id: string }> {
+  return request<{ id: string }>("/integrations", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function deleteIntegration(id: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/integrations/${id}`, { method: "DELETE" });
 }
 
 export function testIntegration(id: string): Promise<{ id: string; success: string }> {
