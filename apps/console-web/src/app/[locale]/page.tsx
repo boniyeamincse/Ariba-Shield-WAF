@@ -6,6 +6,8 @@ import {
   getDashboardOverview,
   getDashboardTraffic,
   getDashboardSecurity,
+  getDashboardTopIPs,
+  getDashboardTopRules,
 } from "@/lib/api";
 import UserProfileWidget from "@/components/UserProfileWidget";
 
@@ -49,14 +51,19 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
     period_days: 7, total_events: 0, blocked_events: 0, unique_ips: 0, by_severity: [] as { severity: string; count: number }[],
   };
 
+  let topIPs: { client_ip: string; hits: number; blocked: number }[] = [];
+  let topRules: { rule_id: string; hits: number }[] = [];
+
   try {
-    [apps, gateways, policies, overview, traffic, security] = await Promise.all([
+    [apps, gateways, policies, overview, traffic, security, topIPs, topRules] = await Promise.all([
       listApplications(),
       listGateways(),
       listSecurityPolicies(),
       getDashboardOverview(),
       getDashboardTraffic(),
       getDashboardSecurity(),
+      getDashboardTopIPs().then((r) => r.top_ips ?? []),
+      getDashboardTopRules().then((r) => r.top_rules ?? []),
     ]);
   } catch {
     fetchError = true;
@@ -217,6 +224,35 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top IPs + Top Rules */}
+        <div className="metrics-grid" style={{ marginBottom: 32 }}>
+          <div className="metric-card glass-panel">
+            <div className="metric-header"><span>Top Client IPs</span></div>
+            <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "2" }}>
+              {topIPs.slice(0, 5).map((ip) => (
+                <div key={ip.client_ip} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                  <span style={{ fontFamily: "monospace", fontSize: "12px" }}>{ip.client_ip}</span>
+                  <span>
+                    {ip.hits}
+                    {ip.blocked > 0 && <span style={{ color: "var(--danger)", marginLeft: "6px" }}>({ip.blocked} blk)</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="metric-card glass-panel">
+            <div className="metric-header"><span>Top Triggered Rules</span></div>
+            <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "2" }}>
+              {topRules.slice(0, 5).map((rule) => (
+                <div key={rule.rule_id} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                  <span style={{ fontFamily: "monospace", fontSize: "12px" }}>{rule.rule_id}</span>
+                  <span style={{ color: "var(--text-primary)" }}>{rule.hits}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

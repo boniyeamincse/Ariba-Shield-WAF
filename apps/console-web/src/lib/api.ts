@@ -538,20 +538,20 @@ export function getDashboardAttacks(): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>("/dashboard/attacks");
 }
 
-export function getDashboardTopIPs(): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>("/dashboard/top-ips");
+export function getDashboardTopIPs(): Promise<{ period_days: number; top_ips: { client_ip: string; hits: number; blocked: number }[] }> {
+  return request<{ period_days: number; top_ips: { client_ip: string; hits: number; blocked: number }[] }>("/dashboard/top-ips");
 }
 
-export function getDashboardTopRules(): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>("/dashboard/top-rules");
+export function getDashboardTopRules(): Promise<{ period_days: number; top_rules: { rule_id: string; hits: number }[] }> {
+  return request<{ period_days: number; top_rules: { rule_id: string; hits: number }[] }>("/dashboard/top-rules");
 }
 
-export function getDashboardApplications(): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>("/dashboard/applications");
+export function getDashboardGateways(): Promise<{ gateways: unknown[]; total: number; active: number; offline: number }> {
+  return request<{ gateways: unknown[]; total: number; active: number; offline: number }>("/dashboard/gateways");
 }
 
-export function getDashboardGateways(): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>("/dashboard/gateways");
+export function getDashboardApplications(): Promise<{ period_days: number; applications: { id: string; name: string; status: string; requests: number; events: number; blocked: number }[] }> {
+  return request<{ period_days: number; applications: { id: string; name: string; status: string; requests: number; events: number; blocked: number }[] }>("/dashboard/applications");
 }
 
 // ===== Reports =====
