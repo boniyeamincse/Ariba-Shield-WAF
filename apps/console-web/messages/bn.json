@@ -26,7 +26,8 @@
     "reports": "রিপোর্ট",
     "users_access": "ইউজার ও এক্সেস",
     "audit_log": "অডিট লগ",
-    "system_settings": "সিস্টেম সেটিংস"
+    "system_settings": "সিস্টেম সেটিংস",
+    "incidents": "ঘটনা"
   },
   "applications": {
     "title": "অ্যাপ্লিকেশন",

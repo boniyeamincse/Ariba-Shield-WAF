@@ -30,6 +30,18 @@ export default function Sidebar({ locale }: { locale: string }) {
             {t("title")}
           </li>
         </Link>
+        <Link href={`/${locale}/security-events`}>
+          <li className={`nav-item ${isActive("/security-events") ? "active" : ""}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            {navT("security_events")}
+          </li>
+        </Link>
+        <Link href={`/${locale}/incidents`}>
+          <li className={`nav-item ${isActive("/incidents") ? "active" : ""}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            {navT("incidents")}
+          </li>
+        </Link>
 
         <li className="sidebar-section-title">Protect</li>
         <Link href={`/${locale}/applications`}>

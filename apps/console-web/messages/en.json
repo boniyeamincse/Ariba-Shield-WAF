@@ -26,7 +26,8 @@
     "reports": "Reports",
     "users_access": "Users & Access",
     "audit_log": "Audit Log",
-    "system_settings": "System Settings"
+    "system_settings": "System Settings",
+    "incidents": "Incidents"
   },
   "applications": {
     "title": "Applications",
