@@ -220,12 +220,12 @@
             <div class="meta-box">
                 <ul style="list-style: none; padding: 0; margin: 0; color: #cbd5e1;">
                     <li style="margin-bottom: 8px;"><strong>Project Name:</strong> Ariba Shield WAF</li>
-                    <li style="margin-bottom: 8px;"><strong>Version:</strong> v0.1.0-alpha</li>
-                    <li style="margin-bottom: 8px;"><strong>Author:</strong> Dev</li>
+                    <li style="margin-bottom: 8px;"><strong>Version:</strong> v0.1.0</li>
+                    <li style="margin-bottom: 8px;"><strong>Author:</strong> Ariba Shield Dev Team</li>
                     <li style="margin-bottom: 0;"><strong>Core Features:</strong> 
                         Coraza-based WAF Engine, OWASP CRS, Role-Based Access Control (RBAC), 
                         Bilingual UI (English/Bangla), Atomic Configuration Reloads, Incident Management, 
-                        and Advanced Analytics Dashboard.
+                        Threat Intelligence, Learning & Policy Suggestions, and Advanced Analytics Dashboard.
                     </li>
                 </ul>
             </div>
@@ -362,11 +362,14 @@
             <h2>5. Analytics Dashboard</h2>
             <p>The main Overview Dashboard contains 8 distinct widgets that provide a real-time, birds-eye view of your network's security posture.</p>
             <ul>
-                <li><strong>Top Metrics:</strong> Instantly view total incoming requests, blocked threats, and active gateways.</li>
-                <li><strong>Traffic Flow:</strong> A visual graph representing traffic spikes and mitigated attacks over time.</li>
-                <li><strong>Top Client IPs:</strong> Identifies the source IPs generating the most traffic or suspicious behavior.</li>
-                <li><strong>Top Triggered Rules:</strong> Shows which WAF rules (e.g., SQL Injection, XSS) are intercepting the most traffic.</li>
+                <li><strong>Metric Cards:</strong> Total Applications, Active Gateways, Enforced Policies, Security Events, and Active Incidents — all fed by the live <code>/dashboard/overview</code> API.</li>
+                <li><strong>Traffic Summary:</strong> Total requests, average latency, P99 latency, and a status-code breakdown for the last 7 days.</li>
+                <li><strong>Security Summary:</strong> Total events, blocked count, unique IPs, and a severity distribution (critical/high/medium/low).</li>
+                <li><strong>Top Client IPs:</strong> The source IPs generating the most events, with blocked counts.</li>
+                <li><strong>Top Triggered Rules:</strong> Which WAF rules (e.g., SQL Injection, XSS) are intercepting the most traffic.</li>
+                <li><strong>Protected Applications:</strong> A list of onboarded applications with live status badges.</li>
             </ul>
+            <p>All widgets accept an optional <code>days</code> window (default 7, max 90).</p>
         </section>
 
         <section id="onboarding">
@@ -443,8 +446,62 @@
             </table>
         </section>
         
+        <section id="integrations">
+            <h2>9. Integrations & Notifications</h2>
+            <h3>SIEM & Log Forwarding Integrations</h3>
+            <p>Forward WAF events and access logs to your security stack. Go to <em>Integrations</em> to manage log-forwarding targets. Supported types:</p>
+            <ul>
+                <li><strong>SIEM:</strong> Splunk HEC, Wazuh, Syslog</li>
+                <li><strong>Messaging:</strong> Microsoft Teams, Slack</li>
+                <li><strong>Custom:</strong> Generic Webhook</li>
+            </ul>
+            <p>Each integration supports a <strong>Test</strong> button to validate connectivity, plus Enable/Disable toggles.</p>
+
+            <h3>Notification Channels</h3>
+            <p>Configure alert delivery for incidents and critical events under <em>Notification Channels</em>. Supported kinds: Wazuh, Syslog, CEF, LEEF, Webhook, Email, Microsoft Teams, Slack, and SOAR. Mark one channel as <em>default</em> to receive all system alerts.</p>
+        </section>
+
+        <section id="certificates">
+            <h2>10. Certificates & Backups</h2>
+            <h3>TLS Certificate Management</h3>
+            <p>Upload, import, renew, and monitor TLS certificates under <em>Certificates</em>. Expiring or expired certificates are color-coded (green = valid, yellow = expiring soon, red = expired).</p>
+
+            <h3>Backups & Disaster Recovery</h3>
+            <p>Trigger encrypted database backups and restore them from the <em>Backups</em> page. Restore operations require confirmation because they overwrite the current configuration.</p>
+        </section>
+
+        <section id="threat-intel">
+            <h2>11. Threat Intelligence</h2>
+            <p>Manage threat intelligence feeds that dynamically block malicious IPs, domains, URLs, and ASNs. Under <em>Threat Intelligence</em> you can:</p>
+            <ul>
+                <li><strong>Create feeds</strong> by source with an indicator type (IP/Domain/URL/ASN) and a confidence level.</li>
+                <li><strong>Test</strong> feed connectivity and <strong>Sync</strong> the latest indicators on demand.</li>
+                <li>Monitor feed status and indicator counts at a glance.</li>
+            </ul>
+        </section>
+
+        <section id="learning">
+            <h2>12. Learning & Policy Suggestions</h2>
+            <p>The <em>Learning</em> module builds policy suggestions from <strong>trusted sources only</strong>. It can never directly weaken an active policy — every suggestion must be reviewed and explicitly accepted.</p>
+            <ul>
+                <li><strong>Sessions:</strong> Create trusted-source learning sessions with a confidence threshold, then start/stop them.</li>
+                <li><strong>Suggestions:</strong> Review engine-generated rule suggestions (rule ID, severity, confidence, rationale). Use <strong>Accept</strong> to gate a policy update through the approval workflow, or <strong>Reject</strong> to discard.</li>
+            </ul>
+        </section>
+
+        <section id="license">
+            <h2>13. License Management</h2>
+            <p>If commercialized, the platform uses edition-based licensing. Under <em>License</em> you can:</p>
+            <ul>
+                <li>View the active edition (Community / Pro / Enterprise), seat count, and expiry date.</li>
+                <li>Monitor usage against limits (gateways, applications) with percentage bars.</li>
+                <li>Activate a license key, or deactivate to revert to the Community edition.</li>
+                <li>Review the granted feature <strong>entitlements</strong> for your edition.</li>
+            </ul>
+        </section>
+
         <section id="troubleshooting">
-            <h2>9. Troubleshooting & Recovery</h2>
+            <h2>14. Troubleshooting & Recovery</h2>
             
             <h4>API Offline Error</h4>
             <p>If the dashboard displays an "API Offline" badge, the frontend is unable to reach the backend API. Ensure that the <code>NEXT_PUBLIC_API_BASE</code> is correctly mapping to your hostname via Docker compose, and that no external firewalls are blocking port 8443.</p>
