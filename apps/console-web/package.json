@@ -18,13 +18,16 @@
     "react-dom": "^19"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "20.17.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^15",
+    "jsdom": "^30.0.1",
     "prettier": "^3",
     "typescript": "^5",
-    "vitest": "^3"
+    "vitest": "^3.2.7"
   }
 }
