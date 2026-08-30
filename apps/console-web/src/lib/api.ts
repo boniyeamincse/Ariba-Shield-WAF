@@ -195,7 +195,7 @@ export type LearningSuggestion = {
 
 export const API_BASE = typeof window === 'undefined'
   ? process.env.INTERNAL_API_BASE ?? "http://control-api:8443"
-  : process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8443";
+  : process.env.NEXT_PUBLIC_API_BASE ?? (window.location.protocol + "//" + window.location.hostname + ":8443");
 
 async function request<T>(path: string, init?: RequestInit, role?: string): Promise<T> {
   const headers: Record<string, string> = {

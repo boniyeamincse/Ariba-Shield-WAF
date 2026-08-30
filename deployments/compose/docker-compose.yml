@@ -55,7 +55,7 @@ services:
       ADMIN_INITIAL_EMAIL: ${ADMIN_INITIAL_EMAIL:?set ADMIN_INITIAL_EMAIL in .env}
       ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:?set ADMIN_INITIAL_PASSWORD in .env}
     ports:
-      - "127.0.0.1:8443:8443"
+      - "8443:8443"
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,7 +74,7 @@ services:
     environment:
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://127.0.0.1:8443}
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     depends_on:
       - control-api
 
@@ -133,7 +133,7 @@ services:
     environment:
       SHIELD_BACKEND_ID: backend-b
     ports:
-      - "127.0.0.1:8082:80"
+      - "127.0.0.1:8083:80"
 
 volumes:
   pgdata:
