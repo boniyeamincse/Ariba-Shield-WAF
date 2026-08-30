@@ -637,6 +637,20 @@ export function getLicenseEntitlements(): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>("/license/entitlements");
 }
 
+// ===== MFA / TOTP =====
+
+export function enableMFA(): Promise<{ secret: string; otpauth_url: string }> {
+  return request<{ secret: string; otpauth_url: string }>("/auth/mfa/enable", { method: "POST" });
+}
+
+export function verifyMFA(code: string): Promise<{ status: string }> {
+  return request<{ status: string }>("/auth/mfa/verify", { method: "POST", body: JSON.stringify({ code }) });
+}
+
+export function disableMFA(): Promise<{ status: string }> {
+  return request<{ status: string }>("/auth/mfa/disable", { method: "POST" });
+}
+
 // ===== IP Lists & Rate Limits =====
 
 export function listIPLists(): Promise<IPList[]> {
