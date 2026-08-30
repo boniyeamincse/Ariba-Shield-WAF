@@ -16,6 +16,17 @@ type RoutePermission struct {
 
 // DefaultRoutePermissions defines the permission map for Phase 3/4.
 var DefaultRoutePermissions = []RoutePermission{
+	// Policy lifecycle (bind, versions, diff) — explicit entries so these
+	// do not fall through to the generic security-policies prefix or system:admin.
+	{Method: "POST", PathPrefix: "/api/v1/security-policies/bind", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/security-policies/{id}/versions", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/security-policies/{id}/versions", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/security-policies/{id}/diff", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/policy-versions/{id}/activate", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/policy-versions/{id}/promote", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "POST", PathPrefix: "/api/v1/policy-versions/{id}/rollback", Permissions: []string{PermPolicyWrite, PermPolicyAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/policy-versions/diff", Permissions: []string{PermPolicyRead, PermPolicyWrite, PermPolicyAdmin}},
+
 	{Method: "GET", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppRead, PermAppWrite, PermAppAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppWrite, PermAppAdmin}},
 	{Method: "PATCH", PathPrefix: "/api/v1/applications", Permissions: []string{PermAppWrite, PermAppAdmin}},
@@ -245,7 +256,7 @@ func CheckRoutePermission(ctx context.Context, method, path string) bool {
 		return true
 	}
 	for _, rp := range DefaultRoutePermissions {
-		if rp.Method == method && strings.HasPrefix(path, rp.PathPrefix) {
+		if rp.Method == method && pathPatternMatches(rp.PathPrefix, path) {
 			for _, p := range rp.Permissions {
 				if HasPermission(ctx, p) {
 					return true
@@ -256,6 +267,26 @@ func CheckRoutePermission(ctx context.Context, method, path string) bool {
 	}
 	// Unknown route: default to requiring admin.
 	return HasPermission(ctx, PermSystemAdmin)
+}
+
+// pathPatternMatches reports whether path matches the pattern. The pattern is
+// matched segment-by-segment and may be a prefix of path; a segment of the form
+// {name} acts as a single-segment wildcard (e.g. /api/v1/users/{id}).
+func pathPatternMatches(pattern, path string) bool {
+	patParts := strings.Split(strings.Trim(pattern, "/"), "/")
+	pathParts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(pathParts) < len(patParts) {
+		return false
+	}
+	for i, p := range patParts {
+		if len(p) >= 3 && p[0] == '{' && p[len(p)-1] == '}' {
+			continue // wildcard matches any single segment
+		}
+		if pathParts[i] != p {
+			return false
+		}
+	}
+	return true
 }
 
 // RBACEnforcer returns middleware that checks route-level permissions using

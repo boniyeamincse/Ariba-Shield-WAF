@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/ariba-shield/control-api/internal/store"
@@ -38,47 +39,122 @@ func DiffPolicyVersions(st *store.Store) http.HandlerFunc {
 	}
 }
 
-// simpleDiff produces a shallow field-level diff of two JSON documents.
+// simpleDiff produces a deep field-level diff of two JSON documents.
+// Returns {added, changed, removed} where each value is a []string
+// of dotted paths for nested fields (e.g. "rules.0.action").
 func simpleDiff(from, to []byte) map[string]any {
-	var f, t map[string]any
+	var f, t any
 	_ = json.Unmarshal(from, &f)
 	_ = json.Unmarshal(to, &t)
 
-	out := map[string]any{
-		"added":   []string{},
-		"removed": []string{},
-		"changed": []string{},
+	var added, changed, removed []string
+	diffValues("", f, t, &added, &changed, &removed)
+
+	if added == nil {
+		added = []string{}
+	}
+	if removed == nil {
+		removed = []string{}
+	}
+	if changed == nil {
+		changed = []string{}
 	}
 
-	// Detect added/changed fields in t.
-	for k, tv := range t {
-		fv, exists := f[k]
-		if !exists {
-			out["added"] = append(out["added"].([]string), k)
-			continue
-		}
-		fjs, _ := json.Marshal(fv)
-		tjs, _ := json.Marshal(tv)
-		if string(fjs) != string(tjs) {
-			out["changed"] = append(out["changed"].([]string), k)
-		}
+	return map[string]any{
+		"added":   added,
+		"removed": removed,
+		"changed": changed,
 	}
-	// Detect removed fields (in f but not t).
-	for k := range f {
-		if _, exists := t[k]; !exists {
-			out["removed"] = append(out["removed"].([]string), k)
+}
+
+// diffValues recursively compares two JSON values and appends dotted paths.
+func diffValues(path string, from, to any, added, changed, removed *[]string) {
+	// If both are maps, recurse by key.
+	fm, fIsMap := from.(map[string]any)
+	tm, tIsMap := to.(map[string]any)
+	if fIsMap && tIsMap {
+		// added/changed in to
+		for k, tv := range tm {
+			key := joinPath(path, k)
+			fv, ok := fm[k]
+			if !ok {
+				*added = append(*added, key)
+				continue
+			}
+			if jsonEqual(fv, tv) {
+				continue
+			}
+			if bothStructured(fv, tv) {
+				diffValues(key, fv, tv, added, changed, removed)
+			} else {
+				*changed = append(*changed, key)
+			}
 		}
+		// removed
+		for k := range fm {
+			if _, ok := tm[k]; !ok {
+				*removed = append(*removed, joinPath(path, k))
+			}
+		}
+		return
 	}
 
-	if len(out["added"].([]string)) == 0 {
-		out["added"] = []string{}
-	}
-	if len(out["removed"].([]string)) == 0 {
-		out["removed"] = []string{}
-	}
-	if len(out["changed"].([]string)) == 0 {
-		out["changed"] = []string{}
+	// If both are arrays, compare element by element.
+	fa, fIsArr := from.([]any)
+	ta, tIsArr := to.([]any)
+	if fIsArr && tIsArr {
+		max := len(fa)
+		if len(ta) > max {
+			max = len(ta)
+		}
+		for i := 0; i < max; i++ {
+			key := fmt.Sprintf("%s[%d]", path, i)
+			if i >= len(fa) {
+				*added = append(*added, key)
+				continue
+			}
+			if i >= len(ta) {
+				*removed = append(*removed, key)
+				continue
+			}
+			if jsonEqual(fa[i], ta[i]) {
+				continue
+			}
+			if bothStructured(fa[i], ta[i]) {
+				diffValues(key, fa[i], ta[i], added, changed, removed)
+			} else {
+				*changed = append(*changed, key)
+			}
+		}
+		return
 	}
 
-	return out
+	// One or both are scalars (or types differ) — mark as changed.
+	if path != "" {
+		*changed = append(*changed, path)
+	}
+}
+
+func joinPath(parent, child string) string {
+	if parent == "" {
+		return child
+	}
+	return parent + "." + child
+}
+
+func bothStructured(a, b any) bool {
+	_, aOk := a.(map[string]any)
+	_, bOk := b.(map[string]any)
+	if aOk && bOk {
+		return true
+	}
+	_, aOk = a.([]any)
+	_, bOk = b.([]any)
+	return aOk && bOk
+}
+
+func jsonEqual(a, b any) bool {
+	aj, _ := json.Marshal(a)
+	bj, _ := json.Marshal(b)
+	return string(aj) == string(bj)
 }

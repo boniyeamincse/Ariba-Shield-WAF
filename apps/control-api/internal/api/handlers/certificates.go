@@ -11,14 +11,14 @@ import (
 )
 
 type certificate struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	Domain    string  `json:"domain"`
-	Issuer    string  `json:"issuer"`
-	Serial    string  `json:"serial"`
-	NotBefore string  `json:"not_before"`
-	NotAfter  string  `json:"not_after"`
-	Status    string  `json:"status"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Domain    string `json:"domain"`
+	Issuer    string `json:"issuer"`
+	Serial    string `json:"serial"`
+	NotBefore string `json:"not_before"`
+	NotAfter  string `json:"not_after"`
+	Status    string `json:"status"`
 }
 
 // ListCertificates returns certificate metadata (never key material, §7.2).
@@ -89,7 +89,6 @@ func UploadCertificate(st *store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
 			return
 		}
-		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
 
 		status := "active"
 		if time.Now().After(cert.NotAfter) {

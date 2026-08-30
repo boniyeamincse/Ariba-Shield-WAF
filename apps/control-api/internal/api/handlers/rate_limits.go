@@ -80,7 +80,6 @@ func CreateRateLimit(st *store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
 			return
 		}
-		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
 
 		if _, err := st.Pool.Exec(r.Context(),
 			`INSERT INTO rate_limit_policies (id, organization_id, name, application_id, route_prefix, limit_count, window_seconds, action)
@@ -102,6 +101,7 @@ func nullIfEmpty(s string) *string {
 	}
 	return &s
 }
+
 // UpdateRateLimit updates a rate limit policy (partial update).
 func UpdateRateLimit(st *store.Store) http.HandlerFunc {
 	type update struct {

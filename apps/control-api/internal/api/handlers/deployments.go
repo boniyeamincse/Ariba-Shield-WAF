@@ -66,7 +66,6 @@ func SyncDeployment(st *store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
 			return
 		}
-		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
 
 		if _, err := st.Pool.Exec(r.Context(),
 			`INSERT INTO deployments (id, organization_id, policy_version_id, target_gateways, status)

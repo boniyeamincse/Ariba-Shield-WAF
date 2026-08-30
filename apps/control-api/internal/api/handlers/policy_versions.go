@@ -7,6 +7,15 @@ import (
 	"github.com/ariba-shield/control-api/internal/store"
 )
 
+// policyStatusTransitions defines the valid status transitions for a policy
+// version (draft -> staging -> approved -> canary -> active, plus rollback).
+var policyStatusTransitions = map[string]map[string]bool{
+	"draft":    {"staging": true, "approved": true},
+	"staging":  {"approved": true, "canary": true},
+	"approved": {"canary": true, "active": true},
+	"canary":   {"active": true, "rolled_back": true},
+}
+
 // CreatePolicyVersion creates a new immutable version of a security policy.
 func CreatePolicyVersion(st *store.Store) http.HandlerFunc {
 	type create struct {
@@ -61,8 +70,18 @@ func CreatePolicyVersion(st *store.Store) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]any{"id": id, "version": nextVersion, "status": initStatus})
+		json.NewEncoder(w).Encode(createPolicyVersionResponse{
+			ID:      id,
+			Version: nextVersion,
+			Status:  initStatus,
+		})
 	}
+}
+
+type createPolicyVersionResponse struct {
+	ID      string `json:"id"`
+	Version int64  `json:"version"`
+	Status  string `json:"status"`
 }
 
 // PromotePolicyVersion moves a version from draft/staging to the next stage.
@@ -98,13 +117,7 @@ func PromotePolicyVersion(st *store.Store) http.HandlerFunc {
 		}
 
 		// Validate the transition.
-		allowed := map[string]map[string]bool{
-			"draft":    {"staging": true, "approved": true},
-			"staging":  {"approved": true, "canary": true},
-			"approved": {"canary": true, "active": true},
-			"canary":   {"active": true, "rolled_back": true},
-		}
-		if !allowed[curStatus][to] {
+		if !policyStatusTransitions[curStatus][to] {
 			http.Error(w, `{"error":"invalid transition"}`, http.StatusBadRequest)
 			return
 		}

@@ -80,7 +80,6 @@ func CreateCustomRule(st *store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
 			return
 		}
-		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
 
 		if _, err := st.Pool.Exec(r.Context(),
 			`INSERT INTO custom_rules (id, organization_id, policy_id, name, description, action, match_conditions)

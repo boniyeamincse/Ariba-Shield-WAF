@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/oklog/ulid/v2"
 )
 
 // RequestID injects a unique request ID into the context and response header.
@@ -13,10 +13,7 @@ func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.Header.Get("X-Request-ID")
 		if id == "" {
-			b := make([]byte, 16)
-			if _, err := rand.Read(b); err == nil {
-				id = hex.EncodeToString(b)
-			}
+			id = ulid.Make().String()
 		}
 		w.Header().Set("X-Request-ID", id)
 		next.ServeHTTP(w, r.WithContext(ContextWithRequestID(r.Context(), id)))
@@ -29,11 +26,13 @@ func Logging(next http.Handler) http.Handler {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w, status: 200}
 		next.ServeHTTP(sw, r)
+		dur := time.Since(start)
+		ObserveRequestDuration(dur)
 		slog.Info("request",
 			"status", sw.status,
 			"method", r.Method,
 			"path", r.URL.Path,
-			"duration_ms", time.Since(start).Milliseconds(),
+			"duration_ms", dur.Milliseconds(),
 			"request_id", RequestIDFromContext(r.Context()),
 		)
 	})

@@ -8,13 +8,14 @@ import (
 	"github.com/ariba-shield/control-api/internal/store"
 )
 
-// RegisterGateway registers a new gateway (idempotent upsert).
+// RegisterGateway registers a new gateway. The ID is always provisioned by the
+// server (ignoring any client-supplied gateway_id) so a gateway cannot claim
+// another gateway's ID.
 func RegisterGateway(st *store.Store) http.HandlerFunc {
 	type register struct {
-		GatewayID   string   `json:"gateway_id"`
-		Hostname    string   `json:"hostname"`
-		IP          string   `json:"ip"`
-		Version     string   `json:"version"`
+		Hostname     string   `json:"hostname"`
+		IP           string   `json:"ip"`
+		Version      string   `json:"version"`
 		Capabilities []string `json:"capabilities"`
 	}
 
@@ -24,40 +25,38 @@ func RegisterGateway(st *store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 			return
 		}
-		if body.GatewayID == "" || body.Hostname == "" {
-			http.Error(w, `{"error":"gateway_id and hostname are required"}`, http.StatusBadRequest)
+		if body.Hostname == "" {
+			http.Error(w, `{"error":"hostname is required"}`, http.StatusBadRequest)
 			return
 		}
 
-		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+		id, err := st.NewID()
+		if err != nil {
+			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
+			return
+		}
+
 		if _, err := st.Pool.Exec(r.Context(),
 			`INSERT INTO gateways (id, organization_id, hostname, ip, version, capabilities, status)
-			 VALUES ($1, $2, $3, $4, $5, $6, 'active')
-			 ON CONFLICT (id) DO UPDATE SET
-			   hostname = EXCLUDED.hostname,
-			   ip = EXCLUDED.ip,
-			   version = EXCLUDED.version,
-			   capabilities = EXCLUDED.capabilities,
-			   status = 'active',
-			   updated_at = now()`,
-			body.GatewayID, orgID, body.Hostname, body.IP, body.Version, body.Capabilities); err != nil {
+			 VALUES ($1, $2, $3, $4, $5, $6, 'active')`,
+			id, orgID, body.Hostname, body.IP, body.Version, body.Capabilities); err != nil {
 			http.Error(w, `{"error":"upsert failed"}`, http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"id": body.GatewayID, "status": "active"})
+		json.NewEncoder(w).Encode(map[string]string{"id": id, "status": "active"})
 	}
 }
 
 // Heartbeat records a gateway heartbeat and updates its last_seen/status.
 func Heartbeat(st *store.Store) http.HandlerFunc {
 	type heartbeat struct {
-		Status     string          `json:"status"`
-		AppliedHash string         `json:"applied_hash"`
-		Version    string          `json:"version"`
-		Health     json.RawMessage `json:"health"`
-		LastError  string          `json:"last_error"`
+		Status      string          `json:"status"`
+		AppliedHash string          `json:"applied_hash"`
+		Version     string          `json:"version"`
+		Health      json.RawMessage `json:"health"`
+		LastError   string          `json:"last_error"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

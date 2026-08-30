@@ -83,7 +83,6 @@ func CreateException(st *store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
 			return
 		}
-		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
 
 		var expiresAt any
 		if body.ExpiresAt != "" {
