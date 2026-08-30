@@ -5,6 +5,7 @@ import {
   listSecurityPolicies,
   getDashboardOverview,
   getDashboardTraffic,
+  getDashboardSecurity,
 } from "@/lib/api";
 import UserProfileWidget from "@/components/UserProfileWidget";
 
@@ -44,13 +45,18 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
     by_status: { status: string; count: number }[];
   } = { period_days: 7, total_requests: 0, avg_latency_ms: 0, p99_latency_ms: 0, by_status: [] };
 
+  let security = {
+    period_days: 7, total_events: 0, blocked_events: 0, unique_ips: 0, by_severity: [] as { severity: string; count: number }[],
+  };
+
   try {
-    [apps, gateways, policies, overview, traffic] = await Promise.all([
+    [apps, gateways, policies, overview, traffic, security] = await Promise.all([
       listApplications(),
       listGateways(),
       listSecurityPolicies(),
       getDashboardOverview(),
       getDashboardTraffic(),
+      getDashboardSecurity(),
     ]);
   } catch {
     fetchError = true;
@@ -175,6 +181,38 @@ export default async function OverviewPage({ params }: { params: Promise<{ local
                 {traffic.by_status.slice(0, 5).map((s) => (
                   <div key={s.status} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
                     <span>{s.status}</span>
+                    <span style={{ color: "var(--text-primary)" }}>{s.count.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Security Widget */}
+        <div className="data-section animate-fade-in delay-3">
+          <div className="section-header">
+            <h2>Security Summary</h2>
+          </div>
+          <div className="metrics-grid" style={{ marginBottom: 0 }}>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>Total Events</span></div>
+              <div className="metric-value">{security.total_events.toLocaleString()}</div>
+            </div>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>Blocked</span></div>
+              <div className="metric-value" style={{ color: "var(--danger)" }}>{security.blocked_events.toLocaleString()}</div>
+            </div>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>Unique IPs</span></div>
+              <div className="metric-value">{security.unique_ips.toLocaleString()}</div>
+            </div>
+            <div className="metric-card glass-panel">
+              <div className="metric-header"><span>By Severity</span></div>
+              <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.8" }}>
+                {security.by_severity.slice(0, 5).map((s) => (
+                  <div key={s.severity} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                    <span style={{ textTransform: "capitalize" }}>{s.severity}</span>
                     <span style={{ color: "var(--text-primary)" }}>{s.count.toLocaleString()}</span>
                   </div>
                 ))}

@@ -522,8 +522,16 @@ export function getDashboardTraffic(): Promise<DashboardTraffic> {
   return request<DashboardTraffic>("/dashboard/traffic");
 }
 
-export function getDashboardSecurity(): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>("/dashboard/security");
+export type DashboardSecurity = {
+  period_days: number;
+  total_events: number;
+  blocked_events: number;
+  unique_ips: number;
+  by_severity: { severity: string; count: number }[];
+};
+
+export function getDashboardSecurity(): Promise<DashboardSecurity> {
+  return request<DashboardSecurity>("/dashboard/security");
 }
 
 export function getDashboardAttacks(): Promise<Record<string, unknown>> {
