@@ -149,18 +149,21 @@ export type Role = {
 export type IPList = {
   id: string;
   name: string;
+  list_type: string;
+  entries: string[];
   description: string;
-  type: string;
-  status: string;
+  version: number;
 };
 
 export type RateLimit = {
   id: string;
   name: string;
+  application_id?: string;
+  route_prefix: string;
   limit_count: number;
   window_seconds: number;
   action: string;
-  status: string;
+  version: number;
 };
 
 export type LearningSession = {
