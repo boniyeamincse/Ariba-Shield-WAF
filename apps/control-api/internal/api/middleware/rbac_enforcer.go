@@ -221,6 +221,7 @@ var DefaultRoutePermissions = []RoutePermission{
 	{Method: "POST", PathPrefix: "/api/v1/learning/suggestions/{id}/reject", Permissions: []string{PermSystemAdmin}},
 	// Phase 4: reports
 	{Method: "GET", PathPrefix: "/api/v1/reports", Permissions: []string{PermEventRead, PermAuditRead, PermSystemAdmin}},
+	{Method: "GET", PathPrefix: "/api/v1/dashboard", Permissions: []string{PermEventRead, PermAuditRead, PermSystemAdmin}},
 	{Method: "POST", PathPrefix: "/api/v1/reports", Permissions: []string{PermSystemAdmin}},
 	{Method: "GET", PathPrefix: "/api/v1/reports/{id}", Permissions: []string{PermEventRead, PermAuditRead, PermSystemAdmin}},
 	{Method: "DELETE", PathPrefix: "/api/v1/reports/{id}", Permissions: []string{PermSystemAdmin}},

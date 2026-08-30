@@ -321,6 +321,16 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/analytics", handlers.SecurityAnalytics(st))
 	mux.HandleFunc("GET /api/v1/rule-analytics", handlers.RuleAnalytics(st))
 
+	// Phase 4: dashboard widgets
+	mux.HandleFunc("GET /api/v1/dashboard/overview", handlers.DashboardOverview(st))
+	mux.HandleFunc("GET /api/v1/dashboard/traffic", handlers.DashboardTraffic(st))
+	mux.HandleFunc("GET /api/v1/dashboard/security", handlers.DashboardSecurity(st))
+	mux.HandleFunc("GET /api/v1/dashboard/attacks", handlers.DashboardAttacks(st))
+	mux.HandleFunc("GET /api/v1/dashboard/top-ips", handlers.DashboardTopIPs(st))
+	mux.HandleFunc("GET /api/v1/dashboard/top-rules", handlers.DashboardTopRules(st))
+	mux.HandleFunc("GET /api/v1/dashboard/applications", handlers.DashboardApplications(st))
+	mux.HandleFunc("GET /api/v1/dashboard/gateways", handlers.DashboardGateways(st))
+
 	// Phase 4: organizations / workspaces / tenants
 	mux.HandleFunc("GET /api/v1/organizations", handlers.ListResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization"}))
 	mux.HandleFunc("POST /api/v1/organizations", handlers.CreateResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "organization", Required: []string{"name"}, Columns: []string{"name", "description", "contact_email", "plan", "quotas", "status"}}))

@@ -87,3 +87,17 @@ This document outlines the full 37-module REST API structure required to elevate
     - POST /incidents — Generate an incidents report (severity distribution).
     - POST /compliance — Generate a compliance summary report (audit event volume, range).
     - GET /{id}/download — Download the full report as JSON attachment.
+
+## Phase 4 — Dashboard (Overview Widgets)
+
+44. **Dashboard** (`/api/v1/dashboard`)
+    - GET /overview — High-level counts (events, blocked, requests, applications, gateways, active incidents).
+    - GET /traffic — Request volume, avg/p99 latency, status-code distribution.
+    - GET /security — Security event volume, blocked count, unique IPs, severity distribution.
+    - GET /attacks — Top attack types by reason in the period.
+    - GET /top-ips — Top client IPs by event volume and blocked count.
+    - GET /top-rules — Top rules by hit count.
+    - GET /applications — Per-application request/event/blocked counts.
+    - GET /gateways — Gateway fleet status (total, active, offline, detail list).
+
+    All widgets accept an optional `days` query param (default 7, max 90).
