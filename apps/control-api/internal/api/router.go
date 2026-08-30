@@ -253,11 +253,9 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("PATCH /api/v1/dlp/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "dlp_profiles", JSONName: "dlp profile", Columns: []string{"scan_targets", "rules", "status"}}))
 	mux.HandleFunc("DELETE /api/v1/dlp/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "dlp_profiles", JSONName: "dlp profile"}))
 
-	// Phase 3: integrations (SIEM/log forwarding)
-	mux.HandleFunc("GET /api/v1/integrations", handlers.ListResource(st, handlers.CRUDConfig{Table: "integrations", JSONName: "integration"}))
-	mux.HandleFunc("POST /api/v1/integrations", handlers.CreateResource(st, handlers.CRUDConfig{Table: "integrations", JSONName: "integration", Required: []string{"type", "name"}, Columns: []string{"type", "name", "endpoint", "log_types", "enabled", "config"}}))
-	mux.HandleFunc("PATCH /api/v1/integrations/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "integrations", JSONName: "integration", Columns: []string{"endpoint", "log_types", "enabled", "config"}}))
-	mux.HandleFunc("DELETE /api/v1/integrations/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "integrations", JSONName: "integration"}))
+	// Phase 3: integrations (SIEM/log forwarding) — canonical handlers registered below.
+	// (Dedicated integration handlers incl. /test, /enable, /disable are registered
+	// in the Phase 4 module block to avoid duplicate ServeMux patterns.)
 
 	// Phase 3: IAM / SSO
 	mux.HandleFunc("GET /api/v1/iam", handlers.ListResource(st, handlers.CRUDConfig{Table: "iam_sso", JSONName: "sso config"}))
