@@ -36,6 +36,64 @@ tags:
   - name: users
   - name: backups
   - name: health
+  - name: analytics
+  - name: api-key
+  - name: api-quota
+  - name: api-security-policy
+  - name: application
+  - name: audit-event
+  - name: automation-policy
+  - name: backend-node
+  - name: backend-pool
+  - name: bot-challenge
+  - name: bot-client
+  - name: bot-event
+  - name: bot-management
+  - name: bot-policy
+  - name: caching-policy
+  - name: certificate
+  - name: client-side-protection-policy
+  - name: cluster
+  - name: config-validation
+  - name: dashboard
+  - name: dlp-policy
+  - name: exception
+  - name: gateway
+  - name: gateway-cluster
+  - name: graphql-security-policy
+  - name: group
+  - name: iam-policy
+  - name: incident
+  - name: integration
+  - name: ip-list
+  - name: learning-session
+  - name: learning-suggestion
+  - name: license
+  - name: listener
+  - name: ml-baseline
+  - name: network-protection-policy
+  - name: notification-channel
+  - name: organization
+  - name: permission
+  - name: policy-approval
+  - name: report
+  - name: role
+  - name: route
+  - name: rule
+  - name: rule-analytics
+  - name: rule-bundle
+  - name: secret
+  - name: security-event
+  - name: security-policy
+  - name: service-account
+  - name: settings
+  - name: site
+  - name: tenant
+  - name: threat-feed
+  - name: threat-intelligence-policy
+  - name: tls-profile
+  - name: user
+  - name: workspace
 paths:
   /api/v1/health:
     get:
@@ -122,6 +180,12 @@ paths:
       responses:
         "201": { description: Created }
   /api/v1/applications/{id}:
+    get:
+      tags: [applications]
+      summary: Get an application
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Application }
     patch:
       tags: [applications]
       summary: Update an application (partial)
@@ -287,6 +351,18 @@ paths:
       responses:
         "201": { description: Created }
   /api/v1/backend-pools/{id}:
+    get:
+      tags: [backend-pools]
+      summary: Get a backend pool
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Backend Pool }
+    patch:
+      tags: [backend-pools]
+      summary: Update a backend pool (partial)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Updated }
     delete:
       tags: [backend-pools]
       summary: Delete a backend pool
@@ -364,6 +440,12 @@ paths:
       responses:
         "201": { description: Created }
   /api/v1/security-policies/{id}:
+    get:
+      tags: [security-policies]
+      summary: Get a security policy
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Security Policy }
     patch:
       tags: [security-policies]
       summary: Update a security policy (partial)
@@ -404,6 +486,12 @@ paths:
 
   # ---------- Policy versions ----------
   /api/v1/security-policies/{id}/versions:
+    get:
+      tags: [policy-versions]
+      summary: List policy version history
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: Policy versions }
     post:
       tags: [policy-versions]
       summary: Create an immutable policy version (first auto-stages)
@@ -491,6 +579,12 @@ paths:
       responses:
         "201": { description: Created }
   /api/v1/ip-lists/{id}:
+    get:
+      tags: [ip-lists]
+      summary: Get an IP list
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: IP List }
     patch:
       tags: [ip-lists]
       summary: Update an IP list
@@ -995,6 +1089,2231 @@ paths:
       parameters: [{ $ref: "#/components/parameters/Id" }]
       responses:
         "200": { description: Restore requested }
+
+  # ---------- Analytics ----------
+  /api/v1/analytics:
+    get:
+      tags: [analytics]
+      summary: List analytics
+      responses:
+        "200": { description: Analytics }
+
+  # ---------- Api Key ----------
+  /api/v1/api-keys:
+    get:
+      tags: [api-key]
+      summary: List API keys
+      responses:
+        "200": { description: Api Key }
+    post:
+      tags: [api-key]
+      summary: Create an API key
+      responses:
+        "200": { description: Api Key }
+
+  # ---------- Api Key ----------
+  /api/v1/api-keys/{id}:
+    delete:
+      tags: [api-key]
+      summary: Delete an API key
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Api Key }
+
+  # ---------- Api Quota ----------
+  /api/v1/api-quotas:
+    get:
+      tags: [api-quota]
+      summary: List API quotas
+      responses:
+        "200": { description: Api Quota }
+    post:
+      tags: [api-quota]
+      summary: Create an API quota
+      responses:
+        "200": { description: Api Quota }
+
+  # ---------- Api Quota ----------
+  /api/v1/api-quotas/{id}:
+    delete:
+      tags: [api-quota]
+      summary: Delete an API quota
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Api Quota }
+    patch:
+      tags: [api-quota]
+      summary: Update an API quota
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Api Quota }
+
+  # ---------- Api Security Policy ----------
+  /api/v1/api-security:
+    get:
+      tags: [api-security-policy]
+      summary: List API security policies
+      responses:
+        "200": { description: Api Security Policy }
+    post:
+      tags: [api-security-policy]
+      summary: Create an API security policy
+      responses:
+        "200": { description: Api Security Policy }
+
+  # ---------- Api Security Policy ----------
+  /api/v1/api-security/{id}:
+    delete:
+      tags: [api-security-policy]
+      summary: Delete an API security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Api Security Policy }
+    patch:
+      tags: [api-security-policy]
+      summary: Update an API security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Api Security Policy }
+
+  # ---------- Application ----------
+  /api/v1/applications/{id}/events:
+    get:
+      tags: [application]
+      summary: Get events for an application
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Application }
+
+  # ---------- Application ----------
+  /api/v1/applications/{id}/health:
+    get:
+      tags: [application]
+      summary: Get health status for an application
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Application }
+
+  # ---------- Application ----------
+  /api/v1/applications/{id}/incidents:
+    get:
+      tags: [application]
+      summary: Get an application
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Application }
+
+  # ---------- Application ----------
+  /api/v1/applications/{id}/policies:
+    get:
+      tags: [application]
+      summary: Get an application
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Application }
+
+  # ---------- Application ----------
+  /api/v1/applications/{id}/traffic:
+    get:
+      tags: [application]
+      summary: Get traffic for an application
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Application }
+
+  # ---------- Audit Event ----------
+  /api/v1/audit-events/export:
+    get:
+      tags: [audit-event]
+      summary: Get an audit event
+      responses:
+        "200": { description: Audit Event }
+
+  # ---------- Audit Event ----------
+  /api/v1/audit-events/{id}:
+    get:
+      tags: [audit-event]
+      summary: Get an audit event
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Audit Event }
+
+  # ---------- Auth ----------
+  /api/v1/auth/break-glass:
+    post:
+      tags: [auth]
+      summary: Create an auth break-glass
+      responses:
+        "200": { description: Auth }
+
+  # ---------- Auth ----------
+  /api/v1/auth/mfa/disable:
+    post:
+      tags: [auth]
+      summary: Create an auth mfa
+      responses:
+        "200": { description: Auth }
+
+  # ---------- Auth ----------
+  /api/v1/auth/mfa/enable:
+    post:
+      tags: [auth]
+      summary: Create an auth mfa
+      responses:
+        "200": { description: Auth }
+
+  # ---------- Auth ----------
+  /api/v1/auth/mfa/verify:
+    post:
+      tags: [auth]
+      summary: Create an auth mfa
+      responses:
+        "200": { description: Auth }
+
+  # ---------- Auth ----------
+  /api/v1/auth/password/change:
+    post:
+      tags: [auth]
+      summary: Create an auth password
+      responses:
+        "200": { description: Auth }
+
+  # ---------- Auth ----------
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Create an auth refresh
+      responses:
+        "200": { description: Auth }
+
+  # ---------- Automation Policy ----------
+  /api/v1/automation:
+    get:
+      tags: [automation-policy]
+      summary: List automation policies
+      responses:
+        "200": { description: Automation Policy }
+    post:
+      tags: [automation-policy]
+      summary: Create an automation policy
+      responses:
+        "200": { description: Automation Policy }
+
+  # ---------- Automation Policy ----------
+  /api/v1/automation/{id}:
+    delete:
+      tags: [automation-policy]
+      summary: Delete an automation policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Automation Policy }
+    patch:
+      tags: [automation-policy]
+      summary: Update an automation policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Automation Policy }
+
+  # ---------- Backend Node ----------
+  /api/v1/backend-nodes/{id}:
+    delete:
+      tags: [backend-node]
+      summary: Delete a backend node
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Node }
+    get:
+      tags: [backend-node]
+      summary: Get a backend node
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Node }
+    patch:
+      tags: [backend-node]
+      summary: Update a backend node
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Node }
+
+  # ---------- Backend Node ----------
+  /api/v1/backend-nodes/{id}/disable:
+    post:
+      tags: [backend-node]
+      summary: Disable a backend node
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Node }
+
+  # ---------- Backend Node ----------
+  /api/v1/backend-nodes/{id}/enable:
+    post:
+      tags: [backend-node]
+      summary: Enable a backend node
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Node }
+
+  # ---------- Backend Pool ----------
+  /api/v1/backend-pools/{id}/drain:
+    post:
+      tags: [backend-pool]
+      summary: Drain a backend pool
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Pool }
+
+  # ---------- Backend Pool ----------
+  /api/v1/backend-pools/{id}/health:
+    get:
+      tags: [backend-pool]
+      summary: Get health status for a backend pool
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Pool }
+
+  # ---------- Backend Pool ----------
+  /api/v1/backend-pools/{id}/nodes:
+    get:
+      tags: [backend-pool]
+      summary: Get nodes for a backend pool
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Pool }
+    post:
+      tags: [backend-pool]
+      summary: Create a backend pool nodes
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Backend Pool }
+
+  # ---------- Bot Challenge ----------
+  /api/v1/bot/challenges/{id}/revoke:
+    post:
+      tags: [bot-challenge]
+      summary: Revoke a bot challenge
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Bot Challenge }
+
+  # ---------- Bot Client ----------
+  /api/v1/bot/clients:
+    get:
+      tags: [bot-client]
+      summary: List bot clients
+      responses:
+        "200": { description: Bot Client }
+
+  # ---------- Bot Event ----------
+  /api/v1/bot/events:
+    get:
+      tags: [bot-event]
+      summary: List bot events
+      responses:
+        "200": { description: Bot Event }
+
+  # ---------- Bot Management ----------
+  /api/v1/bot-management:
+    get:
+      tags: [bot-management]
+      summary: List bot managements
+      responses:
+        "200": { description: Bot Management }
+    post:
+      tags: [bot-management]
+      summary: Create a bot management
+      responses:
+        "200": { description: Bot Management }
+
+  # ---------- Bot Management ----------
+  /api/v1/bot-management/{id}:
+    delete:
+      tags: [bot-management]
+      summary: Delete a bot management
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Bot Management }
+    patch:
+      tags: [bot-management]
+      summary: Update a bot management
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Bot Management }
+
+  # ---------- Bot Policy ----------
+  /api/v1/bot-policies:
+    get:
+      tags: [bot-policy]
+      summary: List bot policies
+      responses:
+        "200": { description: Bot Policy }
+    post:
+      tags: [bot-policy]
+      summary: Create a bot policy
+      responses:
+        "200": { description: Bot Policy }
+
+  # ---------- Bot Policy ----------
+  /api/v1/bot-policies/{id}:
+    delete:
+      tags: [bot-policy]
+      summary: Delete a bot policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Bot Policy }
+    get:
+      tags: [bot-policy]
+      summary: Get a bot policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Bot Policy }
+    patch:
+      tags: [bot-policy]
+      summary: Update a bot policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Bot Policy }
+
+  # ---------- Caching Policy ----------
+  /api/v1/caching:
+    get:
+      tags: [caching-policy]
+      summary: List caching policies
+      responses:
+        "200": { description: Caching Policy }
+    post:
+      tags: [caching-policy]
+      summary: Create a caching policy
+      responses:
+        "200": { description: Caching Policy }
+
+  # ---------- Caching Policy ----------
+  /api/v1/caching/{id}:
+    delete:
+      tags: [caching-policy]
+      summary: Delete a caching policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Caching Policy }
+    patch:
+      tags: [caching-policy]
+      summary: Update a caching policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Caching Policy }
+
+  # ---------- Certificate ----------
+  /api/v1/certificates/import:
+    post:
+      tags: [certificate]
+      summary: Import a certificate
+      responses:
+        "200": { description: Certificate }
+
+  # ---------- Certificate ----------
+  /api/v1/certificates/{id}:
+    delete:
+      tags: [certificate]
+      summary: Delete a certificate
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Certificate }
+    get:
+      tags: [certificate]
+      summary: Get a certificate
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Certificate }
+
+  # ---------- Certificate ----------
+  /api/v1/certificates/{id}/expiry:
+    get:
+      tags: [certificate]
+      summary: Get expiry status for a certificate
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Certificate }
+
+  # ---------- Certificate ----------
+  /api/v1/certificates/{id}/renew:
+    post:
+      tags: [certificate]
+      summary: Renew a certificate
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Certificate }
+
+  # ---------- Client Side Protection Policy ----------
+  /api/v1/client-side-protection:
+    get:
+      tags: [client-side-protection-policy]
+      summary: List client-side protection policies
+      responses:
+        "200": { description: Client Side Protection Policy }
+    post:
+      tags: [client-side-protection-policy]
+      summary: Create a client-side protection policy
+      responses:
+        "200": { description: Client Side Protection Policy }
+
+  # ---------- Client Side Protection Policy ----------
+  /api/v1/client-side-protection/{id}:
+    delete:
+      tags: [client-side-protection-policy]
+      summary: Delete a client-side protection policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Client Side Protection Policy }
+    patch:
+      tags: [client-side-protection-policy]
+      summary: Update a client-side protection policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Client Side Protection Policy }
+
+  # ---------- Cluster ----------
+  /api/v1/clusters:
+    get:
+      tags: [cluster]
+      summary: List clusters
+      responses:
+        "200": { description: Cluster }
+    post:
+      tags: [cluster]
+      summary: Create a cluster
+      responses:
+        "200": { description: Cluster }
+
+  # ---------- Cluster ----------
+  /api/v1/clusters/{id}:
+    delete:
+      tags: [cluster]
+      summary: Delete a cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Cluster }
+    patch:
+      tags: [cluster]
+      summary: Update a cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Cluster }
+
+  # ---------- Config Validation ----------
+  /api/v1/config-validation:
+    post:
+      tags: [config-validation]
+      summary: Create a config validation
+      responses:
+        "200": { description: Config Validation }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/applications:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard applications summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/attacks:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard attacks summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/gateways:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard gateways summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/overview:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard overview summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/security:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard security summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/top-ips:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard top-ips summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/top-rules:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard top-rules summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dashboard ----------
+  /api/v1/dashboard/traffic:
+    get:
+      tags: [dashboard]
+      summary: Get dashboard traffic summary
+      responses:
+        "200": { description: Dashboard }
+
+  # ---------- Dlp Policy ----------
+  /api/v1/dlp:
+    get:
+      tags: [dlp-policy]
+      summary: List DLP policies
+      responses:
+        "200": { description: Dlp Policy }
+    post:
+      tags: [dlp-policy]
+      summary: Create a DLP policy
+      responses:
+        "200": { description: Dlp Policy }
+
+  # ---------- Dlp Policy ----------
+  /api/v1/dlp/{id}:
+    delete:
+      tags: [dlp-policy]
+      summary: Delete a DLP policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Dlp Policy }
+    patch:
+      tags: [dlp-policy]
+      summary: Update a DLP policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Dlp Policy }
+
+  # ---------- Exception ----------
+  /api/v1/exceptions/{id}:
+    delete:
+      tags: [exception]
+      summary: Delete an exception
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Exception }
+    get:
+      tags: [exception]
+      summary: Get an exception
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Exception }
+    patch:
+      tags: [exception]
+      summary: Update an exception
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Exception }
+
+  # ---------- Exception ----------
+  /api/v1/exceptions/{id}/approve:
+    post:
+      tags: [exception]
+      summary: Approve an exception
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Exception }
+
+  # ---------- Exception ----------
+  /api/v1/exceptions/{id}/expire:
+    post:
+      tags: [exception]
+      summary: Expire an exception
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Exception }
+
+  # ---------- Gateway Cluster ----------
+  /api/v1/gateway-clusters:
+    get:
+      tags: [gateway-cluster]
+      summary: List gateway clusters
+      responses:
+        "200": { description: Gateway Cluster }
+    post:
+      tags: [gateway-cluster]
+      summary: Create a gateway cluster
+      responses:
+        "200": { description: Gateway Cluster }
+
+  # ---------- Gateway Cluster ----------
+  /api/v1/gateway-clusters/{id}:
+    delete:
+      tags: [gateway-cluster]
+      summary: Delete a gateway cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway Cluster }
+    get:
+      tags: [gateway-cluster]
+      summary: Get a gateway cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway Cluster }
+    patch:
+      tags: [gateway-cluster]
+      summary: Update a gateway cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway Cluster }
+
+  # ---------- Gateway Cluster ----------
+  /api/v1/gateway-clusters/{id}/deploy:
+    post:
+      tags: [gateway-cluster]
+      summary: Deploy a gateway cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway Cluster }
+
+  # ---------- Gateway Cluster ----------
+  /api/v1/gateway-clusters/{id}/gateways:
+    get:
+      tags: [gateway-cluster]
+      summary: Get member gateways for a gateway cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway Cluster }
+
+  # ---------- Gateway Cluster ----------
+  /api/v1/gateway-clusters/{id}/health:
+    get:
+      tags: [gateway-cluster]
+      summary: Get health status for a gateway cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway Cluster }
+
+  # ---------- Gateway Cluster ----------
+  /api/v1/gateway-clusters/{id}/rollback:
+    post:
+      tags: [gateway-cluster]
+      summary: Roll back a gateway cluster
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway Cluster }
+
+  # ---------- Gateway ----------
+  /api/v1/gateways/{id}:
+    delete:
+      tags: [gateway]
+      summary: Delete a gateway
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+    get:
+      tags: [gateway]
+      summary: Get a gateway
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+    patch:
+      tags: [gateway]
+      summary: Update a gateway
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+
+  # ---------- Gateway ----------
+  /api/v1/gateways/{id}/config:
+    get:
+      tags: [gateway]
+      summary: Get config for a gateway
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+
+  # ---------- Gateway ----------
+  /api/v1/gateways/{id}/config/apply:
+    post:
+      tags: [gateway]
+      summary: Create a gateway config
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+
+  # ---------- Gateway ----------
+  /api/v1/gateways/{id}/config/rollback:
+    post:
+      tags: [gateway]
+      summary: Create a gateway config
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+
+  # ---------- Gateway ----------
+  /api/v1/gateways/{id}/metrics:
+    get:
+      tags: [gateway]
+      summary: Get metrics for a gateway
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+
+  # ---------- Gateway ----------
+  /api/v1/gateways/{id}/status:
+    get:
+      tags: [gateway]
+      summary: Get status for a gateway
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Gateway }
+
+  # ---------- Graphql Security Policy ----------
+  /api/v1/graphql-security:
+    get:
+      tags: [graphql-security-policy]
+      summary: List GraphQL security policies
+      responses:
+        "200": { description: Graphql Security Policy }
+    post:
+      tags: [graphql-security-policy]
+      summary: Create a GraphQL security policy
+      responses:
+        "200": { description: Graphql Security Policy }
+
+  # ---------- Graphql Security Policy ----------
+  /api/v1/graphql-security/{id}:
+    delete:
+      tags: [graphql-security-policy]
+      summary: Delete a GraphQL security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Graphql Security Policy }
+    patch:
+      tags: [graphql-security-policy]
+      summary: Update a GraphQL security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Graphql Security Policy }
+
+  # ---------- Group ----------
+  /api/v1/groups:
+    get:
+      tags: [group]
+      summary: List groups
+      responses:
+        "200": { description: Group }
+    post:
+      tags: [group]
+      summary: Create a group
+      responses:
+        "200": { description: Group }
+
+  # ---------- Group ----------
+  /api/v1/groups/{id}:
+    delete:
+      tags: [group]
+      summary: Delete a group
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Group }
+    get:
+      tags: [group]
+      summary: Get a group
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Group }
+    patch:
+      tags: [group]
+      summary: Update a group
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Group }
+
+  # ---------- Iam Policy ----------
+  /api/v1/iam:
+    get:
+      tags: [iam-policy]
+      summary: List IAM policies
+      responses:
+        "200": { description: Iam Policy }
+    post:
+      tags: [iam-policy]
+      summary: Create an IAM policy
+      responses:
+        "200": { description: Iam Policy }
+
+  # ---------- Iam Policy ----------
+  /api/v1/iam/{id}:
+    delete:
+      tags: [iam-policy]
+      summary: Delete an IAM policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Iam Policy }
+    patch:
+      tags: [iam-policy]
+      summary: Update an IAM policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Iam Policy }
+
+  # ---------- Incident ----------
+  /api/v1/incidents:
+    get:
+      tags: [incident]
+      summary: List incidents
+      responses:
+        "200": { description: Incident }
+    post:
+      tags: [incident]
+      summary: Create an incident
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Incident ----------
+  /api/v1/incidents/{id}:
+    delete:
+      tags: [incident]
+      summary: Delete an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+    get:
+      tags: [incident]
+      summary: Get an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+    patch:
+      tags: [incident]
+      summary: Update an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Incident ----------
+  /api/v1/incidents/{id}/assign:
+    post:
+      tags: [incident]
+      summary: Assign an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Incident ----------
+  /api/v1/incidents/{id}/close:
+    post:
+      tags: [incident]
+      summary: Close an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Incident ----------
+  /api/v1/incidents/{id}/escalate:
+    post:
+      tags: [incident]
+      summary: Escalate an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Incident ----------
+  /api/v1/incidents/{id}/events:
+    get:
+      tags: [incident]
+      summary: Get events for an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Incident ----------
+  /api/v1/incidents/{id}/reopen:
+    post:
+      tags: [incident]
+      summary: Reopen an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Incident ----------
+  /api/v1/incidents/{id}/timeline:
+    get:
+      tags: [incident]
+      summary: Get timeline for an incident
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Incident }
+
+  # ---------- Integration ----------
+  /api/v1/integrations:
+    get:
+      tags: [integration]
+      summary: List integrations
+      responses:
+        "200": { description: Integration }
+    post:
+      tags: [integration]
+      summary: Create an integration
+      responses:
+        "200": { description: Integration }
+
+  # ---------- Integration ----------
+  /api/v1/integrations/{id}:
+    delete:
+      tags: [integration]
+      summary: Delete an integration
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Integration }
+    get:
+      tags: [integration]
+      summary: Get an integration
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Integration }
+    patch:
+      tags: [integration]
+      summary: Update an integration
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Integration }
+
+  # ---------- Integration ----------
+  /api/v1/integrations/{id}/disable:
+    post:
+      tags: [integration]
+      summary: Disable an integration
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Integration }
+
+  # ---------- Integration ----------
+  /api/v1/integrations/{id}/enable:
+    post:
+      tags: [integration]
+      summary: Enable an integration
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Integration }
+
+  # ---------- Integration ----------
+  /api/v1/integrations/{id}/test:
+    post:
+      tags: [integration]
+      summary: Test an integration
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Integration }
+
+  # ---------- Ip List ----------
+  /api/v1/ip-lists/{id}/entries:
+    get:
+      tags: [ip-list]
+      summary: Get entries for an IP list
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Ip List }
+    post:
+      tags: [ip-list]
+      summary: Create an IP list entries
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Ip List }
+
+  # ---------- Ip List ----------
+  /api/v1/ip-lists/{id}/entries/{entryId}:
+    delete:
+      tags: [ip-list]
+      summary: Delete entries from an IP list
+      parameters:
+          - $ref: "#/components/parameters/Id"
+          - { name: entryId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Ip List }
+
+  # ---------- Learning Session ----------
+  /api/v1/learning/sessions:
+    get:
+      tags: [learning-session]
+      summary: List learning sessions
+      responses:
+        "200": { description: Learning Session }
+    post:
+      tags: [learning-session]
+      summary: Create a learning session
+      responses:
+        "200": { description: Learning Session }
+
+  # ---------- Learning Session ----------
+  /api/v1/learning/sessions/{id}:
+    get:
+      tags: [learning-session]
+      summary: Get a learning session
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Learning Session }
+
+  # ---------- Learning Session ----------
+  /api/v1/learning/sessions/{id}/start:
+    post:
+      tags: [learning-session]
+      summary: Start a learning session
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Learning Session }
+
+  # ---------- Learning Session ----------
+  /api/v1/learning/sessions/{id}/stop:
+    post:
+      tags: [learning-session]
+      summary: Stop a learning session
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Learning Session }
+
+  # ---------- Learning Suggestion ----------
+  /api/v1/learning/suggestions:
+    get:
+      tags: [learning-suggestion]
+      summary: List learning suggestions
+      responses:
+        "200": { description: Learning Suggestion }
+
+  # ---------- Learning Suggestion ----------
+  /api/v1/learning/suggestions/{id}:
+    get:
+      tags: [learning-suggestion]
+      summary: Get a learning suggestion
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Learning Suggestion }
+
+  # ---------- Learning Suggestion ----------
+  /api/v1/learning/suggestions/{id}/accept:
+    post:
+      tags: [learning-suggestion]
+      summary: Accept a learning suggestion
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Learning Suggestion }
+
+  # ---------- Learning Suggestion ----------
+  /api/v1/learning/suggestions/{id}/reject:
+    post:
+      tags: [learning-suggestion]
+      summary: Reject a learning suggestion
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Learning Suggestion }
+
+  # ---------- License ----------
+  /api/v1/license:
+    get:
+      tags: [license]
+      summary: List licenses
+      responses:
+        "200": { description: License }
+
+  # ---------- License ----------
+  /api/v1/license/activate:
+    post:
+      tags: [license]
+      summary: Activate a license
+      responses:
+        "200": { description: License }
+
+  # ---------- License ----------
+  /api/v1/license/deactivate:
+    post:
+      tags: [license]
+      summary: Deactivate a license
+      responses:
+        "200": { description: License }
+
+  # ---------- License ----------
+  /api/v1/license/entitlements:
+    get:
+      tags: [license]
+      summary: Get license entitlements
+      responses:
+        "200": { description: License }
+
+  # ---------- License ----------
+  /api/v1/license/usage:
+    get:
+      tags: [license]
+      summary: Get license usage
+      responses:
+        "200": { description: License }
+
+  # ---------- Listener ----------
+  /api/v1/listeners:
+    get:
+      tags: [listener]
+      summary: List listeners
+      responses:
+        "200": { description: Listener }
+    post:
+      tags: [listener]
+      summary: Create a listener
+      responses:
+        "200": { description: Listener }
+
+  # ---------- Listener ----------
+  /api/v1/listeners/{id}:
+    delete:
+      tags: [listener]
+      summary: Delete a listener
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Listener }
+    get:
+      tags: [listener]
+      summary: Get a listener
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Listener }
+    patch:
+      tags: [listener]
+      summary: Update a listener
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Listener }
+
+  # ---------- Listener ----------
+  /api/v1/listeners/{id}/disable:
+    post:
+      tags: [listener]
+      summary: Disable a listener
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Listener }
+
+  # ---------- Listener ----------
+  /api/v1/listeners/{id}/enable:
+    post:
+      tags: [listener]
+      summary: Enable a listener
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Listener }
+
+  # ---------- Ml Baseline ----------
+  /api/v1/ml-baselines:
+    get:
+      tags: [ml-baseline]
+      summary: List ML baselines
+      responses:
+        "200": { description: Ml Baseline }
+    post:
+      tags: [ml-baseline]
+      summary: Create a ML baseline
+      responses:
+        "200": { description: Ml Baseline }
+
+  # ---------- Ml Baseline ----------
+  /api/v1/ml-baselines/{id}:
+    delete:
+      tags: [ml-baseline]
+      summary: Delete a ML baseline
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Ml Baseline }
+    patch:
+      tags: [ml-baseline]
+      summary: Update a ML baseline
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Ml Baseline }
+
+  # ---------- Network Protection Policy ----------
+  /api/v1/network-protection:
+    get:
+      tags: [network-protection-policy]
+      summary: List network protection policies
+      responses:
+        "200": { description: Network Protection Policy }
+    post:
+      tags: [network-protection-policy]
+      summary: Create a network protection policy
+      responses:
+        "200": { description: Network Protection Policy }
+
+  # ---------- Network Protection Policy ----------
+  /api/v1/network-protection/{id}:
+    delete:
+      tags: [network-protection-policy]
+      summary: Delete a network protection policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Network Protection Policy }
+    patch:
+      tags: [network-protection-policy]
+      summary: Update a network protection policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Network Protection Policy }
+
+  # ---------- Notification Channel ----------
+  /api/v1/notification-channels:
+    get:
+      tags: [notification-channel]
+      summary: List notification channels
+      responses:
+        "200": { description: Notification Channel }
+    post:
+      tags: [notification-channel]
+      summary: Create a notification channel
+      responses:
+        "200": { description: Notification Channel }
+
+  # ---------- Notification Channel ----------
+  /api/v1/notification-channels/{id}:
+    delete:
+      tags: [notification-channel]
+      summary: Delete a notification channel
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Notification Channel }
+    get:
+      tags: [notification-channel]
+      summary: Get a notification channel
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Notification Channel }
+    patch:
+      tags: [notification-channel]
+      summary: Update a notification channel
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Notification Channel }
+
+  # ---------- Notification Channel ----------
+  /api/v1/notification-channels/{id}/test:
+    post:
+      tags: [notification-channel]
+      summary: Test a notification channel
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Notification Channel }
+
+  # ---------- Organization ----------
+  /api/v1/organizations:
+    get:
+      tags: [organization]
+      summary: List organizations
+      responses:
+        "200": { description: Organization }
+    post:
+      tags: [organization]
+      summary: Create an organization
+      responses:
+        "200": { description: Organization }
+
+  # ---------- Organization ----------
+  /api/v1/organizations/{id}:
+    delete:
+      tags: [organization]
+      summary: Delete an organization
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Organization }
+    get:
+      tags: [organization]
+      summary: Get an organization
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Organization }
+    patch:
+      tags: [organization]
+      summary: Update an organization
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Organization }
+
+  # ---------- Permission ----------
+  /api/v1/permissions:
+    get:
+      tags: [permission]
+      summary: List permissions
+      responses:
+        "200": { description: Permission }
+
+  # ---------- Policy Approval ----------
+  /api/v1/policy-approvals:
+    get:
+      tags: [policy-approval]
+      summary: List policy approvals
+      responses:
+        "200": { description: Policy Approval }
+    post:
+      tags: [policy-approval]
+      summary: Create a policy approval
+      responses:
+        "200": { description: Policy Approval }
+
+  # ---------- Policy Approval ----------
+  /api/v1/policy-approvals/{id}:
+    get:
+      tags: [policy-approval]
+      summary: Get a policy approval
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Policy Approval }
+
+  # ---------- Policy Approval ----------
+  /api/v1/policy-approvals/{id}/approve:
+    post:
+      tags: [policy-approval]
+      summary: Approve a policy approval
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Policy Approval }
+
+  # ---------- Policy Approval ----------
+  /api/v1/policy-approvals/{id}/reject:
+    post:
+      tags: [policy-approval]
+      summary: Reject a policy approval
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Policy Approval }
+
+  # ---------- Report ----------
+  /api/v1/reports:
+    get:
+      tags: [report]
+      summary: List reports
+      responses:
+        "200": { description: Report }
+    post:
+      tags: [report]
+      summary: Create a report
+      responses:
+        "200": { description: Report }
+
+  # ---------- Report ----------
+  /api/v1/reports/compliance:
+    post:
+      tags: [report]
+      summary: Generate a compliance report
+      responses:
+        "200": { description: Report }
+
+  # ---------- Report ----------
+  /api/v1/reports/incidents:
+    post:
+      tags: [report]
+      summary: Generate an incidents report
+      responses:
+        "200": { description: Report }
+
+  # ---------- Report ----------
+  /api/v1/reports/security:
+    post:
+      tags: [report]
+      summary: Generate a security report
+      responses:
+        "200": { description: Report }
+
+  # ---------- Report ----------
+  /api/v1/reports/traffic:
+    post:
+      tags: [report]
+      summary: Generate a traffic report
+      responses:
+        "200": { description: Report }
+
+  # ---------- Report ----------
+  /api/v1/reports/{id}:
+    delete:
+      tags: [report]
+      summary: Delete a report
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Report }
+    get:
+      tags: [report]
+      summary: Get a report
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Report }
+
+  # ---------- Report ----------
+  /api/v1/reports/{id}/download:
+    get:
+      tags: [report]
+      summary: Download a report
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Report }
+
+  # ---------- Role ----------
+  /api/v1/roles:
+    get:
+      tags: [role]
+      summary: List roles
+      responses:
+        "200": { description: Role }
+
+  # ---------- Role ----------
+  /api/v1/roles/{id}:
+    get:
+      tags: [role]
+      summary: Get a role
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Role }
+
+  # ---------- Route ----------
+  /api/v1/routes:
+    get:
+      tags: [route]
+      summary: List routes
+      responses:
+        "200": { description: Route }
+    post:
+      tags: [route]
+      summary: Create a route
+      responses:
+        "200": { description: Route }
+
+  # ---------- Route ----------
+  /api/v1/routes/{id}:
+    delete:
+      tags: [route]
+      summary: Delete a route
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Route }
+    get:
+      tags: [route]
+      summary: Get a route
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Route }
+    patch:
+      tags: [route]
+      summary: Update a route
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Route }
+
+  # ---------- Rule Analytics ----------
+  /api/v1/rule-analytics:
+    get:
+      tags: [rule-analytics]
+      summary: List rule analytics
+      responses:
+        "200": { description: Rule Analytics }
+
+  # ---------- Rule Bundle ----------
+  /api/v1/rule-bundles:
+    get:
+      tags: [rule-bundle]
+      summary: List rule bundles
+      responses:
+        "200": { description: Rule Bundle }
+    post:
+      tags: [rule-bundle]
+      summary: Create a rule bundle
+      responses:
+        "200": { description: Rule Bundle }
+
+  # ---------- Rule Bundle ----------
+  /api/v1/rule-bundles/{id}:
+    get:
+      tags: [rule-bundle]
+      summary: Get a rule bundle
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule Bundle }
+
+  # ---------- Rule Bundle ----------
+  /api/v1/rule-bundles/{id}/deploy:
+    post:
+      tags: [rule-bundle]
+      summary: Deploy a rule bundle
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule Bundle }
+
+  # ---------- Rule Bundle ----------
+  /api/v1/rule-bundles/{id}/rollback:
+    post:
+      tags: [rule-bundle]
+      summary: Roll back a rule bundle
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule Bundle }
+
+  # ---------- Rule Bundle ----------
+  /api/v1/rule-bundles/{id}/sign:
+    post:
+      tags: [rule-bundle]
+      summary: Sign a rule bundle
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule Bundle }
+
+  # ---------- Rule ----------
+  /api/v1/rules:
+    get:
+      tags: [rule]
+      summary: List rules
+      responses:
+        "200": { description: Rule }
+    post:
+      tags: [rule]
+      summary: Create a rule
+      responses:
+        "200": { description: Rule }
+
+  # ---------- Rule ----------
+  /api/v1/rules/{id}:
+    delete:
+      tags: [rule]
+      summary: Delete a rule
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule }
+    get:
+      tags: [rule]
+      summary: Get a rule
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule }
+    patch:
+      tags: [rule]
+      summary: Update a rule
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule }
+
+  # ---------- Rule ----------
+  /api/v1/rules/{id}/disable:
+    post:
+      tags: [rule]
+      summary: Disable a rule
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule }
+
+  # ---------- Rule ----------
+  /api/v1/rules/{id}/enable:
+    post:
+      tags: [rule]
+      summary: Enable a rule
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule }
+
+  # ---------- Rule ----------
+  /api/v1/rules/{id}/test:
+    post:
+      tags: [rule]
+      summary: Test a rule
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule }
+
+  # ---------- Rule ----------
+  /api/v1/rules/{id}/versions:
+    get:
+      tags: [rule]
+      summary: Get version history for a rule
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Rule }
+
+  # ---------- Secret ----------
+  /api/v1/secrets:
+    get:
+      tags: [secret]
+      summary: List secrets
+      responses:
+        "200": { description: Secret }
+    post:
+      tags: [secret]
+      summary: Create a secret
+      responses:
+        "200": { description: Secret }
+
+  # ---------- Secret ----------
+  /api/v1/secrets/{id}:
+    delete:
+      tags: [secret]
+      summary: Delete a secret
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Secret }
+
+  # ---------- Security Event ----------
+  /api/v1/security-events/{id}:
+    get:
+      tags: [security-event]
+      summary: Get a security event
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Event }
+
+  # ---------- Security Event ----------
+  /api/v1/security-events/{id}/export:
+    post:
+      tags: [security-event]
+      summary: Export a security event
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Event }
+
+  # ---------- Security Event ----------
+  /api/v1/security-events/{id}/mask:
+    post:
+      tags: [security-event]
+      summary: Mask a security event
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Event }
+
+  # ---------- Security Event ----------
+  /api/v1/security-events/{id}/matches:
+    get:
+      tags: [security-event]
+      summary: Get matches for a security event
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Event }
+
+  # ---------- Security Event ----------
+  /api/v1/security-events/{id}/timeline:
+    get:
+      tags: [security-event]
+      summary: Get timeline for a security event
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Event }
+
+  # ---------- Security Policy ----------
+  /api/v1/security-policies/{id}/activate:
+    post:
+      tags: [security-policy]
+      summary: Activate a security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Policy }
+
+  # ---------- Security Policy ----------
+  /api/v1/security-policies/{id}/clone:
+    post:
+      tags: [security-policy]
+      summary: Clone a security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Policy }
+
+  # ---------- Security Policy ----------
+  /api/v1/security-policies/{id}/diff:
+    get:
+      tags: [security-policy]
+      summary: Diff a security policy against another
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Policy }
+
+  # ---------- Security Policy ----------
+  /api/v1/security-policies/{id}/disable:
+    post:
+      tags: [security-policy]
+      summary: Disable a security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Policy }
+
+  # ---------- Security Policy ----------
+  /api/v1/security-policies/{id}/rollback:
+    post:
+      tags: [security-policy]
+      summary: Roll back a security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Policy }
+
+  # ---------- Security Policy ----------
+  /api/v1/security-policies/{id}/validate:
+    post:
+      tags: [security-policy]
+      summary: Validate a security policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Security Policy }
+
+  # ---------- Service Account ----------
+  /api/v1/service-accounts:
+    get:
+      tags: [service-account]
+      summary: List service accounts
+      responses:
+        "200": { description: Service Account }
+    post:
+      tags: [service-account]
+      summary: Create a service account
+      responses:
+        "200": { description: Service Account }
+
+  # ---------- Service Account ----------
+  /api/v1/service-accounts/{id}:
+    delete:
+      tags: [service-account]
+      summary: Delete a service account
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Service Account }
+
+  # ---------- Settings ----------
+  /api/v1/settings:
+    get:
+      tags: [settings]
+      summary: List settings
+      responses:
+        "200": { description: Settings }
+    patch:
+      tags: [settings]
+      summary: Update settings
+      responses:
+        "200": { description: Settings }
+
+  # ---------- Settings ----------
+  /api/v1/settings/localization:
+    get:
+      tags: [settings]
+      summary: Get a settings
+      responses:
+        "200": { description: Settings }
+    patch:
+      tags: [settings]
+      summary: Update a settings
+      responses:
+        "200": { description: Settings }
+
+  # ---------- Settings ----------
+  /api/v1/settings/retention:
+    get:
+      tags: [settings]
+      summary: Get a settings
+      responses:
+        "200": { description: Settings }
+    patch:
+      tags: [settings]
+      summary: Update a settings
+      responses:
+        "200": { description: Settings }
+
+  # ---------- Settings ----------
+  /api/v1/settings/security:
+    get:
+      tags: [settings]
+      summary: Get security for a settings
+      responses:
+        "200": { description: Settings }
+    patch:
+      tags: [settings]
+      summary: Update a settings
+      responses:
+        "200": { description: Settings }
+
+  # ---------- Site ----------
+  /api/v1/sites:
+    get:
+      tags: [site]
+      summary: List sites
+      responses:
+        "200": { description: Site }
+    post:
+      tags: [site]
+      summary: Create a site
+      responses:
+        "200": { description: Site }
+
+  # ---------- Site ----------
+  /api/v1/sites/{id}:
+    delete:
+      tags: [site]
+      summary: Delete a site
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Site }
+    get:
+      tags: [site]
+      summary: Get a site
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Site }
+    patch:
+      tags: [site]
+      summary: Update a site
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Site }
+
+  # ---------- Site ----------
+  /api/v1/sites/{id}/health:
+    get:
+      tags: [site]
+      summary: Get health status for a site
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Site }
+
+  # ---------- Tenant ----------
+  /api/v1/tenants:
+    get:
+      tags: [tenant]
+      summary: List tenants
+      responses:
+        "200": { description: Tenant }
+    post:
+      tags: [tenant]
+      summary: Create a tenant
+      responses:
+        "200": { description: Tenant }
+
+  # ---------- Tenant ----------
+  /api/v1/tenants/{id}:
+    delete:
+      tags: [tenant]
+      summary: Delete a tenant
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Tenant }
+    get:
+      tags: [tenant]
+      summary: Get a tenant
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Tenant }
+    patch:
+      tags: [tenant]
+      summary: Update a tenant
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Tenant }
+
+  # ---------- Threat Feed ----------
+  /api/v1/threat-feeds:
+    get:
+      tags: [threat-feed]
+      summary: List threat feeds
+      responses:
+        "200": { description: Threat Feed }
+    post:
+      tags: [threat-feed]
+      summary: Create a threat feed
+      responses:
+        "200": { description: Threat Feed }
+
+  # ---------- Threat Feed ----------
+  /api/v1/threat-feeds/{id}:
+    delete:
+      tags: [threat-feed]
+      summary: Delete a threat feed
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Feed }
+    get:
+      tags: [threat-feed]
+      summary: Get a threat feed
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Feed }
+    patch:
+      tags: [threat-feed]
+      summary: Update a threat feed
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Feed }
+
+  # ---------- Threat Feed ----------
+  /api/v1/threat-feeds/{id}/indicators:
+    get:
+      tags: [threat-feed]
+      summary: Get indicators for a threat feed
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Feed }
+
+  # ---------- Threat Feed ----------
+  /api/v1/threat-feeds/{id}/sync:
+    post:
+      tags: [threat-feed]
+      summary: Sync a threat feed
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Feed }
+
+  # ---------- Threat Feed ----------
+  /api/v1/threat-feeds/{id}/test:
+    post:
+      tags: [threat-feed]
+      summary: Test a threat feed
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Feed }
+
+  # ---------- Threat Intelligence Policy ----------
+  /api/v1/threat-intelligence:
+    get:
+      tags: [threat-intelligence-policy]
+      summary: List threat intelligence policies
+      responses:
+        "200": { description: Threat Intelligence Policy }
+    post:
+      tags: [threat-intelligence-policy]
+      summary: Create a threat intelligence policy
+      responses:
+        "200": { description: Threat Intelligence Policy }
+
+  # ---------- Threat Intelligence Policy ----------
+  /api/v1/threat-intelligence/{id}:
+    delete:
+      tags: [threat-intelligence-policy]
+      summary: Delete a threat intelligence policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Intelligence Policy }
+    patch:
+      tags: [threat-intelligence-policy]
+      summary: Update a threat intelligence policy
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Threat Intelligence Policy }
+
+  # ---------- Tls Profile ----------
+  /api/v1/tls-profiles:
+    get:
+      tags: [tls-profile]
+      summary: List TLS profiles
+      responses:
+        "200": { description: Tls Profile }
+    post:
+      tags: [tls-profile]
+      summary: Create a TLS profile
+      responses:
+        "200": { description: Tls Profile }
+
+  # ---------- Tls Profile ----------
+  /api/v1/tls-profiles/{id}:
+    delete:
+      tags: [tls-profile]
+      summary: Delete a TLS profile
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Tls Profile }
+    get:
+      tags: [tls-profile]
+      summary: Get a TLS profile
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Tls Profile }
+    patch:
+      tags: [tls-profile]
+      summary: Update a TLS profile
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Tls Profile }
+
+  # ---------- User ----------
+  /api/v1/users/{id}/roles:
+    post:
+      tags: [user]
+      summary: Assign roles to a user
+      parameters:
+          - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: User }
+
+  # ---------- User ----------
+  /api/v1/users/{id}/roles/{roleId}:
+    delete:
+      tags: [user]
+      summary: Remove a role from a user
+      parameters:
+          - $ref: "#/components/parameters/Id"
+          - { name: roleId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: User }
+
+  # ---------- Workspace ----------
+  /api/v1/workspaces:
+    get:
+      tags: [workspace]
+      summary: List workspaces
+      responses:
+        "200": { description: Workspace }
 
 components:
   securitySchemes:
