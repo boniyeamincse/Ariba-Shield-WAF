@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -13,29 +15,30 @@ var templatesFS embed.FS
 
 // Upstream models an nginx upstream block derived from a backend pool.
 type Upstream struct {
-	Name          string
-	LeastConn     bool
-	IPHash        bool
-	ConsistentHash bool
-	StickyCookie  string // non-empty => emit sticky cookie directive
-	HealthCheck   bool   // active health checks enabled
+	Name            string
+	LeastConn       bool
+	IPHash          bool
+	ConsistentHash  bool
+	StickyCookie    string // non-empty => emit sticky cookie directive
+	HealthCheck     bool   // active health checks enabled
 	HealthInterval  string
 	HealthTimeout   string
 	HealthFailCount int
 	HealthPassCount int
 	HealthPath      string
 	HealthStatus    string
-	Servers       []UpstreamServer
+	HealthMatchName string // name of the `match` block for expected statuses, "" if none
+	Servers         []UpstreamServer
 }
 
 type UpstreamServer struct {
-	Host       string
-	Port       int
-	Weight     int
-	MaxFails   int
+	Host        string
+	Port        int
+	Weight      int
+	MaxFails    int
 	FailTimeout int
-	Protocol   string // "http" or "https" (P1.3 TLS re-encryption)
-	SlowStart  string // e.g. "30s" or "" (P1.5)
+	Protocol    string // "http" or "https" (P1.3 TLS re-encryption)
+	SlowStart   string // e.g. "30s" or "" (P1.5)
 }
 
 // Server models an nginx server block derived from a virtual server.
@@ -45,6 +48,7 @@ type Server struct {
 	SSL             bool
 	HTTP2           bool
 	ServerName      string
+	SSLProtocols    string
 	SSLCertPath     string
 	SSLKeyPath      string
 	MaxBodySize     string
@@ -62,6 +66,13 @@ type Location struct {
 	Scheme string
 }
 
+// HealthMatch models an nginx `match` block used by active health checks
+// (P3.39). One block is emitted per distinct expected-status set.
+type HealthMatch struct {
+	Name   string
+	Status string
+}
+
 // RenderNginxConfig produces the nginx configuration from a validated policy
 // document. Deterministic: identical input yields identical bytes.
 func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string, error) {
@@ -71,8 +82,10 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 
 	// Build upstreams from backend pools.
 	var upstreams []Upstream
-	poolByName := make(map[string]string)   // poolID -> upstream name
-	poolScheme := make(map[string]string)   // poolID -> http|https (P1.3)
+	var healthMatches []HealthMatch
+	healthMatchNames := make(map[string]string) // expected-status set -> match name
+	poolByName := make(map[string]string)       // poolID -> upstream name
+	poolScheme := make(map[string]string)       // poolID -> http|https (P1.3)
 	for _, pool := range doc.BackendPools {
 		name := "pool_" + sanitize(pool.Name)
 		poolByName[pool.ID] = name
@@ -135,6 +148,13 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 					statuses = append(statuses, fmt.Sprintf("%d", s))
 				}
 				up.HealthStatus = strings.Join(statuses, " ")
+				name, ok := healthMatchNames[up.HealthStatus]
+				if !ok {
+					name = "shield_health_" + sanitize(up.HealthStatus)
+					healthMatchNames[up.HealthStatus] = name
+					healthMatches = append(healthMatches, HealthMatch{Name: name, Status: up.HealthStatus})
+				}
+				up.HealthMatchName = name
 			}
 		}
 
@@ -197,7 +217,8 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 			ListenPort:      vs.ListenPort,
 			SSL:             vs.TLS.Enabled,
 			HTTP2:           http2,
-			ServerName:      "_",
+			ServerName:      serverNameFor(vs.Name),
+			SSLProtocols:    tlsProtocols(vs.TLS.MinVersion),
 			MaxBodySize:     "10m",
 			MaxHeaderSize:   "8k",
 			VirtualServerID: vs.ID,
@@ -215,10 +236,10 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 
 		if vs.Limits != nil {
 			if vs.Limits.MaxBodySize > 0 {
-				s.MaxBodySize = fmt.Sprintf("%dm", vs.Limits.MaxBodySize/1024/1024)
+				s.MaxBodySize = formatSize(vs.Limits.MaxBodySize)
 			}
 			if vs.Limits.MaxHeaderSize > 0 {
-				s.MaxHeaderSize = fmt.Sprintf("%dk", vs.Limits.MaxHeaderSize/1024)
+				s.MaxHeaderSize = formatSize(vs.Limits.MaxHeaderSize)
 			}
 		}
 
@@ -226,7 +247,14 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 		if len(vs.Routes) == 0 {
 			s.Locations = append(s.Locations, Location{Path: "/", Upstream: upstream, Scheme: poolScheme[vs.DefaultBackendPoolID]})
 		} else {
-			for _, r := range vs.Routes {
+			// P3.36: higher-priority routes are declared first so nginx picks
+			// them first; duplicate/conflicting locations are rejected.
+			routes := append([]Route(nil), vs.Routes...)
+			sort.SliceStable(routes, func(i, j int) bool {
+				return routes[i].Priority > routes[j].Priority
+			})
+			seen := make(map[string]string) // normalized location -> route id
+			for _, r := range routes {
 				u, ok := poolByName[r.BackendPoolID]
 				if !ok {
 					return "", fmt.Errorf("virtual server %q: route %q references unknown pool %q", vs.Name, r.Path, r.BackendPoolID)
@@ -238,6 +266,10 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 				} else if !strings.HasSuffix(path, "/") {
 					path = path + "/"
 				}
+				if prev, dup := seen[path]; dup {
+					return "", fmt.Errorf("virtual server %q: route %q conflicts with route %q at location %q", vs.Name, r.ID, prev, path)
+				}
+				seen[path] = r.ID
 				s.Locations = append(s.Locations, Location{Path: path, Upstream: u, Scheme: poolScheme[r.BackendPoolID]})
 			}
 		}
@@ -247,19 +279,17 @@ func RenderNginxConfig(doc *PolicyDocument, certPaths map[string]string) (string
 
 	// Render template.
 	data := struct {
-		LogLevel        string
-		GatewayID       string
-		VirtualServerID string
-		ApplicationID   string
-		Upstreams       []Upstream
-		Servers         []Server
+		LogLevel      string
+		GatewayID     string
+		Upstreams     []Upstream
+		HealthMatches []HealthMatch
+		Servers       []Server
 	}{
-		LogLevel:        doc.Settings.LogLevel,
-		GatewayID:       first(doc.GatewayTargets, "local"),
-		VirtualServerID: "vs",
-		ApplicationID:   "app",
-		Upstreams:       upstreams,
-		Servers:         servers,
+		LogLevel:      doc.Settings.LogLevel,
+		GatewayID:     first(doc.GatewayTargets, "local"),
+		Upstreams:     upstreams,
+		HealthMatches: healthMatches,
+		Servers:       servers,
 	}
 
 	tmpl, err := template.ParseFS(templatesFS, "templates/shield.conf.tmpl")
@@ -315,6 +345,65 @@ func sanitize(s string) string {
 		return "pool"
 	}
 	return b.String()
+}
+
+// serverNameFor returns the hostname for the server block. The policy virtual
+// server carries its hostname in the Name field; an empty name falls back to
+// nginx's catch-all `_` (P3.34).
+func serverNameFor(name string) string {
+	if name == "" {
+		return "_"
+	}
+	return name
+}
+
+// tlsProtocols maps the policy TLSProfile.MinVersion to the nginx
+// ssl_protocols value, rendering only the configured TLS versions. The safe
+// default is TLSv1.2 TLSv1.3 (P3.33).
+func tlsProtocols(minVersion string) string {
+	switch strings.ToLower(strings.TrimSpace(minVersion)) {
+	case "1.0", "tls1.0", "tlsv1", "tlsv1.0":
+		return "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3"
+	case "1.1", "tls1.1", "tlsv1.1":
+		return "TLSv1.1 TLSv1.2 TLSv1.3"
+	case "1.2", "tls1.2", "tlsv1.2":
+		return "TLSv1.2 TLSv1.3"
+	case "1.3", "tls1.3", "tlsv1.3":
+		return "TLSv1.3"
+	default:
+		return "TLSv1.2 TLSv1.3"
+	}
+}
+
+// formatSize renders a byte count as an nginx size directive, preserving
+// sub-unit precision (5.5 MB becomes "5.5m", not "5m") (P3.38). Sizes at or
+// above 1 MB are expressed in MB, sizes at or above 1 KB in KB, and anything
+// smaller in raw bytes.
+func formatSize(bytes int) string {
+	if bytes <= 0 {
+		return ""
+	}
+	switch {
+	case bytes%(1024*1024) == 0:
+		return fmt.Sprintf("%dm", bytes/(1024*1024))
+	case bytes >= 1024*1024:
+		return trimZeros(strconv.FormatFloat(float64(bytes)/(1024*1024), 'f', -1, 64)) + "m"
+	case bytes%1024 == 0:
+		return fmt.Sprintf("%dk", bytes/1024)
+	case bytes < 1024:
+		return fmt.Sprintf("%d", bytes)
+	default:
+		return trimZeros(strconv.FormatFloat(float64(bytes)/1024, 'f', -1, 64)) + "k"
+	}
+}
+
+// trimZeros removes trailing ".0" from a decimal string produced by
+// strconv.FormatFloat(..., 'f', -1, ...) when the value is a whole number.
+func trimZeros(s string) string {
+	if strings.HasSuffix(s, ".0") {
+		return strings.TrimSuffix(s, ".0")
+	}
+	return s
 }
 
 func first(s []string, def string) string {

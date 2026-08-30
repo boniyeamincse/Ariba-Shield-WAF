@@ -23,8 +23,8 @@
         '"timestamp":"$time_iso8601",'
         '"event_type":"access",'
         '"gateway_id":"{{.GatewayID}}",'
-        '"virtual_server_id":"{{.VirtualServerID}}",'
-        '"application_id":"{{.ApplicationID}}",'
+        '"virtual_server_id":"$shield_vs_id",'
+        '"application_id":"$shield_app_id",'
         '"client":{'
             '"ip":"$remote_addr",'
             '"port":$remote_port,'
@@ -54,13 +54,23 @@
 
     {{range .Upstreams}}
     upstream {{.Name}} {
+        {{if .HealthCheck}}zone {{.Name}} 64k;{{end}}
         {{if .LeastConn}}least_conn;{{end}}
         {{if .IPHash}}ip_hash;{{end}}
         {{if .ConsistentHash}}hash $request_uri consistent;{{end}}
         {{range .Servers}}
         server {{.Host}}:{{.Port}} weight={{.Weight}} max_fails={{.MaxFails}} fail_timeout={{.FailTimeout}}s;
         {{end}}
+        {{if .HealthCheck}}
+        health_check interval={{.HealthInterval}} timeout={{.HealthTimeout}} fails={{.HealthFailCount}} passes={{.HealthPassCount}} uri={{.HealthPath}}{{if .HealthMatchName}} match={{.HealthMatchName}}{{end}};
+        {{end}}
         keepalive 32;
+    }
+    {{end}}
+
+    {{range .HealthMatches}}
+    match {{.Name}} {
+        status {{.Status}};
     }
     {{end}}
 
@@ -73,7 +83,7 @@
         {{if .SSL}}
         ssl_certificate {{.SSLCertPath}};
         ssl_certificate_key {{.SSLKeyPath}};
-        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_protocols {{.SSLProtocols}};
         ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
         ssl_prefer_server_ciphers off;
         ssl_session_cache shared:SSL:10m;
@@ -85,6 +95,10 @@
         if ($http_x_request_id != "") {
             set $shield_request_id $http_x_request_id;
         }
+
+        # Virtual server / application identity for log_format
+        set $shield_vs_id "{{.VirtualServerID}}";
+        set $shield_app_id "{{.ApplicationID}}";
 
         # Trusted proxy headers
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
