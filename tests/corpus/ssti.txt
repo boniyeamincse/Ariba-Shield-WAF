@@ -1,0 +1,59 @@
+# Server-Side Template Injection (SSTI) corpus — EXPECT:block
+# Engine-specific probes for Jinja2 (Flask/Django), Twig (Symfony),
+# Freemarker (Java), ERB (Rails), Velocity, Smarty, Mako, Thymeleaf.
+# EXPECT-RULE: 932*,933*
+
+## Jinja2 / Twig (Python / PHP)
+GET /?name={{7*7}}
+GET /?name={{config}}
+GET /?name={{self._TemplateReference__context}}
+GET /?name={{''.__class__.__mro__[1].__subclasses__()}}
+GET /?name={{lipsum.__globals__["os"].popen("id").read()}}
+GET /?name={{cycler.__init__.__globals__.os.popen('id').read()}}
+GET /?name={{7*'7'}}
+GET /?name={%25+25*25+%}
+GET /?name={{get_flashed_messages.__globals__.__builtins__.open("/etc/passwd").read()}}
+GET /?name={{namespace.__init__.__globals__.os.popen('cat /etc/passwd').read()}}
+
+## Twig (PHP) specific
+GET /?name={{7*7}}
+GET /?name={{_self.env.registerUndefinedFilterCallback("exec")}}
+GET /?name={{_self.env.getFilter("cat /etc/passwd")}}
+GET /?name={{app.request.query.filter("_self.env.registerUndefinedFilterCallback('system')")}}
+
+## Freemarker (Java)
+GET /?name=${7*7}
+GET /?name=${7*'7'?html}
+GET /?name=<#assign ex="freemarker.template.utility.Execute"?new()>${ex("id")}
+GET /?name=${"freemarker.template.utility.Execute"?new()("cat /etc/passwd")}
+GET /?name=${product.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().toURL().openConnection().getInputStream().readAllBytes()?join(" ")}
+
+## ERB (Ruby on Rails)
+GET /?name=<%=7*7%>
+GET /?name=<%=system("id")%>
+GET /?name=<%=File.read("/etc/passwd")%>
+GET /?name=<%=`cat /etc/passwd`%>
+GET /?name=<%25=%20system(%22id%22)%20%25>
+GET /?name=<%25=%20File.read(%22/etc/passwd%22)%20%25>
+
+## Velocity (Java)
+GET /?name=$7*7
+GET /?name=$class.inspect("java.lang.Runtime").getRuntime().exec("id")
+GET /?name=%24%7B7*7%7D
+GET /?name=%24%7Bfoo%7D
+
+## Smarty (PHP)
+GET /?name={$smarty.version}
+GET /?name={system('id')}
+GET /?name={php}echo shell_exec('id');{/php}
+GET /?name={literal}%24{7*7}{/literal}
+
+## Mako (Python)
+GET /?name=${7*7}
+GET /?name=${self.module.cache.util.os.popen("id").read()}
+GET /?name=${self.attr}
+
+## Thymeleaf (Java Spring)
+GET /?name=__$%7B7*7%7D__
+GET /?name=__$%7Bexec%7D__
+GET /?name=%5C__$%7B7*7%7D__%5C

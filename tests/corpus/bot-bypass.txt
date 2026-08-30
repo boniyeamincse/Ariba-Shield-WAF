@@ -1,0 +1,45 @@
+# Bot / challenge bypass corpus — EXPECT:block
+# User-Agent spoofing, CAPTCHA/reCAPTCHA bypass, challenge-header forgery,
+# and anti-bot evasion patterns.
+# No EXPECT-RULE — anti-bot heuristics vary; rely on HTTP status.
+
+## User-Agent spoofing (pretend to be a trusted crawler / browser)
+GET / | User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)
+GET / | User-Agent: Bingbot/2.0
+GET / | User-Agent: facebookexternalhit/1.1
+GET / | User-Agent: Twitterbot/1.0
+GET / | User-Agent: Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)
+GET / | User-Agent: curl/7.68.0
+GET / | User-Agent: python-requests/2.25.1
+GET / | User-Agent: PostmanRuntime/7.26.8
+GET / | User-Agent: node-fetch
+GET / | User-Agent: Go-http-client/1.1
+GET / | User-Agent: Apache-HttpClient/4.5.13
+GET / | User-Agent: "" 
+GET / | User-Agent: 
+
+## CAPTCHA / challenge bypass
+POST /api/v1/captcha/verify | Content-Type: application/json | {"response":"","success":true}
+POST /api/v1/captcha/verify | Content-Type: application/json | {"response":null}
+POST /api/v1/register | Content-Type: application/json | {"captcha":"","user":"new_user"}
+POST /api/v1/login | Content-Type: application/json | {"captcha":"0","username":"admin","password":"x"}
+GET /challenge?answer=0
+GET /challenge?g-recaptcha-response=
+POST /api/v1/captcha/skip | Content-Type: application/json | {"skip":true}
+
+## Anti-bot header forgery
+GET / | X-Forwarded-For: 127.0.0.1
+GET / | X-Real-IP: 127.0.0.1
+GET / | CF-Connecting-IP: 127.0.0.1
+GET / | X-Api-Key: bypass
+GET / | X-Shield-Challenge: pass
+GET / | X-Token: 1
+
+## Headless-browser fingerprint evasion
+GET / | User-Agent: HeadlessChrome/91.0.4472.124
+GET / | User-Agent: HeadlessChrome;;X-Shield-Hook: 1
+
+## Scalable crawl / scraping indicator
+GET /products?page=1
+GET /products?page=2
+GET /products?page=3

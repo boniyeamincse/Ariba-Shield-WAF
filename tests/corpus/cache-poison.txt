@@ -1,0 +1,42 @@
+# Cache poisoning / cache deception corpus — EXPECT:block
+# Web cache poisoning (unkeyed header injection, Host/X-Forwarded-Host abuse)
+# and web cache deception (path confusion that caches private responses).
+# No EXPECT-RULE — depends on caching layer config; HTTP status suffices.
+
+## Web cache poisoning — unkeyed headers
+GET /search?q=cacheme | X-Forwarded-Host: evil.com
+GET /search?q=cacheme | X-Forwarded-Host: attacker.example
+GET /search?q=cacheme | X-Forwarded-Port: 443
+GET /search?q=cacheme | X-Forwarded-Proto: https
+GET /search?q=cacheme | X-Original-URL: /admin
+GET /search?q=cacheme | X-Rewrite-URL: /admin
+GET /search?q=cacheme | X-Host: attacker.example
+GET /search?q=cacheme | Forwarded: host=attacker.example;proto=http
+GET /search?q=cacheme | X-Cache-Poison: 1
+
+## Cache poisoning — duplicate / conflicting Host
+GET /search?q=cacheme | Host: attacker.example
+GET /search?q=cacheme | Host: victim.com;;X-Forwarded-Host: attacker.example
+
+## Web cache deception — static-suffix path confusion
+GET /account/private/user123.css
+GET /account/private/user123.js
+GET /account/settings/../../../admin
+GET /profile/victim/avatar.png
+GET /account/private/notifications
+GET /search/nonexistent%0a%0d.jpg
+GET /home.php/index.html
+GET /secure/settings/../profile
+GET /admin/user123.css
+GET /account/details/robots.txt
+
+## Poisoned response (unkeyed query, reflected caching)
+GET /?unkeyed=1&cb=poison
+GET /error?err=<script>alert(1)</script>
+GET /search?term=reflected%3Csvg%20onload=alert(1)%3E
+GET /?redirect=/login%26next=https://evil.com
+
+## Cache-busting evasion
+GET /account/private/x?v=1
+GET /account/private/x?v=1
+GET /account/private/x?v=2

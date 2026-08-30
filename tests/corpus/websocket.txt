@@ -1,0 +1,30 @@
+# WebSocket bypass corpus — EXPECT:block
+# Cross-Site WebSocket Hijacking (CSWSH), handshake bypass, Origin validation
+# failure, subprotocol smuggling, and upgrade-abuse patterns.
+# No EXPECT-RULE — engine-level WS policy varies; rely on HTTP status.
+
+## CSWSH — missing/weak Origin on the upgrade
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==;;Origin: http://evil.com
+GET /ws/chat | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: abc123==;;Origin: https://attacker.example
+GET /socket | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Origin: null
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Origin:
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Origin: http://victim.com.evil.com
+
+## Origin bypass via subdomain regex confusion
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Origin: http://victim.com@evil.com
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Origin: http://victim.com.evil.com:8080
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Origin: http://evilvictim.com
+
+## Subprotocol smuggling
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Sec-WebSocket-Protocol: chat,admin
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Sec-WebSocket-Protocol: null
+GET /ws | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Version: 13;;Sec-WebSocket-Key: key==;;Sec-WebSocket-Protocol: "proto","evil"
+
+## Upgrade abuse (method/upgrade to internal path)
+POST /internal/exec | Upgrade: websocket;;Connection: Upgrade
+GET /admin | Upgrade: h2c;;Connection: Upgrade
+GET / | Upgrade: websocket;;Connection: Upgrade;;Sec-WebSocket-Key: key==;;Sec-WebSocket-Version: 13;;X-Shield-Bypass: 1
+
+## Framing anomalies in WS payload params
+GET /ws?payload=%3Cscript%3Ealert(1)%3C%2Fscript%3E | Upgrade: websocket;;Connection: Upgrade
+GET /ws?msg=../../etc/passwd | Upgrade: websocket;;Connection: Upgrade

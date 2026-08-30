@@ -1,0 +1,45 @@
+# Authentication & business-abuse corpus — EXPECT:block
+# Credential stuffing, MFA bypass, session fixation, brute-force indicators.
+# These requests must be detected by auth/abuse rules (CRS 943* session
+# fixation, engine rule_ids rate-limit / ip-list) or rate limiting.
+# EXPECT-RULE: 943*,rate-limit,ip-list
+
+## Credential stuffing
+# default/weak credential pairs submitted en masse
+POST /api/v1/login | Content-Type: application/json | {"username":"admin","password":"admin"}
+POST /api/v1/login | Content-Type: application/json | {"username":"admin","password":"123456"}
+POST /api/v1/login | Content-Type: application/json | {"username":"root","password":"toor"}
+POST /api/v1/login | Content-Type: application/json | {"username":"test","password":"test"}
+POST /api/v1/login | Content-Type: application/json | {"username":"admin","password":"password"}
+POST /api/v1/login | Content-Type: application/x-www-form-urlencoded | username=admin&password=Admin123!
+POST /api/v1/login | Content-Type: application/x-www-form-urlencoded | user=administrator&pass=letmein
+GET /?user=admin%26password=changeme
+GET /login?email=victim%40example.com&pass=Winter2020%21
+
+## Brute-force indicators
+# rapid-fire login attempts, common attacker ramping patterns
+GET /api/v1/login?attempt=1%26user=alice
+GET /api/v1/login?attempt=2%26user=alice
+GET /api/v1/login?attempt=3%26user=alice
+POST /api/v1/token | Content-Type: application/json | {"grant_type":"password","username":"bob","password":"guess0001"}
+POST /api/v1/token | Content-Type: application/json | {"grant_type":"password","username":"bob","password":"guess0002"}
+POST /api/v1/token | Content-Type: application/json | {"grant_type":"password","username":"bob","password":"guess0003"}
+POST /api/v1/otp/verify | Content-Type: application/json | {"user":"alice","code":"000000"}
+POST /api/v1/otp/verify | Content-Type: application/json | {"user":"alice","code":"000001"}
+
+## MFA bypass attempts
+# replay / skip / downgrade MFA step
+POST /api/v1/mfa/verify | Content-Type: application/json | {"user":"alice","code":"123456","reuse":"true"}
+POST /api/v1/mfa/enroll | Content-Type: application/json | {"user":"alice","method":"sms","skip":"true"}
+GET /api/v1/account?skipMfa=true%26step=login
+GET /api/v1/session?mfa_bypass=1
+POST /api/v1/login | Content-Type: application/json | {"username":"admin","password":"correct","mfa":"false"}
+POST /api/v1/login | Content-Type: application/json | {"username":"admin","password":"correct","2fa":"skip"}
+
+## Session fixation
+# accept attacker-chosen session id / fail to rotate
+GET /login?sessionid=ATTACKER_SESSION
+GET /account?jsessionid=FIXED123%26step=login
+GET /?SESSID=known123
+POST /api/v1/login | Content-Type: application/json | {"username":"admin","password":"x","session":"preset-fixed-id"}
+GET /api/v1/me?sid=preset-fixed-id

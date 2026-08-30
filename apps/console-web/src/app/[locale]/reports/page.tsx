@@ -86,7 +86,7 @@ export default function ReportsPage() {
   };
 
   const downloadReport = (row: Report) => {
-    const base = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8443";
+    const base = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8443";
     window.open(`${base}/api/v1/reports/${row.id}/download`, "_blank");
   };
 

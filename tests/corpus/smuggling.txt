@@ -1,0 +1,42 @@
+# Request smuggling corpus — EXPECT:block
+# CL.TE, TE.CL, H2.CL, H2.TE framing-confusion patterns (OWASP HTTP smuggling,
+# James Kettle / PortSwigger research). Detection signals live in conflicting
+# Content-Length vs Transfer-Encoding headers and ambiguous framing.
+# EXPECT-RULE: 920*
+
+## CL.TE — front-end uses Content-Length, back-end trusts Transfer-Encoding
+# CL says "6", TE decodes a smuggled prefix request
+POST /api/transfer | Content-Length: 6;;Transfer-Encoding: chunked | 0
+
+POST /api/admin/delete | Content-Length: 4;;Transfer-Encoding: chunked | 0
+
+GET /?cl=6%26te=chunked%26body=0
+POST /internal | Content-Length: 6;;Transfer-Encoding: chunked;;Host: victim | 0
+
+## TE.CL — front-end uses Transfer-Encoding, back-end trusts Content-Length
+POST /api/transfer | Transfer-Encoding: chunked;;Content-Length: 4 | 0
+
+POST /api/admin | Transfer-Encoding: chunked;;Content-Length: 0 | 0
+
+GET /?te=chunked%26cl=0
+POST /x | Transfer-Encoding: chunked;;Content-Length: 3 | 0
+
+## H2.CL — HTTP/2 request smuggling via smuggled Content-Length
+POST /api/transfer | Content-Length: 0;;Transfer-Encoding: chunked | 0
+
+POST /h2 | Transfer-Encoding: chunked | 0
+
+## H2.TE — H2 front-end converts, TE body trusted downstream
+POST /api/h2 | Transfer-Encoding: chunked | 5\r\nhello\r\n0\r\n
+POST /api/h2 | Transfer-Encoding: chunked;;Transfer-Encoding: identity | 0\r\n
+
+## Double Content-Length / mixed CL forms
+POST /api/transfer | Content-Length: 5;;Content-Length: 0 | hello
+GET /?cl=5%26cl=0
+POST /api/x | Content-Length: 5 | 1, 0
+
+## TE obfuscation
+POST /api/transfer | Transfer-Encoding: chunked | 0
+GET /?te=Chunked
+POST /api/x | Transfer-Encoding: xchunked | 0
+

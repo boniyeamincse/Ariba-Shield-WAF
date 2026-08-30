@@ -1,0 +1,38 @@
+# Host-header & routing attack corpus — EXPECT:block
+# Host header injection, absolute-URL host spoofing, routing/ACL bypass via
+# X-Forwarded-* / X-Original-URL, and password-reset poisoning primitives.
+# No EXPECT-RULE — routing/backend rules vary; rely on HTTP status.
+
+## Host header injection (password reset poisoning, virtual host abuse)
+GET / | Host: attacker.example
+GET / | Host: evil.com
+POST /forgot-password | Host: attacker.example;;Content-Type: application/json | {"email":"victim@example.com"}
+POST /api/v1/account/password-reset | Host: evil.com;;Content-Type: application/json | {"email":"victim@example.com"}
+POST /api/v1/forgot | Host: attacker.com:443
+GET /reset | Host: reset-link-attacker.example
+
+## Duplicate / conflicting Host headers
+GET / | Host: victim.com
+GET / | Host: victim.com;;X-Forwarded-Host: attacker.example
+GET / | Host: attacker.example;;X-Forwarded-Host: victim.com
+
+## Routing/ACL bypass headers
+GET /admin | X-Original-URL: /admin
+GET /admin | X-Rewrite-URL: /admin
+GET /admin | X-Forwarded-For: 127.0.0.1
+GET /admin | X-Forwarded-For: 10.0.0.1
+GET /admin | X-Real-IP: 127.0.0.1
+GET /admin | X-Forwarded-Host: internal.admin
+GET /internal/api | X-Forwarded-Proto: https
+GET /admin | X-Client-IP: 127.0.0.1
+GET /admin | True-Client-IP: 127.0.0.1
+GET /admin | X-Custom-IP-Authorization: 127.0.0.1
+
+## Absolute-URI host spoofing
+GET http://evil.com/admin
+GET https://attacker.example/account
+GET / | Host: 
+
+## Absolute URI with path confusion
+GET http://victim.com@evil.com/
+GET http://evil.com%2f@victim.com/

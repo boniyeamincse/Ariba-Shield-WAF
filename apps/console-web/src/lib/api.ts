@@ -193,7 +193,9 @@ export type LearningSuggestion = {
   updated_at: string;
 };
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8443";
+export const API_BASE = typeof window === 'undefined'
+  ? process.env.INTERNAL_API_BASE ?? "http://control-api:8443"
+  : process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8443";
 
 async function request<T>(path: string, init?: RequestInit, role?: string): Promise<T> {
   const headers: Record<string, string> = {
@@ -612,7 +614,8 @@ export function getSettings(): Promise<Record<string, Record<string, unknown>>> 
 }
 
 export function updateSettings(category: string, values: Record<string, unknown>): Promise<{ status: string }> {
-  return request<{ status: string }>(`/settings${category ? `/${category}` : ""}`, { method: "PATCH", body: JSON.stringify(values) });
+  const path = category === 'general' ? '/settings' : `/settings/${category}`;
+  return request<{ status: string }>(path, { method: "PATCH", body: JSON.stringify(values) });
 }
 
 // ===== License =====

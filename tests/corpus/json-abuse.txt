@@ -1,0 +1,43 @@
+# JSON depth bomb / parser abuse corpus — EXPECT:block
+# Deeply nested JSON, duplicate keys, enormous numbers, array-of-arrays
+# leading to parser stack overflow, large payloads, and proto-poisoning.
+# EXPECT-RULE: 920*
+
+## Deeply nested JSON (depth bomb)
+POST /api/json | Content-Type: application/json | {"a":{"b":{"c":{"d":{"e":{"f":{"g":{"h":{"i":{"j":{"k":{"l":{"m":{"n":{"o":{"p":{"q":{"r":{"s":{"t":{"u":{"v":{"w":{"x":{"y":{"z":1}}}}}}}}}}}}}}}}}}}}}}}}}}}
+POST /api/json | Content-Type: application/json | {"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":[{"a":1}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}]}
+POST /api/json | Content-Type: application/json | [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+
+## Duplicate keys (parser ambiguity)
+POST /api/json | Content-Type: application/json | {"admin":false,"admin":true}
+POST /api/json | Content-Type: application/json | {"role":"user","role":"admin"}
+POST /api/json | Content-Type: application/json | {"name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a","name":"a"}
+
+## Huge numbers / overflow
+POST /api/json | Content-Type: application/json | {"price":1e999}
+POST /api/json | Content-Type: application/json | {"id":999999999999999999999999999999999999}
+POST /api/json | Content-Type: application/json | {"amount":-1e999}
+POST /api/json | Content-Type: application/json | {"latency":18446744073709551616}
+
+## Large array / object bomb
+POST /api/json | Content-Type: application/json | {"x":["a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a","a"]}
+
+## JSON with null bytes / control chars
+POST /api/json | Content-Type: application/json | {"role":"admin\u0000user"}
+POST /api/json | Content-Type: application/json | {"name":"foo\u0000"}
+POST /api/json | Content-Type: application/json | {"x":"\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"}
+
+## Proto-poisoning patterns (mass assignment via __proto__)
+POST /api/json | Content-Type: application/json | {"__proto__":{"admin":true}}
+POST /api/json | Content-Type: application/json | {"constructor":{"prototype":{"admin":true}}}
+POST /api/json | Content-Type: application/json | {"__proto__.admin":true}
+POST /api/json | Content-Type: application/json | {"__proto__":"x"}
+
+## JSON with nested type confusion
+POST /api/json | Content-Type: application/json | {"x":null,"x":false,"x":true,"x":0,"x":""}
+POST /api/json | Content-Type: application/json | {"price":"0.01","price":0.01}
+POST /api/json | Content-Type: application/json | {"id":42,"id":"42"}
+
+## JSON with BOM prefix
+POST /api/json | Content-Type: application/json | \ufeff{"admin":true}
+POST /api/json | Content-Type: application/json | {"admin":true}

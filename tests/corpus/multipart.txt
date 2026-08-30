@@ -1,0 +1,29 @@
+# Multipart / file-upload evasion corpus — EXPECT:block
+# Content-Type confusion, filename obfuscation, extension bypass, boundary
+# tricks, and polyglot uploads that slip past extension/signature checks.
+# EXPECT-RULE: 920*,953*
+
+## Filename obfuscation (double extension, case, trailing dots/spaces)
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="shell.php.jpg"\r\nContent-Type: image/jpeg\r\n\r\n<?php system($_GET['c']); ?>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="shell.PHP"\r\n\r\n<?php echo "pwned"; ?>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="shell.phtml"\r\n\r\n<?php passthru($_GET['x']); ?>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="shell.php."\r\n\r\n<?php echo "x"; ?>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="shell.php%00.jpg"\r\n\r\n<?php echo "x"; ?>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename=".htaccess"\r\nContent-Type: text/plain\r\n\r\nAddType application/x-httpd-php .php\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+## Magic-byte spoofing (PNG header + PHP payload)
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="x.php"\r\nContent-Type: image/png\r\n\r\n\x89PNG\r\n\x1a\r\n<?php system($_GET['c']); ?>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="avatar.png"\r\nContent-Type: image/gif\r\n\r\nGIF89a<?php system($_GET['c']); ?>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+## Content-Type confusion (JS/HTML upload for stored XSS)
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="x.svg"\r\nContent-Type: image/svg+xml\r\n\r\n<svg xmlns="http://www.w3.org/2000/svg"><script>alert(document.domain)</script></svg>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="file"; filename="x.html"\r\nContent-Type: text/plain\r\n\r\n<script>alert(1)</script>\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+## Boundary / framing tricks
+POST /upload | Content-Type: multipart/form-data; boundary="xxxxx" | --xxxxx\r\nContent-Disposition: form-data; name="f"; filename="a.txt"\r\n\r\nAAAA\r\n--xxxxx\r\n
+POST /upload | Content-Type: multipart/form-data; boundary=ab | --ab\r\nContent-Disposition: form-data; name="file"; filename="a.php"\r\n\r\n<?php system('id'); ?>\r\n--ab--\r\n
+GET /upload?filename=shell.php%0d%0aContent-Disposition:%20form-data
+GET /?file=..%2f..%2f..%2f..%2fetc%2fpasswd
+
+## Nested / multipart smuggling marker
+POST /upload | Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW | ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name="x"\r\n\r\n0\r\n\r\nPOST /admin HTTP/1.1\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--

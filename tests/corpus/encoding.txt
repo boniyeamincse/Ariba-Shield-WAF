@@ -1,0 +1,51 @@
+# Encoding & double-encoding evasions corpus — EXPECT:block
+# Payloads that try to slip past single-pass decoders: double encoding,
+# overlong UTF-8, null bytes, mixed case, whitespace/tab obfuscation,
+# HTML entities, unicode fullwidth lookalikes.
+# EXPECT-RULE: 941*,942*
+
+## Double encoding (decoded twice by upstream)
+GET /?q=%253Cscript%253Ealert(1)%253C%252Fscript%253E
+GET /?id=1%2527%2520OR%25201%253D1--
+GET /?search=%2527%2520UNION%2520SELECT%2520*--%2520
+GET /?x=%252e%252e%252f%252e%252e%252fetc%252fpasswd
+
+## Overlong / malformed UTF-8 (C1 control chars)
+GET /?q=%C0%BCscript%3E
+GET /?q=%E0%80%BEscript%3Ealert(1)
+GET /?id=%C0%AF%20OR%201%3D1
+GET /?q=%F0%80%80%AE
+
+## Null-byte truncation
+GET /?file=index.php%00.jpg
+GET /?page=..%2f..%2f..%2fetc%2fpasswd%00
+GET /?cmd=whoami%00
+
+## Mixed-case encoding
+GET /?q=%3cScRiPt%3ealert(1)%3C/sCrIpT%3E
+GET /?id=1%20UnIoN%20SeLeCt%201--%20
+GET /?q=%3CIMG%20SRC=x%20ONERROR=alert(1)%3E
+
+## Whitespace / tab obfuscation inside payloads
+GET /?q=%3Cscript%3E%09alert(1)%3C%2Fscript%3E
+GET /?id=1%09OR%091%3D1
+GET /?x=;%0Awhoami
+GET /?q=%0A%3Cscript%3E%0Aalert(1)%0A
+
+## HTML entity encoding
+GET /?q=%26%23x3C;script%26%23x3E;alert(1)%26%23x3C;/script%26%23x3E;
+GET /?q=&#x3C;img&#x20;src=x&#x20;onerror=alert(1)&#x3E;
+GET /?q=%26lt;script%26gt;alert(1)%26lt;/script%26gt;
+
+## Unicode fullwidth lookalikes (no-op decoder leak)
+GET /?q=%EF%BC%9Cscript%EF%BC%9Ealert(1)%EF%BC%9C%2Fscript%EF%BC%9E
+GET /?q=%u003Cscript%u003Ealert(1)%u003C/script%u003E
+
+## Percent-percent / mixed URL encoding
+GET /?q=%25%33%43script%3Ealert(1)%3C%2Fscript%3E
+GET /?id=%31%27%20%4f%52%20%31%3D%31--%20
+
+## Bare-plus / ASCII octal / base64-ish obfuscation
+GET /?q=javascript%3Aalert%281%29
+GET /?q=%26%2397;lert(1)
+GET /?x=;%20%60whoami%60

