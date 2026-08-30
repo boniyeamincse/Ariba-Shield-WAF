@@ -3,12 +3,14 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/api";
 
 export default function LoginPage() {
   const t = useTranslations("login");
   const router = useRouter();
+  const params = useParams<{ locale: string }>();
+  const locale = params?.locale ?? "en";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ export default function LoginPage() {
         throw new Error("Invalid credentials");
       }
 
-      router.push("/en");
+      router.push(`/${locale}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to login");
     } finally {
