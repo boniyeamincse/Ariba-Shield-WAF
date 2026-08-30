@@ -120,7 +120,7 @@ func Login(st *store.Store) http.HandlerFunc {
 			Path:     "/",
 			Expires:  expiresAt,
 			HttpOnly: true,
-			Secure:   true,
+			Secure:   r.TLS != nil, // false for localhost HTTP dev
 			SameSite: http.SameSiteStrictMode,
 		})
 

@@ -84,7 +84,7 @@ func Refresh(st *store.Store) http.HandlerFunc {
 			Path:     "/",
 			Expires:  newExpires,
 			HttpOnly: true,
-			Secure:   true,
+			Secure:   r.TLS != nil, // false for localhost HTTP dev
 			SameSite: http.SameSiteStrictMode,
 		})
 		w.Header().Set("Content-Type", "application/json")
@@ -299,7 +299,7 @@ func BreakGlass(st *store.Store) http.HandlerFunc {
 			Path:     "/",
 			Expires:  expires,
 			HttpOnly: true,
-			Secure:   true,
+			Secure:   r.TLS != nil, // false for localhost HTTP dev
 			SameSite: http.SameSiteStrictMode,
 		})
 		w.Header().Set("Content-Type", "application/json")

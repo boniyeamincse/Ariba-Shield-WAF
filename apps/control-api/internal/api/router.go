@@ -462,13 +462,14 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	// Global CORS Middleware
 	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		// Allow specific origins or just localhost for development
-		if origin == "http://localhost:3002" || origin == "http://127.0.0.1:3002" {
+		// Allow the console web origins (localhost/127.0.0.1 on the dev ports).
+		if origin == "http://localhost:3000" || origin == "http://127.0.0.1:3000" ||
+			origin == "http://localhost:3002" || origin == "http://127.0.0.1:3002" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
