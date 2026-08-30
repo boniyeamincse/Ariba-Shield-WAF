@@ -269,6 +269,10 @@ export function listOrigins(appId: string): Promise<Origin[]> {
   return request<Origin[]>(`/applications/${appId}/origins`);
 }
 
+export function listApplicationOrigins(appId: string): Promise<Origin[]> {
+  return listOrigins(appId);
+}
+
 export function createOrigin(appId: string, origin: Omit<Origin, "id" | "enabled">): Promise<{ id: string }> {
   return request<{ id: string }>(`/applications/${appId}/origins`, {
     method: "POST",
@@ -280,6 +284,10 @@ export function createOrigin(appId: string, origin: Omit<Origin, "id" | "enabled
 
 export function listDomains(appId: string): Promise<Domain[]> {
   return request<Domain[]>(`/applications/${appId}/domains`);
+}
+
+export function listApplicationDomains(appId: string): Promise<Domain[]> {
+  return listDomains(appId);
 }
 
 export function createDomain(appId: string, hostname: string): Promise<{ id: string }> {
