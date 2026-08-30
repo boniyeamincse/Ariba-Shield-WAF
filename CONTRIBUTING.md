@@ -17,6 +17,15 @@ Before diving in, you should be familiar with the core stack:
 - **Data Plane (Gateway):** OpenResty (NGINX), Lua, Coraza WAF Engine
 - **Web Console (UI):** Next.js (TypeScript), Tailwind CSS / Vanilla CSS, React
 
+### Project Directory Structure
+To help you navigate the codebase, here is a high-level overview of our architecture:
+- `/apps/control-api/`: The Go-based backend management API. Out-of-path configuration engine.
+- `/apps/console-web/`: The Next.js frontend dashboard.
+- `/gateways/openresty-gateway/`: The OpenResty container configuration and Lua scripts for live traffic routing.
+- `/docs/`: Project documentation, Architecture Decision Records (ADRs), API schemas, and the User Guide.
+- `/packages/`: Shared libraries, generated API clients, and JSON Schemas that act as the single source of truth.
+- `/deployments/`: Docker Compose and Kubernetes manifests for standing up the stack.
+
 ## 3. Getting Started
 
 ### Prerequisites
