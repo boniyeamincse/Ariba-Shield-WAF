@@ -7,6 +7,39 @@
 
 ---
 
+## Current implementation status
+
+> **Update note (2026-08-30):** The requirements below remain the Phase 0 / Release 0.1 contract and are
+> the day-to-day target. The **codebase has moved beyond the original Release 0.1 scope** and now also
+> implements a large part of Phases 2–5 (see `docs/operations/release-0.1.md` and `docs/api/endpoint.md`).
+> Do not treat the "out of scope" list in §1.2 as current — see below for the implemented surface.
+
+Implemented beyond the original proxy-only scope:
+
+- **WAF engine:** Coraza-based detection-only inspection with a CRS-style baseline rule set
+  (SQLi, XSS, command injection, traversal, LFI); fails open — an engine error never blocks traffic.
+- **Security events pipeline:** engine → event-ingestor → PostgreSQL `security_events`, with
+  sensitive-field masking (master plan rule 5) and a Wazuh/syslog forwarder adapter.
+- **Blocking primitives (Phase 3):** rate limiting and IP lists (allow/block) with CRUD.
+- **RBAC:** 7 roles (Super Admin, Platform Admin, Security Admin, App Owner, SOC Analyst,
+  Auditor, Read Only) enforced by the `RBACEnforcer` middleware; session-cookie auth + TOTP MFA.
+- **Incidents (Phase 4):** incident CRUD, assign/escalate/close/reopen, timeline + events.
+- **Dashboard:** 8 widgets (overview, traffic, security, attacks, top-IPs, top-rules,
+  applications, gateways).
+- **Other Phase 2–5 surface:** security policies with versioning/approvals/clone/diff,
+  custom/managed rules, webhooks, exceptions, certificates, deployments, rule bundles,
+  gateway fleet management (register/heartbeat/config), analytics, learning sessions/suggestions,
+  organizations/tenants, sites, listeners, TLS profiles, notification channels, reports,
+  integrations (SIEM/log forwarding), settings, license, backups, threat feeds, and many
+  CRUD-scaffolded modules (bot, DLP, IAM, API security, GraphQL, CSP, quotas, caching, automation).
+- **Management console:** bilingual (en/bn) Next.js console with 23 routes covering the above.
+
+The full, always-current API surface is defined by `apps/control-api/internal/api/router.go` and
+documented in `docs/api/openapi-v0.yaml` — those are authoritative over §7 below, which is the
+original v0 contract.
+
+---
+
 ## 1. Purpose and scope
 
 This SRS defines the functional and non-functional requirements for **Release 0.1 (Lab)** of Ariba Shield WAF, and anchors the threat model, data model v0, API v0, UI specification, and the sprint backlog used to build it.
@@ -24,10 +57,14 @@ This SRS defines the functional and non-functional requirements for **Release 0.
 
 ### 1.2 Explicitly out of scope for Release 0.1
 
-- Any blocking/enforcement WAF action (Release 0.1 is proxy + management only).
-- Signature engine and OWASP CRS integration (Phase 2).
-- Multi-gateway management, HA, mTLS bundle distribution (Phase 4).
-- Rate limiting, IP lists, bot defense, API protection, learning.
+> Status: superseded by the note above. The bullets below were true of the original proxy-only
+> Release 0.1; several items are now implemented (marked accordingly). What remains genuinely
+> out of scope for the lab release:
+
+- ~~Any blocking/enforcement WAF action~~ — Coraza detection-only engine shipped; **blocking posture is still out**.
+- ~~Signature engine and OWASP CRS integration (Phase 2)~~ — **baseline rules shipped**; full OWASP CRS is still out.
+- ~~Rate limiting, IP lists, bot defense, API protection, learning~~ — **rate limits + IP lists shipped**; bot defense, API schema protection, and full learning remain Phase 3+.
+- Multi-gateway HA, mTLS bundle distribution (Phase 4) — still out.
 - Custom TLS implementation or cryptography — always use maintained system libraries.
 - L3/L4 volumetric DDoS mitigation.
 - Any production blocking posture.

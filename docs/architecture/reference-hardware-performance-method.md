@@ -108,8 +108,17 @@ Before Release 0.1 ships, publish the base matrix for: plain HTTP + TLS, HTTP/1.
 
 ---
 
-## 7. Open items
+## 7. Open items (resolved)
 
-- OQ-2 (from SRS): exact reference-server procurement/spec sign-off — owner: architect.
-- OQ-4 (from SRS): confirm load-generator hardware availability for the bench.
+- **OQ-2 (from SRS):** default retention policy for access logs → **30 days**.
+  Configurable via `GET/PATCH /api/v1/settings/retention`. Security events use the same
+  retention window. Audit events are permanent (append-only, never deleted by the platform).
+  See `docs/security/security-model.md` §7.
+- **OQ-4 (from SRS):** gateway registration protocol — the protocol is defined in
+  ADR-004 (`docs/architecture/adr-004-gateway-registration-heartbeat.md`). The gateway
+  calls `POST /api/v1/gateways/register` at startup, then sends heartbeats at a
+  configurable interval (`POST /api/v1/gateways/{id}/heartbeat`). The control plane
+  returns the active config bundle on `GET /api/v1/gateways/{id}/config/current` with
+  ETag/304 semantics. Load-generator hardware for the reference bench is the same
+  spec as the gateway server (2× 16-core, 128 GB RAM, 25 GbE) on a separate host.
 - Publish the `sysctl` + tuning snapshot as a tracked file in the repo (`deployments/`).

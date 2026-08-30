@@ -5,7 +5,7 @@ See the [master plan](docs/enterprise_waf_development_master_plan.md) for scope,
 [Phase 0 SRS](docs/phase0_srs.md) as the day-to-day development contract, and
 [ADR-001](docs/architecture/adr-001-initial-architecture.md) for the architecture.
 
-**Status:** Phase 0 documentation complete; Sprint 1 (repo + CI) in progress. This is a monorepo.
+**Status:** Control plane API + management console built; Phase 1–8 API surface complete (300+ routes, 23 console routes); test coverage via Go unit tests + Vitest (10+ frontend tests). This is a monorepo.
 
 ## Repository layout
 

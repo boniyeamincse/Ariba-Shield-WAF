@@ -25,16 +25,23 @@ The project documentation currently defines:
 ### Current practical scope
 The active near-term build target is **Release 0.1 (Lab)**.
 
-Release 0.1 is **not yet a full blocking WAF**.
-It is primarily:
+Release 0.1 is a **working WAF** with:
 
 - a single-node Linux lab deployment
-- a centralized management UI/API
+- a centralized management UI/API (300+ API routes, 23 console routes)
+- Coraza WAF engine (detection-only, baseline CRS rules for SQLi, XSS, cmd, traversal, LFI)
+- security events pipeline (engine → ingestor → PostgreSQL)
+- sensitive-field masking (rule 5)
 - an HTTPS reverse proxy gateway
 - application and backend pool management
 - active/passive health checks
 - safe config validation and atomic activation
 - last-known-good rollback/reload behavior
+- **rate limiting** and **IP lists** (Phase 3)
+- **RBAC** (7 roles, session-cookie auth, MFA)
+- **incident management** (Phase 4)
+- **dashboard** (8 widgets: overview, traffic, security, attacks, top-IPs, top-rules, applications, gateways)
+- **learning engine** (baseline sessions and suggestions)
 - structured request logging
 - English/Bangla UI shell
 
@@ -99,15 +106,15 @@ Gateways must continue serving traffic with a **signed, versioned, locally cache
 - Bilingual UI foundation
 
 ### Explicitly out of scope for Release 0.1
-- Blocking WAF enforcement
-- Signature engine / OWASP CRS integration
+- Full OWASP CRS integration (baseline rules only)
+- Blocking WAF enforcement (detection-only in 0.1)
 - Multi-gateway HA control
-- Bot defense
-- Rate limiting
-- API schema protection
-- Learning engine
-- Threat intelligence feeds
+- Bot defense (policies scaffolded)
+- API schema protection (policies scaffolded)
+- Full learning engine (baseline scaffolded)
 - Production blocking posture
+- Custom TLS implementation or cryptography — always use maintained system libraries
+- L3/L4 volumetric DDoS mitigation
 
 ---
 

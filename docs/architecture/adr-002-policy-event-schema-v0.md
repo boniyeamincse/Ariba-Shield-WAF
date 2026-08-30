@@ -32,7 +32,11 @@ Adopt a **versioned, additive-only** contract pair. Major version in the bundle/
 
 ### D2 — Policy/config schema v0 (declarative, versioned, hashable)
 
-Top-level structure (JSON; also stored as PostgreSQL `config_versions.blob`):
+Top-level structure (JSON; also stored as PostgreSQL `config_versions.blob`). The
+top-level document uses `"additionalProperties": true` for forward compatibility:
+Phase 2+ fields like `waf_policy`, `rate_limits`, `ip_lists`, `bot_policy`, and
+`api_schemas` are added as new top-level properties without breaking Release 0.1
+consumers (see extension points below).
 
 ```jsonc
 {

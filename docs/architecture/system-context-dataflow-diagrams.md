@@ -52,6 +52,7 @@ flowchart TB
     subgraph Node["Single Linux Node (management + service network)"]
         subgraph DataPlane["DATA PLANE"]
             GWAPP["OpenResty Gateway\n(listen 443, service-facing)"]
+            WAF["waf-engine (Coraza sidecar)\n:8082, detection-only"]
             CACHE["Config write-ahead store\n/var/lib/shield-waf/config"]
             SIDECAR["Event Collector (Go sidecar)"]
         end
@@ -79,11 +80,13 @@ flowchart TB
     GWAPP -->|"validated nginx conf"| CACHE
     CACHE -->|"last-known-good on start"| GWAPP
     GWAPP -->|"JSON-lines stdout"| SIDECAR
+    GWAPP -->|"inspection (Coraza)"| WAF
+    WAF -->|"detection-only pass-through"| BACKEND["Backend Pools"]
+    WAF -->|"security events (masked)"| SIDECAR
     SIDECAR -->|"batched, async"| OTLP
     OTLP --> PROM
     SIDECAR -->|"normalized events"| DB
 
-    GWAPP -->|"sanitized HTTP"| BACKEND["Backend Pools"]
     API -->|"config bundle (signed, hash)"| GWAPP
 ```
 
@@ -118,13 +121,18 @@ flowchart LR
     B --> C[Strict HTTP parse\nreject ambiguous framing]
     C --> D[Resolve virtual server by SNI/Host]
     D --> E[Apply size limits + trusted proxy headers]
-    E --> F[Select healthy backend\n(health state from DFD-3)]
-    F --> G[Forward sanitized request]
-    G --> H[Backend response + upstream status]
-    H --> I[Emit access event (stdout, non-blocking)\n+ metrics (in-memory)]
+    E --> F["Inspect in waf-engine (Coraza)\nsingle normalized representation"]
+    F --> G[Select healthy backend\n(health state from DFD-3)]
+    G --> H[Forward sanitized request]
+    H --> I[Backend response + upstream status]
+    I --> J[Emit access event (stdout, non-blocking)\n+ metrics (in-memory)]
+    F --> K[Security event on match\n(masked) → event-ingestor]
 ```
 
-> Release 0.1 has **no security parsing** in this path. When Phase 2 adds the Coraza engine, the normalized representation produced at step C is the **single** representation inspected (master plan rule 1; ADR-003 D5) — the pipeline inserts an inspection step here without a second parse.
+> The Coraza waf-engine inspects the **single normalized representation** produced at
+> step C (master plan rule 1; ADR-003 D5, ADR-005) — no second parse. In Release 0.1 the
+> engine is **detection-only** and fails open: an engine error never blocks or crashes
+> traffic (master plan §22). Phase 2+ adds enforcement (block/challenge) at this point.
 
 ### 3.3 DFD-3 — Health check flow
 
@@ -144,6 +152,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     G[Gateway worker] -->|"JSON-lines stdout"| B[Bounded buffer]
+    W[WAF engine (Coraza)] -->|"security events (masked)"| B
     B -->|"non-blocking, fail-open"| S[Event Collector sidecar]
     S -->|"normalized"| OTLP[OpenTelemetry Collector]
     OTLP --> PROM[Prometheus]
@@ -166,6 +175,7 @@ flowchart LR
 | TB4 | Admin ↔ Control Plane | Authenticated users, management network | HTTPS only; roles/least privilege; MFA on local admin |
 | TB5 | Control Plane ↔ PostgreSQL/Redis | Trusted internal | DB creds via secrets; envelope encryption at rest |
 | TB6 | Gateway ↔ Collector/OTel | Trusted sidecar on same node | Non-blocking stdout transport |
+| TB7 | Gateway ↔ waf-engine | Trusted sidecar on same node | Single normalized representation; detection-only, fail-open; no body/cookie storage |
 
 Full STRIDE threat list and mitigations: `../phase0_srs.md` §9.
 

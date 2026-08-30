@@ -107,8 +107,12 @@ test-failover: ## Run gateway + API failure drills
 	@echo "=== Gateway failure tests ==="
 	bash tests/failover/gateway-failure-tests.sh
 	@echo "=== API failure tests (requires compose stack up) ==="
-	@echo "Skipping: run manually with docker compose up -d first"
-	@echo "  bash tests/failover/api-failure-tests.sh"
+	@if [ "$${RUN_API_TESTS:-0}" = "1" ]; then \
+		echo "RUN_API_TESTS=1 — running API failure tests"; \
+		bash tests/failover/api-failure-tests.sh; \
+	else \
+		echo "SKIP: set RUN_API_TESTS=1 to run API failure tests (needs: docker compose up -d)"; \
+	fi
 
 test-replay: ## Run WAF replay corpus (requires live waf-engine on :8082)
 	bash tests/replay/replay.sh --mode detect

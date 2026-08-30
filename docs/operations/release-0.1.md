@@ -23,14 +23,24 @@ A single-node lab platform on Ubuntu Server LTS:
 | Prometheus metrics endpoint | ✅ |
 | Coraza WAF engine — **detection-only** (transparent) | ✅ |
 | CRS-style baseline rules (SQLi, XSS, cmd, traversal, LFI) | ✅ |
+| Rate limiting + IP lists (Phase 3 safe blocking) | ✅ |
 | Security events pipeline (engine → ingestor → PostgreSQL) | ✅ |
 | Sensitive-field masking (rule 5) | ✅ |
 | Wazuh/syslog forwarder (adapter, not yet wired to a live Wazuh) | ⚠️ adapter ready |
 | Audit log (append-only, immutable) | ✅ |
 | Real authentication/RBAC | ✅ session-cookie auth + 7 roles (mock gated behind `AUTH_MOCK_ENABLED`) |
+| TOTP MFA | ✅ |
+| Incidents (assign/escalate/close/reopen) | ✅ |
+| Dashboard (8 widgets) | ✅ |
+| Learning sessions/suggestions | ✅ |
+| Reports, integrations, notification channels, license, settings | ✅ |
+| Full OWASP CRS set | ❌ Phase 2+ |
+| Blocking enforcement posture | ❌ detection-only in 0.1 |
+| Bot defense / API schema protection | ❌ Phase 3+ (CRUD scaffolded) |
+| HA, mTLS fleet, multi-tenancy, SSO | ❌ Phase 4+ |
 
-**Explicitly NOT included:** blocking enforcement, OWASP CRS full set, rate limits,
-IP lists, bot defense, HA, mTLS fleet, multi-tenancy, SSO/MFA.
+**Explicitly NOT included:** blocking enforcement, full OWASP CRS set,
+bot defense, API schema protection, HA, mTLS fleet, multi-tenancy, SSO.
 
 ---
 
@@ -117,16 +127,18 @@ bash tests/failover/api-failure-tests.sh   # requires compose stack up
 ```
 
 Reference result on the lab bench (Oct 2026):
-- Replay detect: **35/35**
-- Replay block: **35/35**
+- Replay detect: **6/6** corpus cases (cmdi, legitimate, lfi, sqli, traversal, xss)
+- Replay block: **6/6** corpus cases
 - Gateway failure drills: **4/4**
+- Go tests: **control-api 18, waf-engine 27, policy-compiler 15** (event-ingestor pending)
+- Console-web Vitest: **10** component/permission tests
 
 ---
 
 ## 5. Known limitations (Release 0.1)
 
-1. **No SSO/MFA** — session-cookie auth + role-based access is implemented,
-   but OIDC/SAML SSO, TOTP MFA, and break-glass are Phase 8.
+1. **No SSO** — session-cookie auth + role-based access + TOTP MFA is implemented,
+   but OIDC/SAML SSO and break-glass are Phase 8.
 2. **No full OWASP CRS** — baseline rules only; CRS integration is Phase 2+.
 3. **Wazuh forwarder** is an adapter that reads JSON-lines stdin; a live Wazuh
    agent + output transport is not yet wired.
