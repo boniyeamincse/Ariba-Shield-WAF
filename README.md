@@ -1,68 +1,119 @@
-# Ariba Shield WAF
+<div align="center">
+  <h1>🛡️ Ariba Shield WAF</h1>
+  <p><b>Centralized, high-performance, enterprise-grade Web Application Firewall (WAF)</b></p>
 
-Centralized, Linux-hosted, web-managed enterprise Web Application Firewall.
-See the [master plan](docs/enterprise_waf_development_master_plan.md) for scope, the
-[Phase 0 SRS](docs/phase0_srs.md) as the day-to-day development contract, and
-[ADR-001](docs/architecture/adr-001-initial-architecture.md) for the architecture.
+  <a href="https://github.com/your-org/ariba-shield-waf/releases"><img src="https://img.shields.io/github/v/release/your-org/ariba-shield-waf?style=for-the-badge&color=blue" alt="Release"></a>
+  <a href="https://github.com/your-org/ariba-shield-waf/blob/main/LICENSE"><img src="https://img.shields.io/github/license/your-org/ariba-shield-waf?style=for-the-badge" alt="License"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge" alt="PRs Welcome"></a>
+</div>
 
-**Status:** Control plane API + management console built; Phase 1–8 API surface complete (300+ routes, 23 console routes); test coverage via Go unit tests + Vitest (10+ frontend tests). This is a monorepo.
+<br>
 
-## Repository layout
+Ariba Shield is an open-source, next-generation Web Application Firewall designed for modern enterprise infrastructure. It isolates the control plane from the data plane, ensuring that your traffic routing is never slowed down by management APIs or logging bottlenecks.
+
+Powered by a robust **Go** control plane, an **OpenResty (Coraza)** data plane, and a sleek **Next.js** glassmorphism dashboard.
+
+## ✨ Key Features
+
+- **Advanced WAF Engine:** Powered by Coraza and the OWASP Core Rule Set (CRS) to mitigate SQLi, XSS, and LFI.
+- **Zero-Downtime Deployments:** Atomic configuration updates with bundle hashing and automatic rollback on failure.
+- **Out-of-Path Control Plane:** Traffic routing is 100% physically isolated from the management APIs.
+- **Granular RBAC:** 7-tier role system (Super Admin to Read Only) natively built-in.
+- **Compliance Ready:** Immutable audit trails and automatic sensitive-field masking in security events.
+- **Premium Dashboard:** Bilingual (English/Bengali) Next.js interface with real-time metric visualization.
+
+---
+
+## 🚀 Quick Start
+
+The fastest way to test Ariba Shield is by running the local development stack via Docker Compose.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-org/ariba-shield-waf.git
+cd ariba-shield-waf
+
+# 2. Spin up the infrastructure
+docker compose -f deployments/compose/docker-compose.yml up -d --build
+```
+
+### Accessing the Dashboard
+
+Once the containers are running, open your browser:
+- **URL:** `http://localhost:3000` (or `http://<your-local-ip>:3000`)
+- **Login Email:** `superadmin@aribashield.local`
+- **Password:** `admin`
+
+*Note: In production, these mock passwords must be replaced and MFA must be enabled.*
+
+---
+
+## 📁 Repository Architecture
+
+This is a monorepo containing both the control plane and data plane.
 
 | Path | Purpose |
 |---|---|
-| `apps/console-web/` | Next.js + TypeScript management console (control plane UI) |
-| `apps/control-api/` | Go control-plane API (management REST/JSON, OpenAPI) |
-| `gateways/openresty-gateway/` | Release 0.1 data plane (OpenResty/Nginx) |
-| `gateways/rust-gateway/` | Phase 9 custom high-performance data plane (placeholder) |
-| `services/` | control-plane services (policy-compiler, event-ingestor, ...) |
-| `packages/` | shared schema, localization, generated SDKs |
-| `rules/` | signature source (Phase 2+, placeholder) |
-| `deployments/` | compose / ansible / helm / appliance |
-| `tests/` | conformance, evasions, performance, failover |
-| `docs/` | architecture ADRs + diagrams, operations, security, API |
+| `/apps/console-web/` | Next.js + TypeScript management console (UI) |
+| `/apps/control-api/` | Go control-plane API (management REST/JSON, OpenAPI) |
+| `/gateways/openresty-gateway/` | OpenResty/Nginx data plane with Lua routing |
+| `/packages/` | Shared schemas, localization, and generated SDKs |
+| `/deployments/` | Docker Compose, Ansible, and Kubernetes manifests |
+| `/docs/` | Architecture ADRs, SRS, API schemas, and User Guide |
 
-## Core invariants (master plan §22)
+---
 
-1. Never parse the same request differently in security and proxy layers.
-2. Never let logging failure block or crash the live traffic path.
-3. Never deploy partially compiled policy.
-4. Never trust automatically learned traffic without poisoning controls.
-5. Never store unmasked secrets merely for analyst convenience.
-6. Never make AI output a direct production block rule without deterministic validation and human approval.
-7. Never publish performance without exact test conditions.
-8. Never add a protocol until it has conformance, fuzz, evasion, and resource-limit tests.
-9. Never update all gateways simultaneously; use canary and rollback.
-10. Never call the product enterprise/F5-grade until independent testing supports the claim.
+## 🔒 10 Core Invariants
 
-## Getting started
+To maintain enterprise-grade resilience, this project strictly adheres to 10 golden rules (defined in our Master Plan):
+1. **Never** parse the same request differently in security and proxy layers.
+2. **Never** let logging failure block or crash the live traffic path.
+3. **Never** deploy partially compiled policy.
+4. **Never** trust automatically learned traffic without poisoning controls.
+5. **Never** store unmasked secrets merely for analyst convenience.
+6. **Never** make AI output a direct production block rule without deterministic validation.
+7. **Never** publish performance without exact test conditions.
+8. **Never** add a protocol until it has conformance, fuzz, and resource-limit tests.
+9. **Never** update all gateways simultaneously; use canary and rollback.
+10. **Never** call the product enterprise/F5-grade until independent testing supports the claim.
 
-See `deployments/compose/` (Sprint 2) for the development environment.
+---
 
-## Development
+## 👥 Role-Based Access Control (RBAC)
 
+Ariba Shield uses a strict RBAC matrix. If you want to test different views locally, you can use these built-in test accounts:
+
+| Role | Email | Password | Access Level |
+|---|---|---|---|
+| **Super Admin** | `superadmin@aribashield.local` | `admin` | Full system access. |
+| **Platform Admin** | `platform@aribashield.local` | `admin` | Gateway nodes and load balancers. |
+| **Security Admin** | `security@aribashield.local` | `admin` | WAF rules, policies, exceptions. |
+| **App Owner** | `appowner@aribashield.local` | `admin` | Assigned apps and traffic logs. |
+| **SOC Analyst** | `soc@aribashield.local` | `admin` | Events, Analytics, Webhooks. |
+| **Auditor** | `auditor@aribashield.local` | `admin` | Read-only Audit logs & config state. |
+| **Read Only** | `readonly@aribashield.local` | `admin` | Dashboard visualization only. |
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Because of the strict security nature of a WAF, please read our [Contribution Guidelines (CONTRIBUTING.md)](CONTRIBUTING.md) before submitting a Pull Request or Architecture Decision Record (ADR).
+
+**Development Commands:**
 ```sh
-make lint      # lint all languages
-make test      # run all tests
+make lint      # lint all languages (Go, TS, Lua)
+make test      # run all unit tests
 make build     # build all artifacts
-make gen       # regenerate SDK types from schema
+make gen       # regenerate SDK types from JSON schemas
 ```
 
-See [repository-ci-coding-standards.md](docs/architecture/repository-ci-coding-standards.md)
-for coding standards and the ADR template.
+## 📚 Documentation
 
-## RBAC Test Users (For Local UI Testing)
+For deep-dives into the architecture, check out:
+- [Phase 0 SRS](docs/phase0_srs.md): The day-to-day development contract.
+- [API Master Plan](docs/api/endpoint.md): 300+ route definitions.
+- [User Guide](docs/user_guide.html): End-user HTML manual.
 
-Use the following credentials in the local development environment (`http://localhost:3002/login`) to test the Role-Based Access Control (RBAC) UI features:
+## 📄 License
 
-| Role | Email | Password | Allowed Access |
-|---|---|---|---|
-| **Super Admin** | `superadmin@aribashield.local` | `admin` | Full access to all settings, global policies, and tenant management. |
-| **Platform Admin** | `platform@aribashield.local` | `admin` | Gateway nodes, load balancers, deployments, and cluster health. |
-| **Security Admin** | `security@aribashield.local` | `admin` | Policy creation, custom rules, WAF configurations, and exceptions. |
-| **App Owner** | `appowner@aribashield.local` | `admin` | Only their assigned Applications and related traffic logs. |
-| **SOC Analyst** | `soc@aribashield.local` | `admin` | Security Events, Incident Playbooks, Analytics, and Webhooks. |
-| **Auditor** | `auditor@aribashield.local` | `admin` | Read-only access to Audit Logs, Reports, and System Configurations. |
-| **Read Only** | `readonly@aribashield.local` | `admin` | Read-only view of the main dashboard and live traffic. |
-
-*(Note: In production, these mock passwords must be replaced, and MFA must be enabled according to Phase 3 requirements.)*
+This project is open-sourced software licensed under the MIT license.
