@@ -679,8 +679,16 @@ export function deleteCertificate(id: string): Promise<{ status: string }> {
 
 // ===== Backups =====
 
-export function listBackups(): Promise<unknown[]> {
-  return request<unknown[]>("/backups");
+export type Backup = {
+  id: string;
+  status: string;
+  artifact_ref?: string;
+  size_bytes: number;
+  created_at: string;
+};
+
+export function listBackups(): Promise<Backup[]> {
+  return request<Backup[]>("/backups");
 }
 
 export function createBackup(): Promise<{ id: string }> {
