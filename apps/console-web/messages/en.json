@@ -78,5 +78,18 @@
     "actor": "Actor",
     "ip": "IP Address",
     "request_id": "Request ID"
+  },
+  "loading": {
+    "title": "Loading...",
+    "description": "Please wait while we load your data."
+  },
+  "error": {
+    "title": "Something went wrong",
+    "message": "An error occurred while rendering this page.",
+    "retry": "Try again"
+  },
+  "notFound": {
+    "message": "The page you are looking for does not exist.",
+    "home": "Back to Overview"
   }
 }
