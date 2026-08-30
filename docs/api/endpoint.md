@@ -74,3 +74,16 @@ This document outlines the full 37-module REST API structure required to elevate
 
 42. **Permissions** (`/api/v1/permissions`)
     - GET — Derive permissions from the role system. Each role carries a permissions[] array; this endpoint lists all roles and their associated permissions.
+
+## Phase 4 — Reports (Compliance & Analytics)
+
+43. **Reports** (`/api/v1/reports`)
+    - GET — List all generated reports (filter by kind, status).
+    - POST — Create a report from a kind + params in the body.
+    - GET /{id} — Retrieve a single report with its summary data.
+    - DELETE /{id} — Delete a report.
+    - POST /security — Generate a security events report (severity distribution).
+    - POST /traffic — Generate a traffic summary report (method, count, avg latency).
+    - POST /incidents — Generate an incidents report (severity distribution).
+    - POST /compliance — Generate a compliance summary report (audit event volume, range).
+    - GET /{id}/download — Download the full report as JSON attachment.
