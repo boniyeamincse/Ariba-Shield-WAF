@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
@@ -21,6 +21,7 @@ type AppRow = Application & { origins: number; domains: number };
 
 export default function ApplicationsPage() {
   const locale = useLocale();
+  const t = useTranslations("applications");
   const [rows, setRows] = useState<AppRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -116,13 +117,13 @@ export default function ApplicationsPage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>Applications</h1>
-            <p style={{ color: "var(--text-secondary)" }}>Manage your protected applications.</p>
+            <h1>{t("title")}</h1>
+            <p style={{ color: "var(--text-secondary)" }}>{t("description")}</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {canUser("create") && (
               <button type="button" className="btn btn-primary" onClick={openCreate}>
-                + New Application
+                + {t("new_application")}
               </button>
             )}
             <UserProfileWidget />

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import DataTable, { type Column } from "@/components/shared/DataTable";
@@ -19,6 +19,7 @@ import {
 
 export default function ThreatIntelligencePage() {
   const locale = useLocale();
+  const t = useTranslations("threat_intelligence");
   const [rows, setRows] = useState<ThreatFeed[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -115,7 +116,7 @@ export default function ThreatIntelligencePage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>Threat Intelligence</h1>
+            <h1>{t("title")}</h1>
             <p style={{ color: "var(--text-secondary)" }}>Manage threat intelligence feeds.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>

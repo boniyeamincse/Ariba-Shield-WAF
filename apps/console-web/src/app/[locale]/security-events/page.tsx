@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import DataTable, { type Column } from "@/components/shared/DataTable";
@@ -13,6 +13,7 @@ const PAGE_SIZE = 25;
 
 export default function SecurityEventsPage() {
   const locale = useLocale();
+  const t = useTranslations("security_events");
   const [rows, setRows] = useState<SecurityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,7 +61,7 @@ export default function SecurityEventsPage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>Security Events</h1>
+            <h1>{t("title")}</h1>
             <p style={{ color: "var(--text-secondary)" }}>Inspected and blocked requests.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import DataTable, { type Column } from "@/components/shared/DataTable";
@@ -22,6 +22,7 @@ type Tab = "ip-lists" | "rate-limits";
 
 export default function TrafficControlPage() {
   const locale = useLocale();
+  const t = useTranslations("traffic_control");
   const [tab, setTab] = useState<Tab>("ip-lists");
 
   // IP lists
@@ -157,7 +158,7 @@ export default function TrafficControlPage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>Traffic Control</h1>
+            <h1>{t("title")}</h1>
             <p style={{ color: "var(--text-secondary)" }}>IP lists and rate limiting.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import DataTable, { type Column } from "@/components/shared/DataTable";
@@ -20,6 +20,7 @@ import {
 
 export default function IncidentsPage() {
   const locale = useLocale();
+  const t = useTranslations("incidents");
   const [rows, setRows] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -104,12 +105,12 @@ export default function IncidentsPage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>Incidents</h1>
-            <p style={{ color: "var(--text-secondary)" }}>Track and respond to security incidents.</p>
+            <h1>{t("title")}</h1>
+            <p style={{ color: "var(--text-secondary)" }}>{t("description")}</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
-              + New Incident
+<button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
+                + {t("new_incident")}
             </button>
             <UserProfileWidget />
           </div>

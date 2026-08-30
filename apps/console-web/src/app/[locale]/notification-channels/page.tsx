@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import DataTable, { type Column } from "@/components/shared/DataTable";
@@ -19,6 +19,7 @@ const KINDS = ["wazuh", "syslog", "cef", "leef", "webhook", "email", "teams", "s
 
 export default function NotificationChannelsPage() {
   const locale = useLocale();
+  const t = useTranslations("notification_channels");
   const [rows, setRows] = useState<NotificationChannel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -98,7 +99,7 @@ export default function NotificationChannelsPage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>Notification Channels</h1>
+            <h1>{t("title")}</h1>
             <p style={{ color: "var(--text-secondary)" }}>Configure alert delivery channels.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>

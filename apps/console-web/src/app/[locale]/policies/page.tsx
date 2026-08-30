@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
@@ -19,6 +19,7 @@ import {
 
 export default function PoliciesPage() {
   const locale = useLocale();
+  const t = useTranslations("policies");
   const [rows, setRows] = useState<SecurityPolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -114,7 +115,7 @@ export default function PoliciesPage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>Security Policies</h1>
+            <h1>{t("title")}</h1>
             <p style={{ color: "var(--text-secondary)" }}>Manage WAF security policies.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>

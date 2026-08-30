@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import { getSettings, updateSettings } from "@/lib/api";
@@ -17,6 +17,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 export default function SettingsPage() {
   const locale = useLocale();
+  const t = useTranslations("settings");
   const [tab, setTab] = useState<TabKey>("general");
   const [settings, setSettings] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(true);
@@ -86,7 +87,7 @@ export default function SettingsPage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>System Settings</h1>
+            <h1>{t("title")}</h1>
             <p style={{ color: "var(--text-secondary)" }}>Configure system-wide options.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>

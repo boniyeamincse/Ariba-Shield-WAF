@@ -36,54 +36,27 @@
   },
   "applications": {
     "title": "Applications",
-    "no_applications": "No applications yet.",
-    "domains": "Domains",
-    "origins": "Origins"
+    "description": "Manage your protected applications.",
+    "new_application": "New Application"
   },
   "gateways": {
     "title": "Gateways",
-    "no_gateways": "No gateways registered.",
+    "description": "Gateway fleet and node status.",
+    "edit": "Edit Gateway",
     "hostname": "Hostname",
-    "status": "Status",
-    "version": "Version",
-    "last_seen": "Last Seen",
-    "applied_hash": "Applied Hash"
+    "ip": "IP Address"
   },
   "security_events": {
     "title": "Security Events",
-    "no_events": "No security events yet.",
-    "severity": "Severity",
-    "time": "Time",
-    "method": "Method",
-    "path": "Path",
-    "reason": "Reason",
-    "rules": "Rules",
-    "client_ip": "Client IP"
+    "description": "Inspected and blocked requests."
   },
   "users": {
     "title": "Users & Access",
-    "description": "Manage user accounts, roles, and access controls for this workspace.",
-    "add_user": "Add User",
-    "name": "Name",
-    "email": "Email",
-    "role": "Role",
-    "status": "Status",
-    "last_login": "Last Login",
-    "actions": "Actions",
-    "active": "Active",
-    "invited": "Invited"
+    "description": "Manage users, roles, and access."
   },
   "audit": {
     "title": "Audit Log",
-    "description": "Immutable, append-only record of all configuration changes and security events.",
-    "immutable_note": "This log is append-only. No entries can be edited or deleted. All mutations are recorded with actor identity, timestamp, and request ID.",
-    "no_events": "No audit events yet. Configuration changes will appear here.",
-    "time": "Time",
-    "action": "Action",
-    "resource": "Resource",
-    "actor": "Actor",
-    "ip": "IP Address",
-    "request_id": "Request ID"
+    "description": "Immutable record of all management actions."
   },
   "loading": {
     "title": "Loading...",
@@ -97,5 +70,113 @@
   "notFound": {
     "message": "The page you are looking for does not exist.",
     "home": "Back to Overview"
+  },
+  "common": {
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "test": "Test",
+    "sync": "Sync",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "creating": "Creating…",
+    "enable": "Enable",
+    "disable": "Disable",
+    "close": "Close",
+    "reopen": "Reopen",
+    "escalate": "Escalate",
+    "activate": "Activate",
+    "rollback": "Rollback",
+    "clone": "Clone",
+    "export": "Export",
+    "download": "Download",
+    "view": "View",
+    "restore": "Restore",
+    "name": "Name",
+    "description": "Description",
+    "status": "Status",
+    "severity": "Severity",
+    "action": "Action",
+    "back_to_list": "← Back to list"
+  },
+  "policies": {
+    "title": "Security Policies",
+    "description": "Manage WAF security policies.",
+    "new_policy": "New Security Policy",
+    "name": "Name",
+    "mode": "Mode",
+    "application": "Application",
+    "version": "Version",
+    "detail": "Policy Detail",
+    "no_policies": "No security policies yet.",
+    "version_history": "Version History",
+    "no_versions": "No version history available."
+  },
+  "incidents": {
+    "title": "Incidents",
+    "description": "Track and respond to security incidents.",
+    "new_incident": "New Incident",
+    "owner": "Owner",
+    "events": "Events",
+    "created": "Created",
+    "no_incidents": "No incidents yet."
+  },
+  "integrations": {
+    "title": "Integrations",
+    "description": "SIEM, logging, and notification integrations.",
+    "new_integration": "New Integration",
+    "type": "Type",
+    "endpoint": "Endpoint",
+    "log_types": "Log Types",
+    "enabled": "Enabled",
+    "no_integrations": "No integrations yet."
+  },
+  "reports": {
+    "title": "Reports",
+    "description": "Generate security, traffic, incident, and compliance reports.",
+    "generate": "Generate {kind}",
+    "no_reports": "No reports generated yet."
+  },
+  "settings": {
+    "title": "System Settings",
+    "description": "Configure system-wide options.",
+    "general": "General",
+    "security": "Security",
+    "localization": "Localization",
+    "retention": "Retention",
+    "save_changes": "Save Changes",
+    "saved": "Saved"
+  },
+  "certificates": {
+    "title": "Certificates",
+    "description": "TLS certificates and profiles."
+  },
+  "backups": {
+    "title": "Backups",
+    "description": "Backup and disaster recovery.",
+    "new_backup": "New Backup"
+  },
+  "traffic_control": {
+    "title": "Traffic Control",
+    "description": "IP lists and rate limiting.",
+    "ip_lists": "IP Lists",
+    "rate_limits": "Rate Limits"
+  },
+  "threat_intelligence": {
+    "title": "Threat Intelligence",
+    "description": "Manage threat intelligence feeds.",
+    "new_feed": "New Threat Feed"
+  },
+  "notification_channels": {
+    "title": "Notification Channels",
+    "description": "Configure alert delivery channels.",
+    "new_channel": "New Channel"
+  },
+  "license_page": {
+    "title": "License",
+    "description": "License status, usage, and entitlements."
   }
 }

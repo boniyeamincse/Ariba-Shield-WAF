@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Sidebar from "@/components/layout/Sidebar";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import { StatusBadge } from "@/components/shared/Badges";
@@ -22,6 +22,7 @@ type Usage = {
 
 export default function LicensePage() {
   const locale = useLocale();
+  const t = useTranslations("license_page");
   const [license, setLicense] = useState<License | null>(null);
   const [usage, setUsage] = useState<Usage>({});
   const [entitlements, setEntitlements] = useState<Record<string, boolean>>({});
@@ -92,7 +93,7 @@ export default function LicensePage() {
       <main className="main-content">
         <div className="top-header animate-fade-in">
           <div className="header-title">
-            <h1>License</h1>
+            <h1>{t("title")}</h1>
             <p style={{ color: "var(--text-secondary)" }}>License status, usage, and entitlements.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
