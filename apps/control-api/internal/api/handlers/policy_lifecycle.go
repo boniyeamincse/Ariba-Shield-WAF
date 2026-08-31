@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/ariba-shield/control-api/internal/store"
 )
@@ -87,7 +90,7 @@ func ValidatePolicy(st *store.Store) http.HandlerFunc {
 	}
 }
 
-// ActivatePolicy activates the latest APPROVED/CANARY version (atomic switch).
+	// ActivatePolicy activates the latest APPROVED/CANARY version (atomic switch).
 func ActivatePolicy(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
@@ -113,8 +116,80 @@ func ActivatePolicy(st *store.Store) http.HandlerFunc {
 			`UPDATE security_policies SET lifecycle_status = 'active', active_version_id = $1, version = version + 1, updated_at = now() WHERE id = $2`,
 			versionID, id)
 
+		// MVP PUSH AUTOMATION
+		// Read document to generate WAF rules locally (since pull architecture is Phase 2)
+		var doc []byte
+		if err := st.Pool.QueryRow(r.Context(), `SELECT document FROM policy_versions WHERE id = $1`, versionID).Scan(&doc); err == nil {
+			go pushToWAFEngine(doc)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"id": id, "active_version_id": versionID, "lifecycle_status": "active"})
+	}
+}
+
+func pushToWAFEngine(doc []byte) {
+	var p struct {
+		ConfigID string  `json:"config_id"`
+		WAF      *wafDoc `json:"waf,omitempty"`
+	}
+	if err := json.Unmarshal(doc, &p); err != nil {
+		return
+	}
+
+	var buf bytes.Buffer
+	if p.WAF == nil || !p.WAF.Enabled {
+		buf.WriteString("# Ariba Shield WAF — Minimal Baseline Configuration\n")
+		buf.WriteString("Include @coraza.conf-recommended\n")
+		buf.WriteString("SecRuleEngine DetectionOnly\n")
+		buf.WriteString("SecRequestBodyAccess On\n")
+		buf.WriteString("SecRequestBodyLimit 13107200\n")
+		buf.WriteString("SecRequestBodyNoFilesLimit 131072\n")
+		buf.WriteString("SecResponseBodyAccess Off\n")
+		buf.WriteString("SecPcreMatchLimit 100000\n")
+		buf.WriteString("SecPcreMatchLimitRecursion 100000\n\n")
+		buf.WriteString("Include @crs-setup.conf.example\n")
+		buf.WriteString("SecAction \"id:900000,phase:1,nolog,pass,t:none,setvar:tx.paranoia_level=1\"\n")
+		buf.WriteString("Include @owasp_crs/*.conf\n")
+		buf.WriteString("SecAction \"id:900001,phase:1,nolog,pass,t:none,setvar:tx.blocking_anomaly_score=5\"\n")
+	} else {
+		buf.WriteString("# Ariba Shield WAF — Dynamically Generated Configuration\n")
+		buf.WriteString(fmt.Sprintf("# config_id=%s\n\n", p.ConfigID))
+		buf.WriteString("Include @coraza.conf-recommended\n\n")
+		buf.WriteString("SecRuleEngine On\n")
+		buf.WriteString("SecRequestBodyAccess On\n")
+		buf.WriteString("SecRequestBodyLimit 13107200\n")
+		buf.WriteString("SecRequestBodyNoFilesLimit 131072\n")
+		buf.WriteString("SecResponseBodyAccess Off\n")
+		buf.WriteString("SecPcreMatchLimit 100000\n")
+		buf.WriteString("SecPcreMatchLimitRecursion 100000\n\n")
+
+		buf.WriteString("# --- CRS Setup ---\n")
+		buf.WriteString("Include @crs-setup.conf.example\n\n")
+
+		pl := p.WAF.ParanoiaLevel
+		if pl < 1 || pl > 4 {
+			pl = 1
+		}
+		buf.WriteString(fmt.Sprintf("SecAction \"id:900000,phase:1,nolog,pass,t:none,setvar:tx.paranoia_level=%d\"\n\n", pl))
+		buf.WriteString("# --- OWASP CRS Managed Rules ---\n")
+		buf.WriteString("Include @owasp_crs/*.conf\n\n")
+
+		thresh := p.WAF.AnomalyThreshold
+		if thresh <= 0 {
+			thresh = 5
+		}
+		buf.WriteString("# --- Anomaly Score Threshold ---\n")
+		buf.WriteString(fmt.Sprintf("SecAction \"id:900001,phase:1,nolog,pass,t:none,setvar:tx.blocking_anomaly_score=%d\"\n", thresh))
+	}
+
+	// Write to shared volume
+	_ = os.WriteFile("/rules/crs.conf", buf.Bytes(), 0644)
+
+	// Trigger WAF engine atomic reload
+	resp, err := http.Post("http://waf-engine:8082/__reload", "application/json", nil)
+	if err == nil {
+		resp.Body.Close()
 	}
 }
 

@@ -56,6 +56,8 @@ services:
       ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:?set ADMIN_INITIAL_PASSWORD in .env}
     ports:
       - "8443:8443"
+    volumes:
+      - waf-config:/rules
     depends_on:
       postgres:
         condition: service_healthy

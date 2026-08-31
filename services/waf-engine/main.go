@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -64,9 +65,42 @@ func main() {
 		eng.SetRateLimit(*rateLimitRoute, *rateLimit, time.Minute)
 	}
 
+	var handler atomic.Value
+	handler.Store(eng.Handler())
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/__reload", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		newEng, err := engine.New(cfg)
+		if err != nil {
+			slog.Error("reload failed to init engine", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if *allowedIPs != "" || *blockedIPs != "" {
+			allowed := splitCSV(*allowedIPs)
+			blocked := splitCSV(*blockedIPs)
+			_ = newEng.SetIPLists(allowed, blocked)
+		}
+		if *rateLimit > 0 {
+			newEng.SetRateLimit(*rateLimitRoute, *rateLimit, time.Minute)
+		}
+		handler.Store(newEng.Handler())
+		slog.Info("waf-engine reloaded rules successfully")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		h := handler.Load().(http.Handler)
+		h.ServeHTTP(w, r)
+	})
+
 	srv := &http.Server{
 		Addr:              *listen,
-		Handler:           eng.Handler(),
+		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
