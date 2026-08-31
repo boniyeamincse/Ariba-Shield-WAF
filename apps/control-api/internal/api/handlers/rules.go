@@ -47,6 +47,15 @@ type RuleFull struct {
 	Action      string           `json:"action"`   // allow | log | block | challenge | rate_limit
 	Status      string           `json:"status"`   // active | disabled
 	Logic       string           `json:"logic"`    // AND | OR
+	// F5-style signature metadata
+	AttackType  string `json:"attack_type,omitempty"`
+	PatternType string `json:"pattern_type,omitempty"`
+	Accuracy    int    `json:"accuracy,omitempty"`
+	Risk        string `json:"risk,omitempty"`
+	Confidence  int    `json:"confidence,omitempty"`
+	Source      string `json:"source,omitempty"`
+	Staging     bool   `json:"staging,omitempty"`
+	Remediation string `json:"remediation,omitempty"`
 	Conditions  []RuleCondition  `json:"conditions"`
 	Scopes      []RuleScope      `json:"scopes"`
 	Version     int64            `json:"version"`
@@ -62,11 +71,15 @@ func GetRule(st *store.Store) http.HandlerFunc {
 		if err := st.Pool.QueryRow(r.Context(),
 			`SELECT id, rule_id, name, COALESCE(description,''), COALESCE(type,'custom'),
 			        COALESCE(category,''), severity, COALESCE(priority,0), action, status,
-			        COALESCE(logic,'AND'), version
+			        COALESCE(logic,'AND'), version,
+			        COALESCE(attack_type,''), COALESCE(pattern_type,'regex'), COALESCE(accuracy,85),
+			        COALESCE(risk,'medium'), COALESCE(confidence,80), COALESCE(source,'ariba-core'),
+			        COALESCE(staging,false), COALESCE(remediation,'')
 			 FROM rules WHERE id = $1`, id).
 			Scan(&rule.ID, &rule.RuleID, &rule.Name, &rule.Description, &rule.Type,
 				&rule.Category, &rule.Severity, &rule.Priority, &rule.Action, &rule.Status,
-				&rule.Logic, &rule.Version); err != nil {
+				&rule.Logic, &rule.Version, &rule.AttackType, &rule.PatternType, &rule.Accuracy,
+				&rule.Risk, &rule.Confidence, &rule.Source, &rule.Staging, &rule.Remediation); err != nil {
 			http.Error(w, `{"error":"rule not found"}`, http.StatusNotFound)
 			return
 		}
@@ -123,6 +136,14 @@ func CreateRule(st *store.Store) http.HandlerFunc {
 		Action      string          `json:"action"`
 		Status      string          `json:"status"`
 		Logic       string          `json:"logic"`
+		AttackType  string          `json:"attack_type"`
+		PatternType string          `json:"pattern_type"`
+		Accuracy    int             `json:"accuracy"`
+		Risk        string          `json:"risk"`
+		Confidence  int             `json:"confidence"`
+		Source      string          `json:"source"`
+		Staging     bool            `json:"staging"`
+		Remediation string          `json:"remediation"`
 		Conditions  []RuleCondition `json:"conditions"`
 		Scopes      []RuleScope     `json:"scopes"`
 	}
@@ -172,10 +193,14 @@ func CreateRule(st *store.Store) http.HandlerFunc {
 		defer tx.Rollback(r.Context())
 
 		if _, err := tx.Exec(r.Context(),
-			`INSERT INTO rules (id, organization_id, rule_id, name, description, type, category, severity, priority, action, status, logic, version)
-			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)`,
+			`INSERT INTO rules (id, organization_id, rule_id, name, description, type, category, severity, priority, action, status, logic, version,
+			                   attack_type, pattern_type, accuracy, risk, confidence, source, staging, remediation)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1,$13,$14,$15,$16,$17,$18,$19,$20)`,
 			id, orgID, body.RuleID, body.Name, body.Description, body.Type, body.Category,
-			body.Severity, body.Priority, body.Action, body.Status, body.Logic); err != nil {
+			body.Severity, body.Priority, body.Action, body.Status, body.Logic,
+			body.AttackType, defStr(body.PatternType, "regex"), intDef(body.Accuracy, 85),
+			defStr(body.Risk, "medium"), intDef(body.Confidence, 80), defStr(body.Source, "ariba-core"),
+			body.Staging, body.Remediation); err != nil {
 			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
 			return
 		}
@@ -255,7 +280,10 @@ func ListRules(st *store.Store) http.HandlerFunc {
 		rows, err := st.Pool.Query(r.Context(),
 			`SELECT id, rule_id, name, COALESCE(description,''), COALESCE(type,'custom'),
 			        COALESCE(category,''), severity, COALESCE(priority,0), action, status,
-			        COALESCE(logic,'AND'), version
+			        COALESCE(logic,'AND'), version,
+			        COALESCE(attack_type,''), COALESCE(pattern_type,'regex'), COALESCE(accuracy,85),
+			        COALESCE(risk,'medium'), COALESCE(confidence,80), COALESCE(source,'ariba-core'),
+			        COALESCE(staging,false), COALESCE(remediation,'')
 			 FROM rules WHERE `+where+` ORDER BY priority ASC, name ASC`, args...)
 		if err != nil {
 			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
@@ -268,7 +296,8 @@ func ListRules(st *store.Store) http.HandlerFunc {
 			var rr ruleRow
 			if err := rows.Scan(&rr.ID, &rr.RuleID, &rr.Name, &rr.Description, &rr.Type,
 				&rr.Category, &rr.Severity, &rr.Priority, &rr.Action, &rr.Status,
-				&rr.Logic, &rr.Version); err == nil {
+				&rr.Logic, &rr.Version, &rr.AttackType, &rr.PatternType, &rr.Accuracy,
+				&rr.Risk, &rr.Confidence, &rr.Source, &rr.Staging, &rr.Remediation); err == nil {
 				rules = append(rules, rr)
 			}
 		}
@@ -802,3 +831,19 @@ func RollbackRuleBundle(st *store.Store) http.HandlerFunc {
 	}
 }
 
+
+// defStr returns val if non-empty, else fallback.
+func defStr(val, fallback string) string {
+	if val == "" {
+		return fallback
+	}
+	return val
+}
+
+// intDef returns val if non-zero, else fallback.
+func intDef(val, fallback int) int {
+	if val == 0 {
+		return fallback
+	}
+	return val
+}
