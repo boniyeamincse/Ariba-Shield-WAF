@@ -489,6 +489,9 @@ export type ManagedRule = {
   category: string;
   enabled: boolean;
   sensitivity: string;
+  paranoia_level: number;
+  action: string;
+  anomaly_threshold: number;
   status: string;
 };
 
@@ -496,9 +499,16 @@ export function listManagedRules(): Promise<ManagedRule[]> {
   return request<ManagedRule[]>("/managed-rules");
 }
 
-export function updateManagedRule(id: string, patch: { enabled?: boolean; sensitivity?: string }): Promise<{ id: string }> {
+export function updateManagedRule(id: string, patch: { enabled?: boolean; sensitivity?: string; paranoia_level?: number; action?: string; anomaly_threshold?: number }): Promise<{ id: string }> {
   return request<{ id: string }>(`/managed-rules/${id}`, {
-    method: "POST", // Backend uses POST for configuring
+    method: "POST",
+    body: JSON.stringify(patch),
+  });
+}
+
+export function updateManagedRulesGlobal(patch: { enabled?: boolean; paranoia_level?: number; anomaly_threshold?: number }): Promise<{ status: string }> {
+  return request<{ status: string }>("/managed-rules/global", {
+    method: "POST",
     body: JSON.stringify(patch),
   });
 }
