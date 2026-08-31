@@ -11,16 +11,89 @@ type application struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Environment string `json:"environment"`
 	Status      string `json:"status"`
 	OwnerUserID string `json:"owner_user_id,omitempty"`
 	Version     int64  `json:"version"`
+	Tags        []string `json:"tags,omitempty"`
+
+	Domain              string `json:"domain,omitempty"`
+	OriginType          string `json:"origin_type,omitempty"`
+	OriginHost          string `json:"origin_host,omitempty"`
+	OriginPort          int    `json:"origin_port,omitempty"`
+	OriginProtocol      string `json:"origin_protocol,omitempty"`
+	OriginPath          string `json:"origin_path,omitempty"`
+	OriginLoadBalancing string `json:"origin_load_balancing,omitempty"`
+
+	WAFPolicyID string `json:"waf_policy_id,omitempty"`
+	WAFMode     string `json:"waf_mode,omitempty"`
+
+	TLSEnabled    bool   `json:"tls_enabled"`
+	CertificateID string `json:"certificate_id,omitempty"`
+	MinTLSVersion string `json:"min_tls_version"`
+	HTTPRedirect  bool   `json:"http_redirect"`
+
+	RateLimitEnabled bool `json:"rate_limit_enabled"`
+	RateLimit        int  `json:"rate_limit"`
+
+	HealthCheckEnabled       bool `json:"health_check_enabled"`
+	HealthCheckMethod        string `json:"health_check_method"`
+	HealthCheckPath          string `json:"health_check_path"`
+	HealthCheckInterval      int    `json:"health_check_interval"`
+	HealthCheckTimeout       int    `json:"health_check_timeout"`
+	HealthCheckRetries       int    `json:"health_check_retries"`
+	HealthCheckExpectedStatus int   `json:"health_check_expected_status"`
+
+	RequestBodyLimitMB int    `json:"request_body_limit_mb"`
+	ConnectionTimeoutS int    `json:"connection_timeout_s"`
+	KeepAlive          bool   `json:"keep_alive"`
+	RealClientIPHeader string `json:"real_client_ip_header"`
+	LogRequestHeaders  bool   `json:"log_request_headers"`
+	LogResponseStatus  bool   `json:"log_response_status"`
+}
+
+// appSelect is the shared column list used by list + detail queries.
+const appSelect = `id, name, COALESCE(description,''), COALESCE(environment,'production'), status,
+	COALESCE(owner_user_id,''), version, COALESCE(tags,'{}'),
+	COALESCE(domain,''), COALESCE(origin_type,'ip'), COALESCE(origin_host,''),
+	COALESCE(origin_port,0), COALESCE(origin_protocol,'https'), COALESCE(origin_path,'/'),
+	COALESCE(origin_load_balancing,'single'),
+	COALESCE(waf_policy_id,''), COALESCE(waf_mode,'block'),
+	COALESCE(tls_enabled,false), COALESCE(certificate_id,''), COALESCE(min_tls_version,'1.2'),
+	COALESCE(http_redirect,false),
+	COALESCE(rate_limit_enabled,false), COALESCE(rate_limit,0),
+	COALESCE(health_check_enabled,false), COALESCE(health_check_method,'GET'),
+	COALESCE(health_check_path,'/health'), COALESCE(health_check_interval,30),
+	COALESCE(health_check_timeout,5), COALESCE(health_check_retries,3),
+	COALESCE(health_check_expected_status,200),
+	COALESCE(request_body_limit_mb,10), COALESCE(connection_timeout_s,30),
+	COALESCE(keep_alive,true), COALESCE(real_client_ip_header,'X-Forwarded-For'),
+	COALESCE(log_request_headers,true), COALESCE(log_response_status,true)`
+
+func scanApplication(row interface{ Scan(...any) error }) (*application, error) {
+	var a application
+	err := row.Scan(
+		&a.ID, &a.Name, &a.Description, &a.Environment, &a.Status,
+		&a.OwnerUserID, &a.Version, &a.Tags,
+		&a.Domain, &a.OriginType, &a.OriginHost, &a.OriginPort, &a.OriginProtocol, &a.OriginPath, &a.OriginLoadBalancing,
+		&a.WAFPolicyID, &a.WAFMode,
+		&a.TLSEnabled, &a.CertificateID, &a.MinTLSVersion, &a.HTTPRedirect,
+		&a.RateLimitEnabled, &a.RateLimit,
+		&a.HealthCheckEnabled, &a.HealthCheckMethod, &a.HealthCheckPath,
+		&a.HealthCheckInterval, &a.HealthCheckTimeout, &a.HealthCheckRetries, &a.HealthCheckExpectedStatus,
+		&a.RequestBodyLimitMB, &a.ConnectionTimeoutS, &a.KeepAlive,
+		&a.RealClientIPHeader, &a.LogRequestHeaders, &a.LogResponseStatus,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
 }
 
 // ListApplications returns all applications visible to the caller.
 func ListApplications(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rows, err := st.Pool.Query(r.Context(),
-			`SELECT id, name, description, status, COALESCE(owner_user_id, ''), version FROM applications ORDER BY name`)
+		rows, err := st.Pool.Query(r.Context(), `SELECT `+appSelect+` FROM applications ORDER BY name`)
 		if err != nil {
 			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
 			return
@@ -29,12 +102,12 @@ func ListApplications(st *store.Store) http.HandlerFunc {
 
 		var apps []application
 		for rows.Next() {
-			var a application
-			if err := rows.Scan(&a.ID, &a.Name, &a.Description, &a.Status, &a.OwnerUserID, &a.Version); err != nil {
+			a, err := scanApplication(rows)
+			if err != nil {
 				http.Error(w, `{"error":"scan failed"}`, http.StatusInternalServerError)
 				return
 			}
-			apps = append(apps, a)
+			apps = append(apps, *a)
 		}
 		if apps == nil {
 			apps = []application{}
@@ -234,12 +307,49 @@ func CreateApplication(st *store.Store) http.HandlerFunc {
 	}
 }
 
-// UpdateApplication updates an application (PATCH semantics).
+// UpdateApplication updates an application (PATCH semantics). All wizard
+// fields are accepted as pointers so omitted fields are left unchanged.
 func UpdateApplication(st *store.Store) http.HandlerFunc {
 	type applicationUpdate struct {
-		Name        *string `json:"name"`
-		Description *string `json:"description"`
-		Status      *string `json:"status"`
+		Name        *string  `json:"name"`
+		Description *string  `json:"description"`
+		Environment *string  `json:"environment"`
+		Status      *string  `json:"status"`
+		Tags        *[]string `json:"tags"`
+
+		Domain              *string `json:"domain"`
+		OriginType          *string `json:"origin_type"`
+		OriginHost          *string `json:"origin_host"`
+		OriginPort          *int    `json:"origin_port"`
+		OriginProtocol      *string `json:"origin_protocol"`
+		OriginPath          *string `json:"origin_path"`
+		OriginLoadBalancing *string `json:"origin_load_balancing"`
+
+		WAFPolicyID *string `json:"waf_policy_id"`
+		WAFMode     *string `json:"waf_mode"`
+
+		TLSEnabled    *bool   `json:"tls_enabled"`
+		CertificateID *string `json:"certificate_id"`
+		MinTLSVersion *string `json:"min_tls_version"`
+		HTTPRedirect  *bool   `json:"http_redirect"`
+
+		RateLimitEnabled *bool `json:"rate_limit_enabled"`
+		RateLimit        *int  `json:"rate_limit"`
+
+		HealthCheckEnabled        *bool   `json:"health_check_enabled"`
+		HealthCheckMethod         *string `json:"health_check_method"`
+		HealthCheckPath           *string `json:"health_check_path"`
+		HealthCheckInterval       *int    `json:"health_check_interval"`
+		HealthCheckTimeout        *int    `json:"health_check_timeout"`
+		HealthCheckRetries        *int    `json:"health_check_retries"`
+		HealthCheckExpectedStatus *int    `json:"health_check_expected_status"`
+
+		RequestBodyLimitMB *int    `json:"request_body_limit_mb"`
+		ConnectionTimeoutS *int    `json:"connection_timeout_s"`
+		KeepAlive          *bool   `json:"keep_alive"`
+		RealClientIPHeader *string `json:"real_client_ip_header"`
+		LogRequestHeaders  *bool   `json:"log_request_headers"`
+		LogResponseStatus  *bool   `json:"log_response_status"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -250,38 +360,98 @@ func UpdateApplication(st *store.Store) http.HandlerFunc {
 			return
 		}
 
-		// Verify exists + read current values for partial update.
-		var name, description, status string
+		// Verify exists.
+		var exists int
 		if err := st.Pool.QueryRow(r.Context(),
-			`SELECT name, COALESCE(description,''), status FROM applications WHERE id = $1`, appID).
-			Scan(&name, &description, &status); err != nil {
+			`SELECT 1 FROM applications WHERE id = $1`, appID).Scan(&exists); err != nil {
 			http.Error(w, `{"error":"application not found"}`, http.StatusNotFound)
 			return
 		}
 
-		if body.Name != nil {
-			name = *body.Name
-		}
-		if body.Description != nil {
-			description = *body.Description
-		}
-		if body.Status != nil {
-			if *body.Status != "active" && *body.Status != "disabled" {
-				http.Error(w, `{"error":"status must be active or disabled"}`, http.StatusBadRequest)
-				return
-			}
-			status = *body.Status
-		}
-
-		if _, err := st.Pool.Exec(r.Context(),
-			`UPDATE applications SET name = $1, description = $2, status = $3, version = version + 1, updated_at = now() WHERE id = $4`,
-			name, description, status, appID); err != nil {
+		// Dynamic SET using COALESCE so nil pointers leave fields unchanged.
+		// Coalesce with the existing column value for text; for non-nullable
+		// boolean/int columns coalesce against their default.
+		_, err := st.Pool.Exec(r.Context(),
+			`UPDATE applications SET
+			   name = COALESCE($2, name),
+			   description = COALESCE($3, description),
+			   environment = COALESCE($4, environment),
+			   status = COALESCE($5, status),
+			   tags = COALESCE($6, tags),
+			   domain = COALESCE($7, domain),
+			   origin_type = COALESCE($8, origin_type),
+			   origin_host = COALESCE($9, origin_host),
+			   origin_port = COALESCE($10, origin_port),
+			   origin_protocol = COALESCE($11, origin_protocol),
+			   origin_path = COALESCE($12, origin_path),
+			   origin_load_balancing = COALESCE($13, origin_load_balancing),
+			   waf_policy_id = COALESCE($14, waf_policy_id),
+			   waf_mode = COALESCE($15, waf_mode),
+			   tls_enabled = COALESCE($16, tls_enabled),
+			   certificate_id = COALESCE($17, certificate_id),
+			   min_tls_version = COALESCE($18, min_tls_version),
+			   http_redirect = COALESCE($19, http_redirect),
+			   rate_limit_enabled = COALESCE($20, rate_limit_enabled),
+			   rate_limit = COALESCE($21, rate_limit),
+			   health_check_enabled = COALESCE($22, health_check_enabled),
+			   health_check_method = COALESCE($23, health_check_method),
+			   health_check_path = COALESCE($24, health_check_path),
+			   health_check_interval = COALESCE($25, health_check_interval),
+			   health_check_timeout = COALESCE($26, health_check_timeout),
+			   health_check_retries = COALESCE($27, health_check_retries),
+			   health_check_expected_status = COALESCE($28, health_check_expected_status),
+			   request_body_limit_mb = COALESCE($29, request_body_limit_mb),
+			   connection_timeout_s = COALESCE($30, connection_timeout_s),
+			   keep_alive = COALESCE($31, keep_alive),
+			   real_client_ip_header = COALESCE($32, real_client_ip_header),
+			   log_request_headers = COALESCE($33, log_request_headers),
+			   log_response_status = COALESCE($34, log_response_status),
+			   version = version + 1,
+			   updated_at = now()
+			 WHERE id = $1`,
+			appID, body.Name, body.Description, body.Environment, body.Status, body.Tags,
+			body.Domain, body.OriginType, body.OriginHost, body.OriginPort, body.OriginProtocol,
+			body.OriginPath, body.OriginLoadBalancing,
+			body.WAFPolicyID, body.WAFMode,
+			body.TLSEnabled, body.CertificateID, body.MinTLSVersion, body.HTTPRedirect,
+			body.RateLimitEnabled, body.RateLimit,
+			body.HealthCheckEnabled, body.HealthCheckMethod, body.HealthCheckPath,
+			body.HealthCheckInterval, body.HealthCheckTimeout, body.HealthCheckRetries, body.HealthCheckExpectedStatus,
+			body.RequestBodyLimitMB, body.ConnectionTimeoutS, body.KeepAlive,
+			body.RealClientIPHeader, body.LogRequestHeaders, body.LogResponseStatus)
+		if err != nil {
 			http.Error(w, `{"error":"update failed"}`, http.StatusInternalServerError)
 			return
 		}
 
+		// Keep the primary domain row in sync if changed.
+		if body.Domain != nil && *body.Domain != "" {
+			if _, err := st.Pool.Exec(r.Context(),
+				`UPDATE domains SET hostname = $1 WHERE application_id = $2 AND id = (SELECT id FROM domains WHERE application_id = $2 ORDER BY created_at ASC LIMIT 1)`,
+				*body.Domain, appID); err == nil {
+				// ignore: domain update is best-effort
+			}
+		}
+
+		// Keep the primary origin row in sync if host/port/protocol changed.
+		if (body.OriginHost != nil && *body.OriginHost != "") || body.OriginPort != nil || body.OriginProtocol != nil {
+			if _, err := st.Pool.Exec(r.Context(),
+				`UPDATE origins SET
+				   host = COALESCE($1, host),
+				   port = COALESCE($2, port),
+				   protocol = COALESCE($3, protocol)
+				 WHERE application_id = $4 AND id = (SELECT id FROM origins WHERE application_id = $4 ORDER BY created_at ASC LIMIT 1)`,
+				body.OriginHost, body.OriginPort, body.OriginProtocol, appID); err == nil {
+				// ignore: origin update is best-effort
+			}
+		}
+
+		name := "application"
+		if body.Name != nil {
+			name = *body.Name
+		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"id": appID, "name": name, "status": status})
+		json.NewEncoder(w).Encode(map[string]any{"id": appID, "name": name})
 	}
 }
 

@@ -12,7 +12,6 @@ import { usePermission } from "@/hooks/usePermission";
 import ApplicationWizard from "@/components/applications/ApplicationWizard";
 import {
   listApplications,
-  updateApplication,
   deleteApplication,
   type Application,
 } from "@/lib/api";
@@ -30,7 +29,6 @@ export default function ApplicationsPage() {
   const [editing, setEditing] = useState<Application | null>(null);
   const [deleting, setDeleting] = useState<Application | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "" });
   const { can: canUser } = usePermission();
 
   const load = async () => {
@@ -51,27 +49,19 @@ export default function ApplicationsPage() {
   }, []);
 
   const openCreate = () => {
+    setEditing(null);
     setWizardOpen(true);
   };
 
   const openEdit = (app: Application) => {
-    setForm({ name: app.name, description: app.description ?? "" });
     setEditing(app);
+    setWizardOpen(true);
   };
 
-  const submitEdit = async () => {
-    if (!editing) return;
-    setSubmitting(true);
-    setError("");
-    try {
-      await updateApplication(editing.id, { name: form.name, description: form.description });
-      setEditing(null);
-      await load();
-    } catch {
-      setError("Failed to save application");
-    } finally {
-      setSubmitting(false);
-    }
+  const closeWizard = async () => {
+    setWizardOpen(false);
+    setEditing(null);
+    await load();
   };
 
   const confirmDelete = async () => {
@@ -99,9 +89,18 @@ export default function ApplicationsPage() {
         </Link>
       ),
     },
+    {
+      key: "environment",
+      label: "Environment",
+      render: (row) => <StatusBadge value={row.environment ?? "production"} />,
+    },
+    { key: "domain", label: "Domain", render: (row) => row.domain || "—" },
+    {
+      key: "origin_host",
+      label: "Origin",
+      render: (row) => (row.origin_host ? `${row.origin_host}:${row.origin_port ?? ""}` : "—"),
+    },
     { key: "status", label: "Status", render: (row) => <StatusBadge value={row.status} /> },
-    { key: "origins", label: "Origins", render: (row) => String(row.origins ?? "—") },
-    { key: "domains", label: "Domains", render: (row) => String(row.domains ?? "—") },
     { key: "version", label: "Version", render: (row) => String(row.version ?? "—") },
   ];
 
@@ -154,65 +153,13 @@ export default function ApplicationsPage() {
 
       {wizardOpen && (
         <ApplicationWizard
-          onClose={() => setWizardOpen(false)}
-          onCreated={async () => {
+          initial={editing}
+          onClose={() => {
             setWizardOpen(false);
-            await load();
+            setEditing(null);
           }}
+          onCreated={closeWizard}
         />
-      )}
-
-      {editing && (
-        <div
-          onClick={() => setEditing(null)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)",
-            display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
-          }}
-        >
-          <div
-            className="glass-panel animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: "440px", padding: "28px", display: "flex", flexDirection: "column", gap: "16px" }}
-          >
-            <h3 style={{ fontSize: "17px", fontWeight: 600 }}>
-              Edit Application
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                style={{
-                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                  padding: "10px 12px", borderRadius: "8px", color: "white", outline: "none", fontSize: "14px",
-                }}
-              />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Description</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={3}
-                style={{
-                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                  padding: "10px 12px", borderRadius: "8px", color: "white", outline: "none", fontSize: "14px",
-                  resize: "vertical",
-                }}
-              />
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
-              <button type="button" className="btn" onClick={() => setEditing(null)} disabled={submitting} style={{ padding: "10px 16px" }}>
-                {ct("cancel")}
-              </button>
-              <button type="button" className="btn btn-primary" onClick={submitEdit} disabled={submitting || !form.name} style={{ padding: "10px 16px" }}>
-                {submitting ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       <ConfirmDialog

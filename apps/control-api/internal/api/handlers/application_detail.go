@@ -11,17 +11,14 @@ import (
 func GetApplication(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		appID := r.PathValue("id")
-		var app application
-		err := st.Pool.QueryRow(r.Context(),
-			`SELECT id, name, COALESCE(description,''), status, COALESCE(owner_user_id,''), version
-			 FROM applications WHERE id = $1`, appID).
-			Scan(&app.ID, &app.Name, &app.Description, &app.Status, &app.OwnerUserID, &app.Version)
+		a, err := scanApplication(st.Pool.QueryRow(r.Context(),
+			`SELECT `+appSelect+` FROM applications WHERE id = $1`, appID))
 		if err != nil {
 			http.Error(w, `{"error":"application not found"}`, http.StatusNotFound)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(app)
+		json.NewEncoder(w).Encode(a)
 	}
 }
 

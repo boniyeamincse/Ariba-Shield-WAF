@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createApplication, type ApplicationCreatePayload } from "@/lib/api";
+import { createApplication, updateApplication, type Application, type ApplicationCreatePayload } from "@/lib/api";
 
 type FormState = ApplicationCreatePayload & {
   tagsInput: string;
@@ -49,11 +49,52 @@ const STEPS = ["Basic Information", "Domain & Origin", "Security & WAF", "Health
 type Props = {
   onClose: () => void;
   onCreated: () => void;
+  initial?: Application | null;
 };
 
-export default function ApplicationWizard({ onClose, onCreated }: Props) {
+export default function ApplicationWizard({ onClose, onCreated, initial }: Props) {
+  const isEdit = !!initial;
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<FormState>(() => {
+    const base = emptyForm();
+    if (!initial) return base;
+    return {
+      ...base,
+      ...(initial.environment ? { environment: initial.environment } : {}),
+      ...(initial.status ? { status: initial.status } : {}),
+      ...(initial.tags ? { tags: initial.tags } : {}),
+      name: initial.name ?? "",
+      description: initial.description ?? "",
+      domain: initial.domain ?? "",
+      origin_type: initial.origin_type ?? "ip",
+      origin_host: initial.origin_host ?? "",
+      origin_port: initial.origin_port ?? 443,
+      origin_protocol: initial.origin_protocol ?? "https",
+      origin_path: initial.origin_path ?? "/",
+      origin_load_balancing: initial.origin_load_balancing ?? "single",
+      waf_policy_id: initial.waf_policy_id ?? "",
+      waf_mode: initial.waf_mode ?? "block",
+      tls_enabled: initial.tls_enabled ?? false,
+      certificate_id: initial.certificate_id ?? "",
+      min_tls_version: initial.min_tls_version ?? "1.2",
+      http_redirect: initial.http_redirect ?? false,
+      rate_limit_enabled: initial.rate_limit_enabled ?? false,
+      rate_limit: initial.rate_limit ?? 1000,
+      health_check_enabled: initial.health_check_enabled ?? false,
+      health_check_method: initial.health_check_method ?? "GET",
+      health_check_path: initial.health_check_path ?? "/health",
+      health_check_interval: initial.health_check_interval ?? 30,
+      health_check_timeout: initial.health_check_timeout ?? 5,
+      health_check_retries: initial.health_check_retries ?? 3,
+      health_check_expected_status: initial.health_check_expected_status ?? 200,
+      request_body_limit_mb: initial.request_body_limit_mb ?? 10,
+      connection_timeout_s: initial.connection_timeout_s ?? 30,
+      keep_alive: initial.keep_alive ?? true,
+      real_client_ip_header: initial.real_client_ip_header ?? "X-Forwarded-For",
+      log_request_headers: initial.log_request_headers ?? true,
+      log_response_status: initial.log_response_status ?? true,
+    };
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -93,10 +134,14 @@ export default function ApplicationWizard({ onClose, onCreated }: Props) {
     try {
       const payload: ApplicationCreatePayload = { ...form };
       delete (payload as Partial<FormState>).tagsInput;
-      await createApplication(payload);
+      if (isEdit && initial) {
+        await updateApplication(initial.id, payload);
+      } else {
+        await createApplication(payload);
+      }
       onCreated();
     } catch {
-      setError("Failed to create application.");
+      setError(isEdit ? "Failed to update application." : "Failed to create application.");
     } finally {
       setSubmitting(false);
     }
@@ -122,7 +167,7 @@ export default function ApplicationWizard({ onClose, onCreated }: Props) {
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", overflowY: "auto" }}>
       <div className="glass-panel animate-fade-in" onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "640px", padding: "28px", display: "flex", flexDirection: "column", gap: "18px", maxHeight: "92vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ fontSize: "18px", fontWeight: 700 }}>New Application</h3>
+          <h3 style={{ fontSize: "18px", fontWeight: 700 }}>{isEdit ? "Edit Application" : "New Application"}</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: "20px", cursor: "pointer" }}>×</button>
         </div>
 
@@ -351,7 +396,7 @@ export default function ApplicationWizard({ onClose, onCreated }: Props) {
               <button type="button" className="btn btn-primary" onClick={next} style={{ padding: "10px 18px" }}>Next →</button>
             ) : (
               <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting} style={{ padding: "10px 18px" }}>
-                {submitting ? "Creating…" : "Create Application"}
+                {submitting ? "Saving…" : isEdit ? "Save Changes" : "Create Application"}
               </button>
             )}
           </div>
