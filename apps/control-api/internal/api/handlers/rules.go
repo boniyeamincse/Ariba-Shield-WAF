@@ -7,35 +7,366 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"net/netip"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/ariba-shield/control-api/internal/store"
 )
 
-// GetRule returns a single rule with its tags.
+// RuleCondition is a single match condition.
+type RuleCondition struct {
+	ID            string `json:"id,omitempty"`
+	GroupID       int    `json:"group_id"`
+	Field         string `json:"field"`
+	Operator      string `json:"operator"`
+	Value         string `json:"value"`
+	Transformation string `json:"transformation"`
+	CaseSensitive bool   `json:"case_sensitive"`
+}
+
+// RuleScope is where a rule applies.
+type RuleScope struct {
+	ID            string   `json:"id,omitempty"`
+	ApplicationID string   `json:"application_id,omitempty"`
+	PathPattern   string   `json:"path_pattern"`
+	Methods       []string `json:"methods,omitempty"`
+}
+
+// RuleFull is the full rule document used by the wizard + engine.
+type RuleFull struct {
+	ID          string           `json:"id"`
+	RuleID      string           `json:"rule_id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Type        string           `json:"type"`     // managed | custom
+	Category    string           `json:"category"` // sqli | xss | lfi | ...
+	Severity    string           `json:"severity"`
+	Priority    int              `json:"priority"`
+	Action      string           `json:"action"`   // allow | log | block | challenge | rate_limit
+	Status      string           `json:"status"`   // active | disabled
+	Logic       string           `json:"logic"`    // AND | OR
+	Conditions  []RuleCondition  `json:"conditions"`
+	Scopes      []RuleScope      `json:"scopes"`
+	Version     int64            `json:"version"`
+	CreatedAt   string           `json:"created_at,omitempty"`
+	UpdatedAt   string           `json:"updated_at,omitempty"`
+}
+
+// GetRule returns a single rule with its conditions and scopes.
 func GetRule(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		var rule struct {
-			ID          string `json:"id"`
-			RuleID      string `json:"rule_id"`
-			Name        string `json:"name"`
-			Description string `json:"description"`
-			Action      string `json:"action"`
-			Severity    string `json:"severity"`
-			Phase       int    `json:"phase"`
-			Status      string `json:"status"`
-			Version     int64  `json:"version"`
-		}
+		var rule RuleFull
 		if err := st.Pool.QueryRow(r.Context(),
-			`SELECT id, rule_id, name, COALESCE(description,''), action, severity, phase, status, version
+			`SELECT id, rule_id, name, COALESCE(description,''), COALESCE(type,'custom'),
+			        COALESCE(category,''), severity, COALESCE(priority,0), action, status,
+			        COALESCE(logic,'AND'), version
 			 FROM rules WHERE id = $1`, id).
-			Scan(&rule.ID, &rule.RuleID, &rule.Name, &rule.Description, &rule.Action,
-				&rule.Severity, &rule.Phase, &rule.Status, &rule.Version); err != nil {
+			Scan(&rule.ID, &rule.RuleID, &rule.Name, &rule.Description, &rule.Type,
+				&rule.Category, &rule.Severity, &rule.Priority, &rule.Action, &rule.Status,
+				&rule.Logic, &rule.Version); err != nil {
 			http.Error(w, `{"error":"rule not found"}`, http.StatusNotFound)
 			return
 		}
+
+		// Conditions.
+		condRows, err := st.Pool.Query(r.Context(),
+			`SELECT id, group_id, field, operator, value, COALESCE(transformation,''), case_sensitive
+			 FROM waf_rule_conditions WHERE rule_id = $1 ORDER BY group_id, created_at`, id)
+		if err == nil {
+			for condRows.Next() {
+				var c RuleCondition
+				if err := condRows.Scan(&c.ID, &c.GroupID, &c.Field, &c.Operator, &c.Value, &c.Transformation, &c.CaseSensitive); err == nil {
+					rule.Conditions = append(rule.Conditions, c)
+				}
+			}
+			condRows.Close()
+		}
+		if rule.Conditions == nil {
+			rule.Conditions = []RuleCondition{}
+		}
+
+		// Scopes.
+		scopeRows, err := st.Pool.Query(r.Context(),
+			`SELECT id, COALESCE(application_id,''), path_pattern, methods
+			 FROM waf_rule_scopes WHERE rule_id = $1`, id)
+		if err == nil {
+			for scopeRows.Next() {
+				var s RuleScope
+				if err := scopeRows.Scan(&s.ID, &s.ApplicationID, &s.PathPattern, &s.Methods); err == nil {
+					rule.Scopes = append(rule.Scopes, s)
+				}
+			}
+			scopeRows.Close()
+		}
+		if rule.Scopes == nil {
+			rule.Scopes = []RuleScope{}
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(rule)
+	}
+}
+
+// CreateRule creates a rule with conditions and scopes.
+func CreateRule(st *store.Store) http.HandlerFunc {
+	type createReq struct {
+		RuleID      string          `json:"rule_id"`
+		Name        string          `json:"name"`
+		Description string          `json:"description"`
+		Type        string          `json:"type"`
+		Category    string          `json:"category"`
+		Severity    string          `json:"severity"`
+		Priority    int             `json:"priority"`
+		Action      string          `json:"action"`
+		Status      string          `json:"status"`
+		Logic       string          `json:"logic"`
+		Conditions  []RuleCondition `json:"conditions"`
+		Scopes      []RuleScope     `json:"scopes"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body createReq
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+		if body.Name == "" || body.Conditions == nil || len(body.Conditions) == 0 {
+			http.Error(w, `{"error":"name and at least one condition required"}`, http.StatusBadRequest)
+			return
+		}
+		if body.RuleID == "" {
+			http.Error(w, `{"error":"rule_id required"}`, http.StatusBadRequest)
+			return
+		}
+		if body.Severity == "" {
+			body.Severity = "medium"
+		}
+		if body.Action == "" {
+			body.Action = "block"
+		}
+		if body.Status == "" {
+			body.Status = "active"
+		}
+		if body.Type == "" {
+			body.Type = "custom"
+		}
+		if body.Logic == "" {
+			body.Logic = "AND"
+		}
+
+		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+		id, err := st.NewID()
+		if err != nil {
+			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		tx, err := st.Pool.Begin(r.Context())
+		if err != nil {
+			http.Error(w, `{"error":"tx begin failed"}`, http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback(r.Context())
+
+		if _, err := tx.Exec(r.Context(),
+			`INSERT INTO rules (id, organization_id, rule_id, name, description, type, category, severity, priority, action, status, logic, version)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)`,
+			id, orgID, body.RuleID, body.Name, body.Description, body.Type, body.Category,
+			body.Severity, body.Priority, body.Action, body.Status, body.Logic); err != nil {
+			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		for _, c := range body.Conditions {
+			condID, _ := st.NewID()
+			if _, err := tx.Exec(r.Context(),
+				`INSERT INTO waf_rule_conditions (id, rule_id, group_id, field, operator, value, transformation, case_sensitive)
+				 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+				condID, id, c.GroupID, c.Field, c.Operator, c.Value, c.Transformation, c.CaseSensitive); err != nil {
+				http.Error(w, `{"error":"condition insert failed"}`, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		for _, s := range body.Scopes {
+			scopeID, _ := st.NewID()
+			if _, err := tx.Exec(r.Context(),
+				`INSERT INTO waf_rule_scopes (id, rule_id, application_id, path_pattern, methods)
+				 VALUES ($1,$2,$3,$4,$5)`,
+				scopeID, id, nullIfEmpty(s.ApplicationID), s.PathPattern, s.Methods); err != nil {
+				http.Error(w, `{"error":"scope insert failed"}`, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if err := tx.Commit(r.Context()); err != nil {
+			http.Error(w, `{"error":"tx commit failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]string{"id": id})
+	}
+}
+
+// ListRules returns rules with filters + pagination + conditions.
+func ListRules(st *store.Store) http.HandlerFunc {
+	type ruleRow struct {
+		RuleFull
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		category := r.URL.Query().Get("category")
+		ruleType := r.URL.Query().Get("type")
+		severity := r.URL.Query().Get("severity")
+		action := r.URL.Query().Get("action")
+		status := r.URL.Query().Get("status")
+		search := r.URL.Query().Get("q")
+
+		where := "1=1"
+		args := []any{}
+		add := func(cond string, val any) {
+			args = append(args, val)
+			where += " AND " + cond
+		}
+		if category != "" {
+			add("category = $"+strconv.Itoa(len(args)+1), category)
+		}
+		if ruleType != "" {
+			add("type = $"+strconv.Itoa(len(args)+1), ruleType)
+		}
+		if severity != "" {
+			add("severity = $"+strconv.Itoa(len(args)+1), severity)
+		}
+		if action != "" {
+			add("action = $"+strconv.Itoa(len(args)+1), action)
+		}
+		if status != "" {
+			add("status = $"+strconv.Itoa(len(args)+1), status)
+		}
+		if search != "" {
+			add("(name ILIKE $"+strconv.Itoa(len(args)+1)+" OR rule_id ILIKE $"+strconv.Itoa(len(args)+1)+")", "%"+search+"%")
+		}
+
+		rows, err := st.Pool.Query(r.Context(),
+			`SELECT id, rule_id, name, COALESCE(description,''), COALESCE(type,'custom'),
+			        COALESCE(category,''), severity, COALESCE(priority,0), action, status,
+			        COALESCE(logic,'AND'), version
+			 FROM rules WHERE `+where+` ORDER BY priority ASC, name ASC`, args...)
+		if err != nil {
+			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var rules []ruleRow
+		for rows.Next() {
+			var rr ruleRow
+			if err := rows.Scan(&rr.ID, &rr.RuleID, &rr.Name, &rr.Description, &rr.Type,
+				&rr.Category, &rr.Severity, &rr.Priority, &rr.Action, &rr.Status,
+				&rr.Logic, &rr.Version); err == nil {
+				rules = append(rules, rr)
+			}
+		}
+		if rules == nil {
+			rules = []ruleRow{}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(rules)
+	}
+}
+
+// DuplicateRule clones an existing rule with a new rule_id.
+func DuplicateRule(st *store.Store) http.HandlerFunc {
+	type dupReq struct {
+		NewRuleID string `json:"rule_id"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var body dupReq
+		_ = json.NewDecoder(r.Body).Decode(&body)
+
+		var src RuleFull
+		if err := st.Pool.QueryRow(r.Context(),
+			`SELECT id, rule_id, name, COALESCE(description,''), COALESCE(type,'custom'),
+			        COALESCE(category,''), severity, COALESCE(priority,0), action, status,
+			        COALESCE(logic,'AND')
+			 FROM rules WHERE id = $1`, id).
+			Scan(&src.ID, &src.RuleID, &src.Name, &src.Description, &src.Type,
+				&src.Category, &src.Severity, &src.Priority, &src.Action, &src.Status, &src.Logic); err != nil {
+			http.Error(w, `{"error":"rule not found"}`, http.StatusNotFound)
+			return
+		}
+
+		newID, _ := st.NewID()
+		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+		newRuleID := body.NewRuleID
+		if newRuleID == "" {
+			newRuleID = src.RuleID + "-COPY"
+		}
+
+		tx, err := st.Pool.Begin(r.Context())
+		if err != nil {
+			http.Error(w, `{"error":"tx begin failed"}`, http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback(r.Context())
+
+		if _, err := tx.Exec(r.Context(),
+			`INSERT INTO rules (id, organization_id, rule_id, name, description, type, category, severity, priority, action, status, logic, version)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,1)`,
+			newID, orgID, newRuleID, src.Name+" (copy)", src.Description, src.Type,
+			src.Category, src.Severity, src.Priority, src.Action, src.Status, src.Logic); err != nil {
+			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Copy conditions.
+		condRows, err := tx.Query(r.Context(),
+			`SELECT group_id, field, operator, value, COALESCE(transformation,''), case_sensitive
+			 FROM waf_rule_conditions WHERE rule_id = $1`, id)
+		if err == nil {
+			for condRows.Next() {
+				var c RuleCondition
+				if err := condRows.Scan(&c.GroupID, &c.Field, &c.Operator, &c.Value, &c.Transformation, &c.CaseSensitive); err == nil {
+					condID, _ := st.NewID()
+					_, _ = tx.Exec(r.Context(),
+						`INSERT INTO waf_rule_conditions (id, rule_id, group_id, field, operator, value, transformation, case_sensitive)
+						 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+						condID, newID, c.GroupID, c.Field, c.Operator, c.Value, c.Transformation, c.CaseSensitive)
+				}
+			}
+			condRows.Close()
+		}
+
+		// Copy scopes.
+		scopeRows, err := tx.Query(r.Context(),
+			`SELECT COALESCE(application_id,''), path_pattern, methods FROM waf_rule_scopes WHERE rule_id = $1`, id)
+		if err == nil {
+			for scopeRows.Next() {
+				var s RuleScope
+				if err := scopeRows.Scan(&s.ApplicationID, &s.PathPattern, &s.Methods); err == nil {
+					scopeID, _ := st.NewID()
+					_, _ = tx.Exec(r.Context(),
+						`INSERT INTO waf_rule_scopes (id, rule_id, application_id, path_pattern, methods)
+						 VALUES ($1,$2,$3,$4,$5)`,
+						scopeID, newID, nullIfEmpty(s.ApplicationID), s.PathPattern, s.Methods)
+				}
+			}
+			scopeRows.Close()
+		}
+
+		if err := tx.Commit(r.Context()); err != nil {
+			http.Error(w, `{"error":"tx commit failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"id": newID, "rule_id": newRuleID})
 	}
 }
 
@@ -50,7 +381,7 @@ func UpdateRule(st *store.Store) http.HandlerFunc {
 		}
 		sets := []string{}
 		vals := []any{}
-		for _, c := range []string{"name", "description", "action", "severity", "phase", "source", "status"} {
+		for _, c := range []string{"name", "description", "action", "severity", "phase", "source", "status", "category", "priority", "logic", "type"} {
 			if v, ok := body[c]; ok {
 				vals = append(vals, v)
 				sets = append(sets, c+" = $"+itoa(len(vals)))
@@ -126,46 +457,204 @@ func ListRuleVersions(st *store.Store) http.HandlerFunc {
 	}
 }
 
-// TestRule runs the rule against its regression test cases.
+// testRequest is the sample request sent to evaluate a rule.
+type testRequest struct {
+	Method  string              `json:"method"`
+	URL     string              `json:"url"`
+	Headers map[string]string   `json:"headers"`
+	Body    string              `json:"body"`
+}
+
+// evalCondition evaluates a single condition against a test request.
+func evalCondition(c RuleCondition, req testRequest) (bool, string) {
+	// Resolve the field value from the request.
+	var raw string
+	lower := func(s string) string {
+		if c.CaseSensitive {
+			return s
+		}
+		return strings.ToLower(s)
+	}
+	switch c.Field {
+	case "method":
+		raw = req.Method
+	case "url":
+		raw = req.URL
+	case "request_body", "body":
+		raw = req.Body
+	case "user_agent":
+		raw = req.Headers["User-Agent"]
+	case "host":
+		raw = req.Headers["Host"]
+	case "source_ip", "client_ip":
+		raw = req.Headers["X-Forwarded-For"]
+	case "header":
+		// Take the first header value (or match against all).
+		for _, v := range req.Headers {
+			raw += v + " "
+		}
+		raw = strings.TrimSpace(raw)
+	case "query_param", "query":
+		// Extract raw query string from URL.
+		if i := strings.Index(req.URL, "?"); i >= 0 {
+			raw = req.URL[i+1:]
+		}
+	default:
+		// Try to match against the whole request for unknown fields.
+		raw = req.Method + " " + req.URL + " " + req.Body
+	}
+
+	if c.Transformation == "lowercase" {
+		raw = strings.ToLower(raw)
+	}
+	// Normalize case.
+	fieldVal := lower(raw)
+	needle := lower(c.Value)
+
+	match := false
+	switch c.Operator {
+	case "equals":
+		match = fieldVal == needle
+	case "not_equals":
+		match = fieldVal != needle
+	case "contains":
+		match = strings.Contains(fieldVal, needle)
+	case "not_contains":
+		match = !strings.Contains(fieldVal, needle)
+	case "starts_with":
+		match = strings.HasPrefix(fieldVal, needle)
+	case "ends_with":
+		match = strings.HasSuffix(fieldVal, needle)
+	case "regex":
+		re, err := regexp.Compile(c.Value)
+		if err == nil {
+			match = re.MatchString(raw)
+		}
+	case "ip_match":
+		addr, err := netip.ParseAddr(strings.TrimSpace(raw))
+		if err == nil {
+			other, err2 := netip.ParseAddr(strings.TrimSpace(c.Value))
+			match = err2 == nil && addr == other
+		}
+	case "cidr_match":
+		addr, err := netip.ParseAddr(strings.TrimSpace(raw))
+		if err == nil {
+			prefix, err2 := netip.ParsePrefix(strings.TrimSpace(c.Value))
+			match = err2 == nil && prefix.Contains(addr)
+		}
+	case "gt":
+		l, e1 := strconv.ParseFloat(fieldVal, 64)
+		rv, e2 := strconv.ParseFloat(c.Value, 64)
+		match = e1 == nil && e2 == nil && l > rv
+	case "lt":
+		l, e1 := strconv.ParseFloat(fieldVal, 64)
+		rv, e2 := strconv.ParseFloat(c.Value, 64)
+		match = e1 == nil && e2 == nil && l < rv
+	}
+
+	return match, c.Field
+}
+
+// TestRule evaluates a rule's conditions against a provided test request.
 func TestRule(st *store.Store) http.HandlerFunc {
+	type testBody struct {
+		Method  string            `json:"method"`
+		URL     string            `json:"url"`
+		Headers map[string]string `json:"headers"`
+		Body    string            `json:"body"`
+	}
 	type result struct {
-		TestCase string `json:"test_case"`
-		Type     string `json:"test_type"`
-		Expected string `json:"expected"`
-		Passed   bool   `json:"passed"`
+		Matched bool   `json:"matched"`
+		Field   string `json:"field"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
+		var body testBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+		if body.Method == "" {
+			body.Method = "GET"
+		}
+		if body.Headers == nil {
+			body.Headers = map[string]string{}
+		}
+
+		// Load rule + conditions.
+		var rule RuleFull
+		if err := st.Pool.QueryRow(r.Context(),
+			`SELECT id, rule_id, name, COALESCE(action,'block'), COALESCE(logic,'AND'), severity, status
+			 FROM rules WHERE id = $1`, id).
+			Scan(&rule.ID, &rule.RuleID, &rule.Name, &rule.Action, &rule.Logic, &rule.Severity, &rule.Status); err != nil {
+			http.Error(w, `{"error":"rule not found"}`, http.StatusNotFound)
+			return
+		}
+
 		rows, err := st.Pool.Query(r.Context(),
-			`SELECT payload, test_type, expected FROM rule_tests WHERE rule_id = $1`, id)
+			`SELECT group_id, field, operator, value, COALESCE(transformation,''), case_sensitive
+			 FROM waf_rule_conditions WHERE rule_id = $1 ORDER BY group_id, created_at`, id)
 		if err != nil {
 			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
-
-		results := []result{}
-		allPassed := true
-		// The engine would evaluate payloads here; in this phase we record the
-		// regression cases and mark them passed (engine hook = Phase 2+).
 		for rows.Next() {
-			var payload, testType, expected string
-			if err := rows.Scan(&payload, &testType, &expected); err != nil {
+			var c RuleCondition
+			if err := rows.Scan(&c.GroupID, &c.Field, &c.Operator, &c.Value, &c.Transformation, &c.CaseSensitive); err == nil {
+				rule.Conditions = append(rule.Conditions, c)
+			}
+		}
+
+		// Evaluate: group by group_id, apply logic within group, then AND groups.
+		groups := map[int][]bool{}
+		groupMatches := map[int]bool{}
+		matchedFields := []string{}
+		groupResults := map[int][]result{}
+		for _, c := range rule.Conditions {
+			m, f := evalCondition(c, testRequest{Method: body.Method, URL: body.URL, Headers: body.Headers, Body: body.Body})
+			g := c.GroupID
+			groups[g] = append(groups[g], m)
+			groupResults[g] = append(groupResults[g], result{Matched: m, Field: f})
+			if m {
+				matchedFields = append(matchedFields, f)
+			}
+		}
+		for g, ms := range groups {
+			if len(ms) == 0 {
+				groupMatches[g] = false
 				continue
 			}
-			res := result{TestCase: payload, Type: testType, Expected: expected, Passed: true}
-			if !res.Passed {
-				allPassed = false
+			all := true
+			for _, m := range ms {
+				if !m {
+					all = false
+					break
+				}
 			}
-			results = append(results, res)
-			_, _ = st.Pool.Exec(r.Context(),
-				`UPDATE rule_tests SET passed = $1, last_run_at = now() WHERE rule_id = $2 AND payload = $3`,
-				true, id, payload)
+			groupMatches[g] = all
+		}
+		// All groups must match (AND across groups).
+		overall := true
+		for _, gm := range groupMatches {
+			if !gm {
+				overall = false
+				break
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"rule_id": id, "all_passed": allPassed, "results": results})
+		json.NewEncoder(w).Encode(map[string]any{
+			"rule_id":        rule.RuleID,
+			"rule_name":      rule.Name,
+			"matched":        overall,
+			"action":         rule.Action,
+			"severity":       rule.Severity,
+			"status":         rule.Status,
+			"matched_fields": matchedFields,
+			"groups":         groupResults,
+		})
 	}
 }
 

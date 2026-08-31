@@ -56,8 +56,8 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/policy-approvals/{id}/reject", handlers.RejectPolicyApproval(st))
 
 	// WAF Rules / Signatures (master plan §6.3)
-	mux.HandleFunc("GET /api/v1/rules", handlers.ListResource(st, handlers.CRUDConfig{Table: "rules", JSONName: "rule"}))
-	mux.HandleFunc("POST /api/v1/rules", handlers.CreateResource(st, handlers.CRUDConfig{Table: "rules", JSONName: "rule", Required: []string{"rule_id", "name"}, Columns: []string{"rule_id", "name", "description", "action", "severity", "phase", "source", "status"}}))
+	mux.HandleFunc("GET /api/v1/rules", handlers.ListRules(st))
+	mux.HandleFunc("POST /api/v1/rules", handlers.CreateRule(st))
 	mux.HandleFunc("GET /api/v1/rules/{id}", handlers.GetRule(st))
 	mux.HandleFunc("PATCH /api/v1/rules/{id}", handlers.UpdateRule(st))
 	mux.HandleFunc("DELETE /api/v1/rules/{id}", handlers.DeleteRule(st))
@@ -65,6 +65,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/rules/{id}/test", handlers.TestRule(st))
 	mux.HandleFunc("POST /api/v1/rules/{id}/enable", handlers.EnableRule(st))
 	mux.HandleFunc("POST /api/v1/rules/{id}/disable", handlers.DisableRule(st))
+	mux.HandleFunc("POST /api/v1/rules/{id}/duplicate", handlers.DuplicateRule(st))
 
 	// Rule Bundles
 	mux.HandleFunc("GET /api/v1/rule-bundles", handlers.ListResource(st, handlers.CRUDConfig{Table: "rule_bundles", JSONName: "bundle"}))
