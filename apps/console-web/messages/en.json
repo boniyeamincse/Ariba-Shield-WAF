@@ -20,6 +20,7 @@
     "traffic": "Traffic",
     "security_events": "Security Events",
     "policies": "Policies",
+    "rules": "Rules",
     "gateways_clusters": "Gateways & Clusters",
     "platform": "Platform",
     "integrations": "Integrations",
