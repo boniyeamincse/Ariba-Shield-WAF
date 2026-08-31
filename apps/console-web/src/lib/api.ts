@@ -480,6 +480,81 @@ export function exportSecurityEvent(id: string): Promise<{ id: string }> {
   return request<{ id: string }>(`/security-events/${id}/export`, { method: "POST" });
 }
 
+// ===== Rules =====
+
+export type RuleCondition = {
+  id?: string;
+  group_id: number;
+  field: string;
+  operator: string;
+  value: string;
+  transformation?: string;
+  case_sensitive?: boolean;
+};
+
+export type RuleScope = {
+  id?: string;
+  application_id?: string;
+  path_pattern: string;
+  methods?: string[];
+};
+
+export type RuleFull = {
+  id: string;
+  rule_id: string;
+  name: string;
+  description?: string;
+  type?: string;
+  category?: string;
+  severity: string;
+  priority?: number;
+  action: string;
+  status?: string;
+  logic?: string;
+  conditions?: RuleCondition[];
+  scopes?: RuleScope[];
+  version?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export function listRules(params?: Record<string, string>): Promise<RuleFull[]> {
+  const qs = new URLSearchParams(params ?? {}).toString();
+  return request<RuleFull[]>(`/rules${qs ? `?${qs}` : ""}`);
+}
+
+export function getRule(id: string): Promise<RuleFull> {
+  return request<RuleFull>(`/rules/${id}`);
+}
+
+export function createRule(payload: Partial<RuleFull>): Promise<{ id: string }> {
+  return request<{ id: string }>("/rules", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function updateRule(id: string, patch: Partial<RuleFull>): Promise<{ id: string }> {
+  return request<{ id: string }>(`/rules/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
+export function deleteRule(id: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/rules/${id}`, { method: "DELETE" });
+}
+
+export function duplicateRule(id: string, newRuleId?: string): Promise<{ id: string; rule_id: string }> {
+  return request<{ id: string; rule_id: string }>(`/rules/${id}/duplicate`, { method: "POST", body: JSON.stringify({ rule_id: newRuleId ?? "" }) });
+}
+
+export function testRule(id: string, payload: { method?: string; url?: string; headers?: Record<string, string>; body?: string }): Promise<{ matched: boolean; action: string; matched_fields: string[] }> {
+  return request<{ matched: boolean; action: string; matched_fields: string[] }>(`/rules/${id}/test`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function enableRule(id: string): Promise<{ id: string }> {
+  return request<{ id: string }>(`/rules/${id}/enable`, { method: "POST" });
+}
+
+export function disableRule(id: string): Promise<{ id: string }> {
+  return request<{ id: string }>(`/rules/${id}/disable`, { method: "POST" });
+}
+
 // ===== Incidents =====
 
 export function listIncidents(): Promise<Incident[]> {

@@ -12,9 +12,10 @@ export const ROLE_NAV: Record<string, NavItem[]> = {
     { href: "/security-events", labelKey: "security_events", roles: ["Super Admin", "Platform Admin", "Security Admin", "App Owner", "SOC Analyst", "Auditor", "Read Only"] },
     { href: "/incidents", labelKey: "incidents", roles: ["Super Admin", "Platform Admin", "Security Admin", "SOC Analyst"] },
   ],
-  protect: [
+protect: [
     { href: "/applications", labelKey: "applications" },
     { href: "/policies", labelKey: "policies", roles: ["Super Admin", "Platform Admin", "Security Admin", "App Owner"] },
+    { href: "/rules", labelKey: "rules", roles: ["Super Admin", "Platform Admin", "Security Admin", "App Owner"] },
     { href: "/traffic-control", labelKey: "traffic", roles: ["Super Admin", "Platform Admin", "Security Admin"] },
   ],
   platform: [
@@ -68,6 +69,7 @@ export const PAGE_ROLES: Record<string, string[]> = {
   "/integrations": ["Super Admin", "Platform Admin", "Security Admin"],
   "/notification-channels": ["Super Admin", "Platform Admin", "Security Admin"],
   "/policies": ["Super Admin", "Platform Admin", "Security Admin", "App Owner"],
+  "/rules": ["Super Admin", "Platform Admin", "Security Admin", "App Owner"],
   "/traffic-control": ["Super Admin", "Platform Admin", "Security Admin"],
   "/certificates": ["Super Admin", "Platform Admin", "Security Admin"],
   "/threat-intelligence": ["Super Admin", "Platform Admin", "Security Admin"],
