@@ -46,10 +46,16 @@ func Audit(pool *pgxpool.Pool, next http.Handler) http.Handler {
 			actor := AuditFromContext(r.Context())
 			reqID := RequestIDFromContext(r.Context())
 			id := ulid.Make().String()
+			// Use NULL actor for unauthenticated actions (e.g. login) so the
+			// audit_events FK to users(id) is not violated by an empty string.
+			var actorID any
+			if actor != "" {
+				actorID = actor
+			}
 			_, err := pool.Exec(context.Background(),
 				`INSERT INTO audit_events (id, organization_id, actor_user_id, action, resource_type, resource_id, ip, request_id, created_at)
 				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-				id, "01ARZ3NDEKTSV4RRFFQ69G5FAV", actor, r.Method,
+				id, "01ARZ3NDEKTSV4RRFFQ69G5FAV", actorID, r.Method,
 				r.URL.Path, r.URL.Path, r.RemoteAddr, reqID, time.Now().UTC())
 			if err != nil {
 				slog.Warn("audit write failed", "error", err, "path", r.URL.Path)
