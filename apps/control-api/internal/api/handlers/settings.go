@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/ariba-shield/control-api/internal/store"
 )
@@ -121,4 +123,17 @@ func GetRetentionSettings(st *store.Store) http.HandlerFunc {
 // UpdateRetentionSettings updates retention settings.
 func UpdateRetentionSettings(st *store.Store) http.HandlerFunc {
 	return UpdateSettings(st, "retention")
+}
+
+// sessionExpiry reads security.session_timeout_minutes from DB and returns
+// the expiry time, defaulting to 24h.
+func sessionExpiry(st *store.Store, ctx context.Context) time.Time {
+	minutes := 1440 // 24h default
+	st.Pool.QueryRow(ctx,
+		`SELECT value::text FROM system_settings
+		 WHERE organization_id='01ARZ3NDEKTSV4RRFFQ69G5FAV' AND category='security' AND key='session_timeout_minutes'`).Scan(&minutes)
+	if minutes <= 0 || minutes > 1440 {
+		minutes = 1440
+	}
+	return time.Now().Add(time.Duration(minutes) * time.Minute)
 }

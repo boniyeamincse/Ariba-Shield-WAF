@@ -462,6 +462,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	h = middleware.Audit(st.Pool, h)
 	h = middleware.Idempotency(store)(h)
 	h = middleware.RBACEnforcer(h)
+	h = middleware.SettingsMiddlewareFactory(st.Pool, middleware.NewSettingsReader(st.Pool))(h)
 	h = middleware.Auth(st)(h)
 	h = middleware.RequestID(h)
 	h = middleware.Recovery(h)

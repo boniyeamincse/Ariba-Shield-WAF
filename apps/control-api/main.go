@@ -41,6 +41,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start the retention pruner (24h interval).
+	pruner := &store.RetentionPruner{Store: st}
+	go pruner.StartLoop(ctx)
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           api.NewRouter(st, cfg),

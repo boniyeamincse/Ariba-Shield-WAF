@@ -69,7 +69,7 @@ func Refresh(st *store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"token generation failed"}`, http.StatusInternalServerError)
 			return
 		}
-		newExpires := time.Now().Add(24 * time.Hour)
+		newExpires := sessionExpiry(st, r.Context())
 		if _, err := st.Pool.Exec(r.Context(),
 			`UPDATE sessions SET token_hash = $1, expires_at = $2, last_used_at = now()
 			 WHERE id = $3 AND user_id = $4`,

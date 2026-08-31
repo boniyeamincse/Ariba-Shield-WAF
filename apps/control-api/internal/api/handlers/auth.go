@@ -104,7 +104,8 @@ func Login(st *store.Store) http.HandlerFunc {
 		}
 		token := hex.EncodeToString(tokenBytes)
 
-		expiresAt := time.Now().Add(24 * time.Hour)
+		expiresAt := sessionExpiry(st, r.Context())
+
 		if _, err := st.Pool.Exec(r.Context(),
 			`INSERT INTO sessions (id, user_id, token_hash, expires_at, request_id)
 			 VALUES ($1, $2, $3, $4, $5)`,
