@@ -30,7 +30,7 @@ export default function TrafficControlPage() {
   const [ipLoading, setIpLoading] = useState(true);
   const [ipError, setIpError] = useState("");
   const [creatingList, setCreatingList] = useState(false);
-  const [listForm, setListForm] = useState({ name: "", list_type: "allow", description: "" });
+  const [listForm, setListForm] = useState({ name: "", list_type: "allow", entries: "", description: "" });
   const [deletingList, setDeletingList] = useState<IPList | null>(null);
 
   // Rate limits
@@ -77,9 +77,19 @@ export default function TrafficControlPage() {
   const submitList = async () => {
     setSubmitting(true);
     try {
-      await createIPList({ name: listForm.name, list_type: listForm.list_type, description: listForm.description, entries: [] });
+      const parsedEntries = listForm.entries
+        .split(/[\n,]/)
+        .map(e => e.trim())
+        .filter(e => e.length > 0);
+        
+      await createIPList({ 
+        name: listForm.name, 
+        list_type: listForm.list_type, 
+        description: listForm.description, 
+        entries: parsedEntries 
+      });
       setCreatingList(false);
-      setListForm({ name: "", list_type: "allow", description: "" });
+      setListForm({ name: "", list_type: "allow", entries: "", description: "" });
       await loadIPs();
     } catch {
       setIpError("Failed to create IP list");
@@ -159,7 +169,7 @@ export default function TrafficControlPage() {
         <div className="top-header animate-fade-in">
           <div className="header-title">
             <h1>{t("title")}</h1>
-            <p style={{ color: "var(--text-secondary)" }}>IP lists and rate limiting.</p>
+            <p style={{ color: "var(--text-secondary)" }}>{t("description")}</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <button
@@ -237,13 +247,23 @@ export default function TrafficControlPage() {
       {creatingList && (
         <ModalShell title="New IP List" onClose={() => setCreatingList(false)}>
           <Field label="Name">
-            <input type="text" value={listForm.name} onChange={(e) => setListForm({ ...listForm, name: e.target.value })} style={inputStyle} />
+            <input type="text" value={listForm.name} onChange={(e) => setListForm({ ...listForm, name: e.target.value })} style={inputStyle} placeholder="e.g. Blocked Attackers" />
           </Field>
           <Field label="Type">
             <select value={listForm.list_type} onChange={(e) => setListForm({ ...listForm, list_type: e.target.value })} style={inputStyle}>
               <option value="allow" style={optionStyle}>Allow</option>
               <option value="block" style={optionStyle}>Block</option>
             </select>
+          </Field>
+          <Field label="Entries (IP or CIDR)">
+            <textarea 
+              value={listForm.entries} 
+              onChange={(e) => setListForm({ ...listForm, entries: e.target.value })} 
+              rows={3} 
+              style={inputStyle} 
+              placeholder="192.168.1.1&#10;10.0.0.0/8" 
+            />
+            <span style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>One IP/CIDR per line or comma-separated</span>
           </Field>
           <Field label="Description">
             <textarea value={listForm.description} onChange={(e) => setListForm({ ...listForm, description: e.target.value })} rows={2} style={inputStyle} />

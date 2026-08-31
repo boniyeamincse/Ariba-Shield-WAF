@@ -67,7 +67,16 @@ type Engine struct {
 func New(cfg Config) (*Engine, error) {
 	ruleData, err := os.ReadFile(cfg.RulesPath)
 	if err != nil {
-		return nil, fmt.Errorf("read rules file: %w", err)
+		if os.IsNotExist(err) {
+			// Fallback to baseline if no file exists yet (waiting for control-plane to push)
+			ruleData = []byte(`
+Include @coraza.conf-recommended
+SecRuleEngine DetectionOnly
+SecAction "id:900000,phase:1,nolog,pass,t:none,setvar:tx.paranoia_level=1"
+			`)
+		} else {
+			return nil, fmt.Errorf("read rules file: %w", err)
+		}
 	}
 
 	wafCfg := coraza.NewWAFConfig().
