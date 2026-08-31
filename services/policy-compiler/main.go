@@ -14,6 +14,7 @@ import (
 func main() {
 	policyPath := flag.String("policy", "", "path to policy document (JSON, ADR-002 schema v0)")
 	outputPath := flag.String("output", "-", "output path for generated nginx config (default stdout)")
+	wafOutputPath := flag.String("waf-output", "", "output path for generated WAF rules (Coraza config)")
 	certDir := flag.String("cert-dir", "/etc/shield-waf/certs", "base directory for certificate_ref lookups (<ref>/cert.pem, <ref>/key.pem inside)")
 	signKey := flag.String("sign-key", "", "path to ed25519 private key PEM; if set, signs the bundle before rendering")
 	signKeyID := flag.String("sign-key-id", "control-plane-01", "key ID attached to the signature")
@@ -58,23 +59,43 @@ func main() {
 		}
 	}
 
+	// 1. Render Nginx Config
 	config, err := compiler.RenderNginxConfig(doc, certPaths)
 	if err != nil {
-		log.Fatalf("render config: %v", err)
+		log.Fatalf("render nginx config: %v", err)
 	}
 
 	out := os.Stdout
 	if *outputPath != "-" {
 		f, err := os.Create(*outputPath)
 		if err != nil {
-			log.Fatalf("create output: %v", err)
+			log.Fatalf("create nginx output: %v", err)
 		}
 		defer f.Close()
 		out = f
 	}
 
 	if _, err := fmt.Fprintf(out, "# Ariba Shield WAF generated config\n# config_id=%s bundle_hash=%s\n%s", doc.ConfigID, hash, config); err != nil {
-		log.Fatalf("write output: %v", err)
+		log.Fatalf("write nginx output: %v", err)
 	}
-	log.Printf("generated config for %s (bundle_hash=%s)", doc.ConfigID, hash)
+	log.Printf("generated nginx config for %s (bundle_hash=%s)", doc.ConfigID, hash)
+
+	// 2. Render WAF Config (if path provided)
+	if *wafOutputPath != "" {
+		wafConfig, err := compiler.RenderWAFConfig(doc)
+		if err != nil {
+			log.Fatalf("render WAF config: %v", err)
+		}
+
+		wafFile, err := os.Create(*wafOutputPath)
+		if err != nil {
+			log.Fatalf("create waf output: %v", err)
+		}
+		defer wafFile.Close()
+
+		if _, err := wafFile.WriteString(wafConfig); err != nil {
+			log.Fatalf("write waf output: %v", err)
+		}
+		log.Printf("generated waf config for %s at %s", doc.ConfigID, *wafOutputPath)
+	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/ariba-shield/waf-engine/internal/engine/blockpage"
 	"github.com/ariba-shield/waf-engine/internal/engine/iplist"
 	"github.com/ariba-shield/waf-engine/internal/engine/ratelimit"
+	"github.com/corazawaf/coraza-coreruleset/v4"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/oklog/ulid/v2"
@@ -64,7 +65,14 @@ type Engine struct {
 
 // New builds the engine from config.
 func New(cfg Config) (*Engine, error) {
-	wafCfg := coraza.NewWAFConfig().WithDirectivesFromFile(cfg.RulesPath)
+	ruleData, err := os.ReadFile(cfg.RulesPath)
+	if err != nil {
+		return nil, fmt.Errorf("read rules file: %w", err)
+	}
+
+	wafCfg := coraza.NewWAFConfig().
+		WithRootFS(coreruleset.FS).
+		WithDirectives(string(ruleData))
 
 	// Phase 3: anomaly threshold override. The baseline.conf already has the
 	// blocking rule (949110) with a default threshold. If the user requests a

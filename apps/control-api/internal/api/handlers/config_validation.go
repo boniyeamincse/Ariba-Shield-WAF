@@ -102,4 +102,11 @@ type policyDoc struct {
 	ConfigID       string                 `json:"config_id"`
 	VirtualServers []map[string]any       `json:"virtual_servers"`
 	BackendPools   []map[string]any       `json:"backend_pools"`
+	WAF            *wafDoc                `json:"waf,omitempty"`
+}
+
+type wafDoc struct {
+	Enabled          bool `json:"enabled"`
+	AnomalyThreshold int  `json:"anomaly_threshold"`
+	ParanoiaLevel    int  `json:"paranoia_level"`
 }

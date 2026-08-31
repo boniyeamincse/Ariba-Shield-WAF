@@ -5,6 +5,7 @@ go 1.26.5
 require github.com/corazawaf/coraza/v3 v3.7.0
 
 require (
+	github.com/corazawaf/coraza-coreruleset/v4 v4.25.0 // indirect
 	github.com/corazawaf/libinjection-go v0.3.2 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect

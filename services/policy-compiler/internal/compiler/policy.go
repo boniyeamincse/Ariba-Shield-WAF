@@ -21,8 +21,23 @@ type PolicyDocument struct {
 	VirtualServers []VirtualServer  `json:"virtual_servers"`
 	BackendPools   []BackendPool    `json:"backend_pools"`
 	Headers        *HeadersConfig   `json:"headers,omitempty"`
+	WAF            *WAFConfig       `json:"waf,omitempty"`
 	Signature      *Signature       `json:"signature,omitempty"`
 	Extensions     json.RawMessage  `json:"extensions,omitempty"`
+}
+
+type WAFConfig struct {
+	Enabled          bool          `json:"enabled"`
+	AnomalyThreshold int           `json:"anomaly_threshold,omitempty"`
+	ParanoiaLevel    int           `json:"paranoia_level,omitempty"`
+	ManagedRules     []ManagedRule `json:"managed_rules,omitempty"`
+}
+
+type ManagedRule struct {
+	Category    string `json:"category"`
+	Enabled     bool   `json:"enabled"`
+	Sensitivity string `json:"sensitivity,omitempty"` // low, medium, high, strict
+	Action      string `json:"action,omitempty"`      // block, log
 }
 
 type Settings struct {

@@ -111,9 +111,11 @@ services:
       GATEWAY_ID: gw-01
     ports:
       - "127.0.0.1:8082:8082"
+    volumes:
+      - waf-config:/rules
     depends_on:
       - backend-a
-    command: ["--listen", ":8082", "--backend", "http://backend-a:80", "--rules", "/rules/baseline.conf", "--detect-only"]
+    command: ["--listen", ":8082", "--backend", "http://backend-a:80", "--rules", "/rules/crs.conf", "--detect-only"]
 
   # Event-ingestor: reads JSON-lines from stdin, writes to PostgreSQL.
   event-ingestor:
@@ -136,3 +138,4 @@ services:
 volumes:
   pgdata:
   gateway-config:
+  waf-config:

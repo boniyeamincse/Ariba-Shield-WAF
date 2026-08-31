@@ -450,7 +450,8 @@ export function cloneSecurityPolicy(id: string): Promise<{ id: string }> {
 }
 
 export function listPolicyVersions(id: string): Promise<unknown[]> {
-  return request<unknown[]>(`/security-policies/${id}/versions`);
+  return request<{ policy_id: string; versions: unknown[] }>(`/security-policies/${id}/versions`)
+    .then((res) => res.versions || []);
 }
 
 // ===== Security Events =====
@@ -481,6 +482,26 @@ export function exportSecurityEvent(id: string): Promise<{ id: string }> {
 }
 
 // ===== Rules =====
+
+export type ManagedRule = {
+  id: string;
+  name: string;
+  category: string;
+  enabled: boolean;
+  sensitivity: string;
+  status: string;
+};
+
+export function listManagedRules(): Promise<ManagedRule[]> {
+  return request<ManagedRule[]>("/managed-rules");
+}
+
+export function updateManagedRule(id: string, patch: { enabled?: boolean; sensitivity?: string }): Promise<{ id: string }> {
+  return request<{ id: string }>(`/managed-rules/${id}`, {
+    method: "POST", // Backend uses POST for configuring
+    body: JSON.stringify(patch),
+  });
+}
 
 export type RuleCondition = {
   id?: string;

@@ -102,8 +102,13 @@ export default function RulesPage() {
             <p style={{ color: "var(--text-secondary)" }}>Manage WAF detection and protection rules.</p>
           </div>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {canUser("edit") && (
+              <Link href={`/${locale}/rules/managed`} className="btn" style={{ textDecoration: "none", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", padding: "8px 16px" }}>
+                Managed Rules (CRS)
+              </Link>
+            )}
             {canUser("create") && (
-              <Link href={`/${locale}/rules/create`} className="btn btn-primary" style={{ textDecoration: "none" }}>
+              <Link href={`/${locale}/rules/create`} className="btn btn-primary" style={{ textDecoration: "none", padding: "8px 16px" }}>
                 + New Rule
               </Link>
             )}
