@@ -167,6 +167,12 @@ export default function RulesPage() {
               { value: "ip", label: "IP / Reputation" },
               { value: "geo", label: "Geo Security" },
               { value: "rate_limit", label: "Rate Limiting" },
+              { value: "idor", label: "Insecure Direct Object Reference" },
+              { value: "open_redirect", label: "Open Redirect" },
+              { value: "clickjacking", label: "Clickjacking" },
+              { value: "jwt", label: "JWT Misconfiguration" },
+              { value: "prototype_pollution", label: "Prototype Pollution" },
+              { value: "cors", label: "CORS Misconfiguration" },
             ]},
             { type: "select", key: "type", label: "Type", options: [
               { value: "managed", label: "Managed" },

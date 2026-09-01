@@ -1,0 +1,3 @@
+DELETE FROM waf_rule_conditions WHERE rule_id LIKE '01MRRUL%';
+DELETE FROM rules WHERE rule_id LIKE 'ARB-IDOR-%' OR rule_id LIKE 'ARB-OPEN_REDIRECT-%' OR rule_id LIKE 'ARB-CLICKJACKING-%' OR rule_id LIKE 'ARB-JWT-%' OR rule_id LIKE 'ARB-PROTOTYPE_POLLUTION-%' OR rule_id LIKE 'ARB-CORS-%';
+DELETE FROM managed_rules WHERE id LIKE '01MRCAT1%';
