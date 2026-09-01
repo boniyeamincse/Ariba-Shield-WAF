@@ -51,6 +51,10 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/security-policies/{id}/versions", handlers.ListPolicyVersions(st))
 	mux.HandleFunc("GET /api/v1/security-policies/{id}/diff", handlers.DiffPolicy(st))
 	mux.HandleFunc("POST /api/v1/security-policies/{id}/clone", handlers.ClonePolicy(st))
+	mux.HandleFunc("POST /api/v1/security-policies/{id}/rules", handlers.AddPolicyRule(st))
+	mux.HandleFunc("GET /api/v1/security-policies/{id}/rules", handlers.ListPolicyRules(st))
+	mux.HandleFunc("DELETE /api/v1/security-policies/{id}/rules/{ruleId}", handlers.RemovePolicyRule(st))
+	mux.HandleFunc("GET /api/v1/security-policies/{id}/validate-activation", handlers.ValidatePolicyActivation(st))
 
 	// Policy approvals (four-eyes workflow, §7.1)
 	mux.HandleFunc("GET /api/v1/policy-approvals", handlers.ListPolicyApprovals(st))
@@ -72,6 +76,8 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/rules/{id}/duplicate", handlers.DuplicateRule(st))
 	mux.HandleFunc("POST /api/v1/rules/bulk", handlers.BulkUpdateRules(st))
 	mux.HandleFunc("GET /api/v1/rules/export", handlers.ExportRules(st))
+	mux.HandleFunc("POST /api/v1/rules/import", handlers.ImportRules(st))
+	mux.HandleFunc("POST /api/v1/rules/{id}/lifecycle", handlers.UpdateRuleLifecycle(st))
 
 	// Rule Bundles
 	mux.HandleFunc("GET /api/v1/rule-bundles", handlers.ListResource(st, handlers.CRUDConfig{Table: "rule_bundles", JSONName: "bundle"}))
