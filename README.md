@@ -44,7 +44,7 @@ git clone https://github.com/your-org/ariba-shield-waf.git
 cd ariba-shield-waf
 
 # Spin up the Data Plane and Control Plane via Docker Compose
-docker compose -f deployments/compose/docker-compose.yml up -d --build
+docker compose -f infra/compose/docker-compose.yml up -d --build
 ```
 
 ### 3. Accessing the Dashboard

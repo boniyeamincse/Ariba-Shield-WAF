@@ -92,7 +92,7 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 - [x] **P3.6** `.github/pull_request_template.md` — referenced in `repository-ci-coding-standards.md` but does not exist.
 - [x] **P3.7** `Makefile` `test-failover` target: don't skip API tests — add a note that compose must be up, but don't hide the test.
 - [x] **P3.8** `Makefile` `check-i18n` target is called by CI but doesn't exist. Add a simple i18n key-completeness check.
-- [x] **P3.9** `deployments/ansible/`, `deployments/helm/`, `deployments/appliance/` — empty directories. Add placeholder READMEs or remove.
+- [x] **P3.9** `infra/ansible/`, `infra/helm/`, `infra/appliance/` — empty directories. Add placeholder READMEs or remove.
 - [x] **P3.10** `rules/cve/`, `rules/technology/`, `rules/tests/` — empty directories. Add placeholder READMEs or remove.
 - [x] **P3.11** `docs/ariba-shield-waf-dashboard.html` — standalone UI artifact not referenced anywhere. Move to a `design/` directory or document its purpose.
 - [x] **P3.12** `handlers/policy_versions.go` — `CreatePolicyVersion` returns `{"id":"...","version":N,"status":"..."}` but the `version` field is typed `any` and the `json:"version"` tag is `int`. The response structure is inconsistent.
@@ -127,7 +127,7 @@ Priorities: **P0** (critical bug) → **P1** (high) → **P2** (medium) → **P3
 - [x] **P3.41** CI `schema` job: runs `make schema-check` without setting up Node.js — `npx tsc --noEmit` will fail unless Node is available. Fix.
 - [x] **P3.42** `.github/workflows/ci.yml` — gosec uses `@master` floating tag. Pin to a specific version.
 - [x] **P3.43** `.github/workflows/ci.yml` — no `pull_request_template.md` exists despite being referenced in coding standards.
-- [x] **P3.44** `docs/architecture/reference-hardware-performance-method.md` — OQ-2 and OQ-4 still open. No `sysctl` tuning snapshot tracked in `deployments/`.
+- [x] **P3.44** `docs/architecture/reference-hardware-performance-method.md` — OQ-2 and OQ-4 still open. No `sysctl` tuning snapshot tracked in `infra/`.
 - [x] **P3.45** `docs/architecture/adr-002-policy-event-schema-v0.md` — D2 says `additionalProperties: false` at top level, contradicting forward-compat requirement. Fix.
 - [x] **P3.46** `docs/operations/release-0.1.md` — capability table says "RBAC ❌" but code has working RBAC middleware. Update.
 - [x] **P3.47** `docs/operations/release-0.1.md` — reference result 35/35 is stale. Update to reflect current test count.

@@ -33,7 +33,7 @@ shield-waf/
     sdk-typescript/     # shared TS types (generated)
   rules/                # Phase 2+
     core/ cve/ technology/ tests/
-  deployments/
+  infra/
     compose/            # dev environment
     ansible/ helm/ appliance/   # later phases
   tests/

@@ -54,7 +54,7 @@ bot defense, API schema protection, HA, mTLS fleet, multi-tenancy, SSO.
 ### 2.2 Run the stack
 
 ```sh
-cd deployments/compose
+cd infra/compose
 cp .env.example .env          # EDIT the passwords first — no defaults
 docker compose up -d --build
 ```

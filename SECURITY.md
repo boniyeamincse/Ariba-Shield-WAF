@@ -15,7 +15,7 @@ Security is a core value of Ariba Shield WAF. If you discover a vulnerability or
 
 Instead, please report it privately:
 
-1. Send an email to **security@aribashield.local**.
+1. Send an email to **boniyeamin.cse1@gmail.com**.
 2. Include a detailed description of the vulnerability.
 3. Provide step-by-step instructions to reproduce the issue (PoC).
 4. Do not disclose the vulnerability in public forums until we have successfully patched it and released a fix.

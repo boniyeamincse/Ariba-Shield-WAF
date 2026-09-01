@@ -24,7 +24,7 @@ To help you navigate the codebase, here is a high-level overview of our architec
 - `/gateways/openresty-gateway/`: The OpenResty container configuration and Lua scripts for live traffic routing.
 - `/docs/`: Project documentation, Architecture Decision Records (ADRs), API schemas, and the User Guide.
 - `/packages/`: Shared libraries, generated API clients, and JSON Schemas that act as the single source of truth.
-- `/deployments/`: Docker Compose and Kubernetes manifests for standing up the stack.
+- `/infra/`: Docker Compose and Kubernetes manifests for standing up the stack.
 
 ## 3. Getting Started
 
@@ -44,7 +44,7 @@ To help you navigate the codebase, here is a high-level overview of our architec
 2. **Run the Development Stack:**
    We use Docker Compose to spin up the entire infrastructure locally.
    ```bash
-   docker compose -f deployments/compose/docker-compose.yml up -d --build
+   docker compose -f infra/compose/docker-compose.yml up -d --build
    ```
 
 3. **Access the Application:**

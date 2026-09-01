@@ -414,7 +414,7 @@ shield-waf/
     cve/
     technology/
     tests/
-  deployments/
+  infra/
     compose/
     ansible/
     helm/
@@ -800,7 +800,7 @@ One person can build the early lab MVP, but production blocking, parser security
 
 ### Sprint 2 — Weeks 3–4
 
-- [x] Docker Compose development environment. (deployments/compose/)
+- [x] Docker Compose development environment. (infra/compose/)
 - [x] PostgreSQL migrations. (apps/control-api/migrations 0001–0004)
 - [x] Go control API skeleton. (Handlers for domains, origins, policies, metrics, rate_limits, ip_lists added)
 - [x] Next.js login/layout/i18n. (Premium Glassmorphism Dashboard UI completed)
