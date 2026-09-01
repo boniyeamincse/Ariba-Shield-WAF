@@ -20,16 +20,22 @@ func GetSecurityPolicy(st *store.Store) http.HandlerFunc {
 			Description     string `json:"description"`
 			EnforcementMode string `json:"enforcement_mode"`
 			ApplicationID   string `json:"application_id,omitempty"`
+			ParentPolicyID  string `json:"parent_policy_id,omitempty"`
+			CanaryPercent   int    `json:"canary_percent"`
+			ScheduledAt     string `json:"scheduled_at,omitempty"`
+			ScheduledAction string `json:"scheduled_action,omitempty"`
 			LifecycleStatus string `json:"lifecycle_status"`
 			ActiveVersionID string `json:"active_version_id,omitempty"`
 			Version         int64  `json:"version"`
 		}
 		err := st.Pool.QueryRow(r.Context(),
 			`SELECT id, name, COALESCE(description,''), enforcement_mode,
-			        COALESCE(application_id,''), lifecycle_status,
-			        COALESCE(active_version_id,''), version
+			        COALESCE(application_id,''), COALESCE(parent_policy_id,''),
+			        COALESCE(canary_percent,0), COALESCE(scheduled_at::text,''), COALESCE(scheduled_action,''),
+			        lifecycle_status, COALESCE(active_version_id,''), version
 			 FROM security_policies WHERE id = $1`, id).
 			Scan(&p.ID, &p.Name, &p.Description, &p.EnforcementMode, &p.ApplicationID,
+				&p.ParentPolicyID, &p.CanaryPercent, &p.ScheduledAt, &p.ScheduledAction,
 				&p.LifecycleStatus, &p.ActiveVersionID, &p.Version)
 		if err != nil {
 			http.Error(w, `{"error":"policy not found"}`, http.StatusNotFound)

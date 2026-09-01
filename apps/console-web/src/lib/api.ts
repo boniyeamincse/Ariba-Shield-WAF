@@ -111,6 +111,10 @@ export type SecurityPolicy = {
   description: string;
   enforcement_mode: string;
   application_id?: string;
+  parent_policy_id?: string;
+  canary_percent?: number;
+  scheduled_at?: string;
+  scheduled_action?: string;
   version: number;
 };
 
