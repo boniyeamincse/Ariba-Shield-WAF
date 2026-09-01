@@ -14,6 +14,7 @@ import {
 } from "@/lib/api";
 import UserProfileWidget from "@/components/UserProfileWidget";
 import Sidebar from "@/components/layout/Sidebar";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
 
 export default function OverviewPage() {
   const locale = useLocale();
@@ -207,20 +208,30 @@ export default function OverviewPage() {
                       <div className="metric-value" style={{ fontSize: '28px' }}>{traffic.avg_latency_ms.toFixed(1)}<span style={{fontSize: '14px', color: 'var(--text-secondary)'}}>ms</span></div>
                     </div>
                   </div>
-                  <div className="metric-card glass-panel" style={{ padding: '20px' }}>
+                  <div className="metric-card glass-panel" style={{ padding: '20px', minHeight: '220px' }}>
                     <div className="metric-header" style={{ marginBottom: '12px', fontSize: '13px' }}><span>Status Breakdown</span></div>
-                    <div style={{ fontSize: "13px", color: "var(--text-secondary)", display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {traffic.by_status.slice(0, 4).map((s) => (
-                        <div key={s.status} style={{ display: "flex", justifyContent: "space-between", alignItems: 'center' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.status.startsWith('2') ? 'var(--success)' : s.status.startsWith('4') ? 'var(--warning)' : s.status.startsWith('5') ? 'var(--danger)' : 'var(--accent-primary)' }} />
-                            HTTP {s.status}
-                          </span>
-                          <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{s.count.toLocaleString()}</span>
-                        </div>
-                      ))}
-                      {traffic.by_status.length === 0 && <span style={{ opacity: 0.5 }}>No traffic data available.</span>}
-                    </div>
+                    {traffic.by_status.length > 0 ? (
+                      <div style={{ width: '100%', height: '160px' }}>
+                        <ResponsiveContainer>
+                          <BarChart data={traffic.by_status} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                            <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={12} />
+                            <YAxis type="category" dataKey="status" stroke="rgba(255,255,255,0.5)" fontSize={12} />
+                            <RechartsTooltip 
+                              contentStyle={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
+                              itemStyle={{ color: '#fff' }}
+                            />
+                            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                              {traffic.by_status.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.status.startsWith('2') ? '#10b981' : entry.status.startsWith('4') ? '#fbbf24' : entry.status.startsWith('5') ? '#ef4444' : '#3b82f6'} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <span style={{ opacity: 0.5, fontSize: '13px', display: 'block', marginTop: '16px' }}>No traffic data available.</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -240,20 +251,30 @@ export default function OverviewPage() {
                       <div className="metric-value" style={{ fontSize: '28px', color: 'var(--danger)' }}>{security.blocked_events.toLocaleString()}</div>
                     </div>
                   </div>
-                  <div className="metric-card glass-panel" style={{ padding: '20px' }}>
+                  <div className="metric-card glass-panel" style={{ padding: '20px', minHeight: '220px' }}>
                     <div className="metric-header" style={{ marginBottom: '12px', fontSize: '13px' }}><span>By Severity</span></div>
-                    <div style={{ fontSize: "13px", color: "var(--text-secondary)", display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {security.by_severity.slice(0, 4).map((s) => (
-                        <div key={s.severity} style={{ display: "flex", justifyContent: "space-between", alignItems: 'center' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', textTransform: "capitalize" }}>
-                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.severity === 'critical' ? 'var(--danger)' : s.severity === 'high' ? 'var(--warning)' : s.severity === 'medium' ? 'var(--accent-primary)' : 'var(--success)' }} />
-                            {s.severity}
-                          </span>
-                          <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{s.count.toLocaleString()}</span>
-                        </div>
-                      ))}
-                      {security.by_severity.length === 0 && <span style={{ opacity: 0.5 }}>No security events recorded.</span>}
-                    </div>
+                    {security.by_severity.length > 0 ? (
+                      <div style={{ width: '100%', height: '160px' }}>
+                        <ResponsiveContainer>
+                          <BarChart data={security.by_severity} margin={{ top: 5, right: 0, left: 10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis dataKey="severity" stroke="rgba(255,255,255,0.3)" fontSize={12} textAnchor="middle" style={{textTransform: 'capitalize'}} />
+                            <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} />
+                            <RechartsTooltip 
+                              contentStyle={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
+                              itemStyle={{ color: '#fff' }}
+                            />
+                            <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                              {security.by_severity.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.severity === 'critical' ? '#ef4444' : entry.severity === 'high' ? '#fbbf24' : entry.severity === 'medium' ? '#3b82f6' : '#10b981'} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <span style={{ opacity: 0.5, fontSize: '13px', display: 'block', marginTop: '16px' }}>No security events recorded.</span>
+                    )}
                   </div>
                 </div>
               </div>

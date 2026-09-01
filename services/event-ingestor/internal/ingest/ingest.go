@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/ulid/v2"
 )
@@ -157,11 +158,73 @@ func (in *Ingestor) Flush(ctx context.Context) error {
 		}
 	}
 
+	// Phase 3: Incident Auto-Correlation (ADR-008)
+	if err := correlateIncidents(ctx, tx, batch); err != nil {
+		slog.Warn("incident correlation failed, proceeding anyway", "error", err)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		in.buf = append(in.buf, batch...)
 		return err
 	}
 	in.backoff = 0
+	return nil
+}
+
+func correlateIncidents(ctx context.Context, tx pgx.Tx, batch []Event) error {
+	for _, ev := range batch {
+		if ev.Decision != "deny" && ev.Severity != "critical" && ev.Severity != "high" {
+			continue
+		}
+
+		if ev.AppID == "" || ev.ClientIP == "" {
+			continue
+		}
+
+		title := "WAF Auto-Mitigation: Attack from " + ev.ClientIP
+
+		// Look for an open incident with the same title created in the last 1 hour
+		var incID string
+		var related []string
+		var orgID string
+
+		// First get orgID from app
+		err := tx.QueryRow(ctx, `SELECT organization_id FROM applications WHERE id = $1`, ev.AppID).Scan(&orgID)
+		if err != nil {
+			continue
+		}
+
+		err = tx.QueryRow(ctx, `
+			SELECT id, related_events 
+			FROM incidents 
+			WHERE organization_id = $1 AND title = $2 AND status = 'open' AND created_at > NOW() - INTERVAL '1 hour'
+			ORDER BY created_at DESC LIMIT 1`,
+			orgID, title).Scan(&incID, &related)
+
+		if err == nil && incID != "" {
+			// Append event to existing incident
+			related = append(related, ev.EventID)
+			relatedJSON, _ := json.Marshal(related)
+			_, _ = tx.Exec(ctx, `UPDATE incidents SET related_events = $1, updated_at = NOW() WHERE id = $2`, relatedJSON, incID)
+		} else {
+			// Create new incident
+			incID = ulid.Make().String()
+			relatedJSON, _ := json.Marshal([]string{ev.EventID})
+
+			// Decide incident severity based on event severity
+			incSev := "medium"
+			if ev.Severity == "critical" {
+				incSev = "critical"
+			} else if ev.Severity == "high" {
+				incSev = "high"
+			}
+
+			_, _ = tx.Exec(ctx, `
+				INSERT INTO incidents (id, organization_id, title, severity, status, related_events, created_at, updated_at)
+				VALUES ($1, $2, $3, $4, 'open', $5, NOW(), NOW())`,
+				incID, orgID, title, incSev, relatedJSON)
+		}
+	}
 	return nil
 }
 

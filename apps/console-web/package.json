@@ -16,7 +16,8 @@
     "next-intl": "^3",
     "puppeteer": "^25.9.0",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",

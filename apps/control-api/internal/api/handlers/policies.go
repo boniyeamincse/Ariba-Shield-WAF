@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/ariba-shield/control-api/internal/store"
@@ -114,6 +115,7 @@ func CreateSecurityPolicy(st *store.Store) http.HandlerFunc {
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 			policyID, orgID, appID, body.Name, body.Description, body.EnforcementMode, userID,
 			parentID, body.CanaryPercent, nullIfEmpty(body.ScheduledAt), nullIfEmpty(body.ScheduledAction)); err != nil {
+			fmt.Println("INSERT policy error:", err)
 			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
 			return
 		}

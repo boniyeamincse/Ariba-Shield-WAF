@@ -1,20 +1,22 @@
 ## Description
-Please include a summary of the changes and the related issue. Describe the architectural impacts (if any) and mention which ADR is tied to this PR if you are changing boundaries, stores, or flow.
+
+Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
 
 Fixes # (issue)
 
 ## Type of change
-Please delete options that are not relevant.
+
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
+- [ ] This change requires a documentation update
 
 ## Checklist:
-- [ ] I have read the `CONTRIBUTING.md` guide.
-- [ ] I have run `make lint` and it passes cleanly.
-- [ ] I have run `make test` and all unit tests pass.
-- [ ] If this introduces new API endpoints, I have updated `docs/api/endpoint.md` and `openapi-v0.yaml`.
-- [ ] I have verified that there are no secrets, keys, or hardcoded sensitive credentials in my changes.
-- [ ] I have verified that this code does NOT block or crash the live traffic path in the Gateway.
-- [ ] I have provided a descriptive and imperative commit message.
+
+- [ ] My code follows the architectural guidelines of this project (`docs/architecture/`).
+- [ ] I have performed a self-review of my own code.
+- [ ] I have commented my code, particularly in hard-to-understand areas.
+- [ ] I have made corresponding changes to the documentation (e.g. `docs/api/endpoint.md` if changing APIs).
+- [ ] My changes generate no new warnings (run `make lint`).
+- [ ] I have added tests that prove my fix is effective or that my feature works (`make test`).
+- [ ] Any dependent changes have been merged and published in downstream modules.
