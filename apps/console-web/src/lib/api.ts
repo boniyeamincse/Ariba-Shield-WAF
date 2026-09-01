@@ -1054,3 +1054,8 @@ export type GeoConfig = {
 export function listGeoConfig(): Promise<GeoConfig[]> {
   return request<GeoConfig[]>("/geo-blocking");
 }
+
+export function getApplicationAnalytics(id: string, days?: number): Promise<{ application_id: string; period_days: number; health_score: number; health_status: string; total_requests: number; total_events: number; blocked: number; block_ratio: number; top_ips: { client_ip: string; hits: number }[]; top_rules: { rule_id: string; hits: number }[]; timeline: { date: string; events: number }[] }> {
+  const qs = days ? `?days=${days}` : "";
+  return request<{ application_id: string; period_days: number; health_score: number; health_status: string; total_requests: number; total_events: number; blocked: number; block_ratio: number; top_ips: { client_ip: string; hits: number }[]; top_rules: { rule_id: string; hits: number }[]; timeline: { date: string; events: number }[] }>(`/applications/${id}/analytics${qs}`);
+}

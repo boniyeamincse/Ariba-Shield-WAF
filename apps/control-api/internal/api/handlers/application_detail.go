@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strconv"
 	"encoding/json"
 	"net/http"
 
@@ -230,3 +231,125 @@ func ApplicationHealth(st *store.Store) http.HandlerFunc {
 	}
 }
 
+
+// ApplicationAnalytics returns per-app metrics: health score, traffic, attacks,
+// top IPs, top rules, and a daily attack timeline.
+func ApplicationAnalytics(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		appID := r.PathValue("id")
+		days := 7
+		if v := r.URL.Query().Get("days"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 90 {
+				days = n
+			}
+		}
+
+		// Health score: 0-100 based on pool/node health.
+		var totalNodes, healthyNodes int
+		_ = st.Pool.QueryRow(r.Context(),
+			`SELECT COUNT(bn.id), COUNT(bn.id) FILTER (WHERE bn.active AND (bn.last_health_state IS NULL OR bn.last_health_state='healthy'))
+			 FROM backend_pools bp JOIN backend_nodes bn ON bn.pool_id = bp.id
+			 WHERE bp.application_id = $1`, appID).Scan(&totalNodes, &healthyNodes)
+		healthScore := 100
+		if totalNodes > 0 {
+			healthScore = healthyNodes * 100 / totalNodes
+		}
+
+		// Traffic + security aggregates.
+		var totalRequests, totalEvents, blocked int
+		_ = st.Pool.QueryRow(r.Context(),
+			`SELECT COUNT(*), (SELECT COUNT(*) FROM security_events WHERE application_id=$1 AND created_at > now()-make_interval(days=>$2)),
+			        (SELECT COUNT(*) FROM security_events WHERE application_id=$1 AND decision_action='block' AND created_at > now()-make_interval(days=>$2))
+			 FROM access_events WHERE application_id=$1 AND created_at > now()-make_interval(days=>$2)`, appID, days).Scan(&totalRequests, &totalEvents, &blocked)
+
+		// Top source IPs by event volume.
+		topIPs := []map[string]any{}
+		rows, _ := st.Pool.Query(r.Context(),
+			`SELECT COALESCE(client_ip,'unknown'), COUNT(*) FROM security_events
+			 WHERE application_id=$1 AND created_at > now()-make_interval(days=>$2)
+			 GROUP BY client_ip ORDER BY COUNT(*) DESC LIMIT 10`, appID, days)
+		if rows != nil {
+			for rows.Next() {
+				var ip string
+				var cnt int
+				if rows.Scan(&ip, &cnt) == nil {
+					topIPs = append(topIPs, map[string]any{"client_ip": ip, "hits": cnt})
+				}
+			}
+			rows.Close()
+		}
+		if topIPs == nil {
+			topIPs = []map[string]any{}
+		}
+
+		// Top rules.
+		topRules := []map[string]any{}
+		rows2, _ := st.Pool.Query(r.Context(),
+			`SELECT unnest(rule_ids) AS rule_id, COUNT(*) FROM security_events
+			 WHERE application_id=$1 AND created_at > now()-make_interval(days=>$2)
+			 GROUP BY rule_id ORDER BY COUNT(*) DESC LIMIT 10`, appID, days)
+		if rows2 != nil {
+			for rows2.Next() {
+				var rid string
+				var cnt int
+				if rows2.Scan(&rid, &cnt) == nil {
+					topRules = append(topRules, map[string]any{"rule_id": rid, "hits": cnt})
+				}
+			}
+			rows2.Close()
+		}
+		if topRules == nil {
+			topRules = []map[string]any{}
+		}
+
+		// Daily attack timeline.
+		timeline := []map[string]any{}
+		rows3, _ := st.Pool.Query(r.Context(),
+			`SELECT date_trunc('day', created_at)::date::text, COUNT(*) FROM security_events
+			 WHERE application_id=$1 AND created_at > now()-make_interval(days=>$2)
+			 GROUP BY 1 ORDER BY 1`, appID, days)
+		if rows3 != nil {
+			for rows3.Next() {
+				var day string
+				var cnt int
+				if rows3.Scan(&day, &cnt) == nil {
+					timeline = append(timeline, map[string]any{"date": day, "events": cnt})
+				}
+			}
+			rows3.Close()
+		}
+		if timeline == nil {
+			timeline = []map[string]any{}
+		}
+
+		status := "healthy"
+		if healthScore == 0 {
+			status = "down"
+		} else if healthScore < 100 {
+			status = "degraded"
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"application_id": appID,
+			"period_days":    days,
+			"health_score":   healthScore,
+			"health_status":  status,
+			"total_requests": totalRequests,
+			"total_events":   totalEvents,
+			"blocked":        blocked,
+			"block_ratio":    safeRatio(blocked, totalEvents),
+			"top_ips":        topIPs,
+			"top_rules":      topRules,
+			"timeline":       timeline,
+		})
+	}
+}
+
+// safeRatio computes percent of x/y; 0 when y is 0.
+func safeRatio(x, y int) float64 {
+	if y <= 0 {
+		return 0
+	}
+	return float64(x) / float64(y) * 100
+}

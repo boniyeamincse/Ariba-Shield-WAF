@@ -30,6 +30,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/applications/{id}/incidents", handlers.ApplicationIncidents(st))
 	mux.HandleFunc("GET /api/v1/applications/{id}/policies", handlers.ApplicationPolicies(st))
 	mux.HandleFunc("GET /api/v1/applications/{id}/health", handlers.ApplicationHealth(st))
+	mux.HandleFunc("GET /api/v1/applications/{id}/analytics", handlers.ApplicationAnalytics(st))
 	mux.HandleFunc("DELETE /api/v1/applications/{id}", handlers.DeleteApplication(st))
 	mux.HandleFunc("GET /api/v1/applications/{id}/domains", handlers.ListDomains(st))
 	mux.HandleFunc("POST /api/v1/applications/{id}/domains", handlers.CreateDomain(st))
