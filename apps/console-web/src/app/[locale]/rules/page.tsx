@@ -18,6 +18,23 @@ import {
   type RuleFull,
 } from "@/lib/api";
 
+function ExportRulesButton() {
+  const [busy, setBusy] = useState(false);
+  const doExport = async () => {
+    setBusy(true);
+    try {
+      const r = await fetch(`${process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8443"}/api/v1/rules/export`, { credentials: "include" });
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "rules-export.json";
+      a.click();
+    } finally { setBusy(false); }
+  };
+  return <button className="btn" onClick={doExport} disabled={busy} style={{ padding: "8px 14px", fontSize: "13px" }}>{busy ? "Exporting…" : "Export"}</button>;
+}
+
 export default function RulesPage() {
   const locale = useLocale();
   const { can: canUser } = usePermission();
