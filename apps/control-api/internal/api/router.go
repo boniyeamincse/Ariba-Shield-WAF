@@ -205,6 +205,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/certificates/import", handlers.ImportCertificate(st))
 	mux.HandleFunc("POST /api/v1/certificates/{id}/renew", handlers.RenewCertificate(st))
 	mux.HandleFunc("GET /api/v1/certificates/{id}/expiry", handlers.CertExpiry(st))
+	mux.HandleFunc("POST /api/v1/certificates/acme", handlers.ProvisionACME(st))
 
 	// TLS profiles
 	mux.HandleFunc("GET /api/v1/tls-profiles", handlers.ListResource(st, handlers.CRUDConfig{Table: "tls_profiles", JSONName: "tls profile"}))

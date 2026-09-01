@@ -918,6 +918,13 @@ export function deleteCertificate(id: string): Promise<{ status: string }> {
   return request<{ status: string }>(`/certificates/${id}`, { method: "DELETE" });
 }
 
+export function provisionACME(domain: string, email: string, staging?: boolean): Promise<{ id: string; domain: string; issuer: string; acme: boolean; not_before?: string; not_after?: string; certificate_pem?: string }> {
+  return request<{ id: string; domain: string; issuer: string; acme: boolean; not_before?: string; not_after?: string; certificate_pem?: string }>("/certificates/acme", {
+    method: "POST",
+    body: JSON.stringify({ domain, email, staging: staging ?? false }),
+  });
+}
+
 // ===== Backups =====
 
 export type Backup = {

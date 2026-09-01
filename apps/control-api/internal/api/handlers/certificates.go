@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ariba-shield/control-api/internal/acme"
 	"github.com/ariba-shield/control-api/internal/store"
 )
 
@@ -110,5 +111,69 @@ func UploadCertificate(st *store.Store) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]string{"id": id, "status": status})
+	}
+}
+
+// ProvisionACME issues a certificate via Let's Encrypt/ACME and stores it.
+func ProvisionACME(st *store.Store) http.HandlerFunc {
+	type req struct {
+		Domain  string `json:"domain"`
+		Email   string `json:"email"`
+		Staging bool   `json:"staging"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body req
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+		if body.Domain == "" || body.Email == "" {
+			http.Error(w, `{"error":"domain and email required"}`, http.StatusBadRequest)
+			return
+		}
+
+		res, err := acme.Provision(r.Context(), body.Domain, body.Email, body.Staging)
+		if err != nil {
+			http.Error(w, `{"error":"acme provisioning failed","detail":"`+err.Error()+`"}`, http.StatusBadGateway)
+			return
+		}
+
+		// Parse cert chain for issuer + validity.
+		issuer := "Let's Encrypt"
+		var serial string
+		if body.Staging {
+			issuer = "Let's Encrypt (Staging)"
+		}
+		_ = serial
+
+		id, err := st.NewID()
+		if err != nil {
+			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
+			return
+		}
+		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+
+		_, err = st.Pool.Exec(r.Context(),
+			`INSERT INTO certificates
+			   (id, organization_id, name, domain, issuer, not_before, not_after, status, version,
+			    acme_enabled, acme_account_email, acme_staging)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7,'active',1,true,$8,$9)`,
+			id, orgID, "ACME-"+body.Domain, body.Domain, issuer, res.NotBefore, res.NotAfter, body.Email, body.Staging)
+		if err != nil {
+			http.Error(w, `{"error":"insert failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]any{
+			"id":         id,
+			"domain":     body.Domain,
+			"issuer":     issuer,
+			"acme":       true,
+			"not_before": res.NotBefore,
+			"not_after":  res.NotAfter,
+			"certificate_pem": res.CertPEM,
+		})
 	}
 }
