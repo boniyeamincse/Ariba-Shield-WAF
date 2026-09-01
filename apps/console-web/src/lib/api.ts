@@ -1059,3 +1059,41 @@ export function getApplicationAnalytics(id: string, days?: number): Promise<{ ap
   const qs = days ? `?days=${days}` : "";
   return request<{ application_id: string; period_days: number; health_score: number; health_status: string; total_requests: number; total_events: number; blocked: number; block_ratio: number; top_ips: { client_ip: string; hits: number }[]; top_rules: { rule_id: string; hits: number }[]; timeline: { date: string; events: number }[] }>(`/applications/${id}/analytics${qs}`);
 }
+
+// ===== Policy-Rule junction =====
+
+export type PolicyRule = {
+  id: string;
+  rule_id: string;
+  action_override: string;
+  enabled: boolean;
+  name: string;
+  category: string;
+  severity: string;
+  priority: number;
+  status: string;
+};
+
+export function listPolicyRules(policyId: string): Promise<PolicyRule[]> {
+  return request<PolicyRule[]>(`/security-policies/${policyId}/rules`);
+}
+
+export function addPolicyRule(policyId: string, ruleId: string, actionOverride?: string, enabled?: boolean): Promise<{ id: string }> {
+  return request<{ id: string }>(`/security-policies/${policyId}/rules`, { method: "POST", body: JSON.stringify({ rule_id: ruleId, action_override: actionOverride ?? "", enabled: enabled ?? true }) });
+}
+
+export function removePolicyRule(policyId: string, ruleId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/security-policies/${policyId}/rules/${ruleId}`, { method: "DELETE" });
+}
+
+export function validatePolicyActivation(policyId: string): Promise<{ valid: boolean; rule_count: number; errors: string[] }> {
+  return request<{ valid: boolean; rule_count: number; errors: string[] }>(`/security-policies/${policyId}/validate-activation`);
+}
+
+export function updateRuleLifecycle(ruleId: string, status: string): Promise<{ id: string; lifecycle_status: string }> {
+  return request<{ id: string; lifecycle_status: string }>(`/rules/${ruleId}/lifecycle`, { method: "POST", body: JSON.stringify({ status }) });
+}
+
+export function importRules(payload: { rules: unknown[] }): Promise<{ total: number; imported: number; updated: number; skipped: number; failed: number; failures: string[] }> {
+  return request<{ total: number; imported: number; updated: number; skipped: number; failed: number; failures: string[] }>("/rules/import", { method: "POST", body: JSON.stringify(payload) });
+}

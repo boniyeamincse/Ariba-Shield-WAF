@@ -108,9 +108,12 @@ export default function RulesPage() {
               </Link>
             )}
             {canUser("create") && (
-              <Link href={`/${locale}/rules/create`} className="btn btn-primary" style={{ textDecoration: "none", padding: "8px 16px" }}>
-                + New Rule
-              </Link>
+              <>
+                <Link href={`/${locale}/rules/create`} className="btn btn-primary" style={{ textDecoration: "none", padding: "8px 16px" }}>
+                  + New Rule
+                </Link>
+                <ExportRulesButton />
+              </>
             )}
             <UserProfileWidget />
           </div>
