@@ -66,6 +66,8 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /api/v1/rules/{id}/enable", handlers.EnableRule(st))
 	mux.HandleFunc("POST /api/v1/rules/{id}/disable", handlers.DisableRule(st))
 	mux.HandleFunc("POST /api/v1/rules/{id}/duplicate", handlers.DuplicateRule(st))
+	mux.HandleFunc("POST /api/v1/rules/bulk", handlers.BulkUpdateRules(st))
+	mux.HandleFunc("GET /api/v1/rules/export", handlers.ExportRules(st))
 
 	// Rule Bundles
 	mux.HandleFunc("GET /api/v1/rule-bundles", handlers.ListResource(st, handlers.CRUDConfig{Table: "rule_bundles", JSONName: "bundle"}))
@@ -254,6 +256,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /api/v1/bot/events", handlers.ListBotEvents(st))
 	mux.HandleFunc("GET /api/v1/bot/clients", handlers.ListBotClients(st))
 	mux.HandleFunc("POST /api/v1/bot/challenges/{id}/revoke", handlers.RevokeBotChallenge(st))
+	mux.HandleFunc("POST /api/v1/bot/challenges/issue", handlers.IssueBotChallenge(st))
 
 	// Phase 3: DLP
 	mux.HandleFunc("GET /api/v1/dlp", handlers.ListResource(st, handlers.CRUDConfig{Table: "dlp_profiles", JSONName: "dlp profile"}))
@@ -366,6 +369,7 @@ func NewRouter(st *store.Store, cfg *config.Config) http.Handler {
 	mux.HandleFunc("PATCH /api/v1/sites/{id}", handlers.UpdateResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site", Columns: []string{"name", "description", "location", "country_code", "gateway_ids", "status"}}))
 	mux.HandleFunc("DELETE /api/v1/sites/{id}", handlers.DeleteResource(st, handlers.CRUDConfig{Table: "sites", JSONName: "site"}))
 	mux.HandleFunc("GET /api/v1/sites/{id}/health", handlers.SiteHealth(st))
+	mux.HandleFunc("GET /api/v1/geo-blocking", handlers.GetGeoConfig(st))
 	mux.HandleFunc("GET /api/v1/workspaces", handlers.ListResource(st, handlers.CRUDConfig{Table: "organizations", JSONName: "workspace"}))
 
 	// Phase 5: graphql security, CSP, quotas, ML baselines, network protection

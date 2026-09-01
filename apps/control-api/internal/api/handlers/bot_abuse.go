@@ -108,3 +108,57 @@ func RevokeBotChallenge(st *store.Store) http.HandlerFunc {
 		json.NewEncoder(w).Encode(map[string]string{"id": id, "status": "revoked"})
 	}
 }
+// IssueBotChallenge issues a JS/CAPTCHA challenge for a client IP.
+func IssueBotChallenge(st *store.Store) http.HandlerFunc {
+	type req struct {
+		ClientIP      string `json:"client_ip"`
+		ChallengeType string `json:"challenge_type"` // javascript | captcha | proof_of_work
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body req
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+			return
+		}
+		if body.ClientIP == "" {
+			http.Error(w, `{"error":"client_ip required"}`, http.StatusBadRequest)
+			return
+		}
+		if body.ChallengeType == "" {
+			body.ChallengeType = "javascript"
+		}
+
+		id, err := st.NewID()
+		if err != nil {
+			http.Error(w, `{"error":"id generation failed"}`, http.StatusInternalServerError)
+			return
+		}
+		orgID := "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+
+		_, err = st.Pool.Exec(r.Context(),
+			`INSERT INTO bot_challenges (id, organization_id, client_ip, challenge_type, status)
+			 VALUES ($1, $2, $3, $4, 'issued')`,
+			id, orgID, body.ClientIP, body.ChallengeType)
+		if err != nil {
+			http.Error(w, `{"error":"challenge insert failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Return the challenge token + a JS snippet for the gateway to serve.
+		jsSnippet := ""
+		if body.ChallengeType == "javascript" {
+			jsSnippet = `(function(){var k='__shield_chal';var v=localStorage.getItem(k);if(!v){v='solved-'+Date.now();localStorage.setItem(k,v);}fetch('/__challenge/'+v).then(r=>{if(r.ok)location.reload();});})();`
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]any{
+			"id":             id,
+			"client_ip":      body.ClientIP,
+			"challenge_type": body.ChallengeType,
+			"status":         "issued",
+			"expires_at":     "10m",
+			"js_snippet":     jsSnippet,
+		})
+	}
+}

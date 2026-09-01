@@ -847,3 +847,89 @@ func intDef(val, fallback int) int {
 	}
 	return val
 }
+
+// BulkUpdateRules performs bulk enable/disable/delete on multiple rules.
+func BulkUpdateRules(st *store.Store) http.HandlerFunc {
+	type req struct {
+		IDs    []string `json:"ids"`
+		Action string   `json:"action"` // enable | disable | delete
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body req
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.IDs) == 0 {
+			http.Error(w, `{"error":"ids required"}`, http.StatusBadRequest)
+			return
+		}
+		switch body.Action {
+		case "enable", "disable", "delete":
+		default:
+			http.Error(w, `{"error":"action must be enable, disable or delete"}`, http.StatusBadRequest)
+			return
+		}
+
+		affected := 0
+		for _, id := range body.IDs {
+			var res interface{ RowsAffected() int64 }
+			if body.Action == "delete" {
+				ct, err := st.Pool.Exec(r.Context(), `DELETE FROM rules WHERE id = $1`, id)
+				if err == nil {
+					res = ct
+				}
+			} else {
+				status := "active"
+				if body.Action == "disable" {
+					status = "disabled"
+				}
+				ct, err := st.Pool.Exec(r.Context(),
+					`UPDATE rules SET status = $1, updated_at = now() WHERE id = $2`, status, id)
+				if err == nil {
+					res = ct
+				}
+			}
+			if res != nil && res.RowsAffected() > 0 {
+				affected++
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"action": body.Action, "requested": len(body.IDs), "affected": affected})
+	}
+}
+
+// ExportRules returns all rules as JSON (import/export support).
+func ExportRules(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rows, err := st.Pool.Query(r.Context(),
+			`SELECT id, rule_id, name, COALESCE(description,''), COALESCE(type,'custom'), COALESCE(category,''),
+			        severity, COALESCE(priority,0), action, status, COALESCE(logic,'AND'),
+			        COALESCE(attack_type,''), COALESCE(pattern_type,'regex'), COALESCE(accuracy,85),
+			        COALESCE(risk,'medium'), COALESCE(confidence,80), COALESCE(source,'ariba-core')
+			 FROM rules ORDER BY priority ASC`)
+		if err != nil {
+			http.Error(w, `{"error":"query failed"}`, http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		rules := []map[string]any{}
+		for rows.Next() {
+			var id, ruleID, name, desc, typ, cat, sev, action, status, logic, atk, ptype, risk, src string
+			var priority, acc, conf int
+			if err := rows.Scan(&id, &ruleID, &name, &desc, &typ, &cat, &sev, &priority, &action,
+				&status, &logic, &atk, &ptype, &acc, &risk, &conf, &src); err == nil {
+				rules = append(rules, map[string]any{
+					"id": id, "rule_id": ruleID, "name": name, "description": desc, "type": typ,
+					"category": cat, "severity": sev, "priority": priority, "action": action,
+					"status": status, "logic": logic, "attack_type": atk, "pattern_type": ptype,
+					"accuracy": acc, "risk": risk, "confidence": conf, "source": src,
+				})
+			}
+		}
+		if rules == nil {
+			rules = []map[string]any{}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", `attachment; filename="rules-export.json"`)
+		json.NewEncoder(w).Encode(map[string]any{"rules": rules, "count": len(rules)})
+	}
+}

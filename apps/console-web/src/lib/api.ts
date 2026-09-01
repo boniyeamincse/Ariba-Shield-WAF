@@ -1023,3 +1023,34 @@ export function getSecurityAnalytics(): Promise<Record<string, unknown>> {
 export function getRuleAnalytics(): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>("/rule-analytics");
 }
+
+// ===== Rule Bulk + Export =====
+
+export function bulkUpdateRules(ids: string[], action: "enable" | "disable" | "delete"): Promise<{ action: string; requested: number; affected: number }> {
+  return request<{ action: string; requested: number; affected: number }>("/rules/bulk", { method: "POST", body: JSON.stringify({ ids, action }) });
+}
+
+export async function exportRules(): Promise<{ rules: unknown[]; count: number }> {
+  return request<{ rules: unknown[]; count: number }>("/rules/export");
+}
+
+// ===== Bot Challenge =====
+
+export function issueBotChallenge(clientIP: string, challengeType?: string): Promise<{ id: string; client_ip: string; challenge_type: string; status: string; js_snippet?: string }> {
+  return request<{ id: string; client_ip: string; challenge_type: string; status: string; js_snippet?: string }>("/bot/challenges/issue", { method: "POST", body: JSON.stringify({ client_ip: clientIP, challenge_type: challengeType ?? "javascript" }) });
+}
+
+// ===== Geo Blocking =====
+
+export type GeoConfig = {
+  id: string;
+  name: string;
+  blocked_countries: string[];
+  allowed_countries: string[];
+  action: string;
+  status: string;
+};
+
+export function listGeoConfig(): Promise<GeoConfig[]> {
+  return request<GeoConfig[]>("/geo-blocking");
+}
